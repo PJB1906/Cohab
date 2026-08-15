@@ -1,0 +1,29 @@
+{
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(npm run:*)",
+      "Bash(uvicorn:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(alembic revision:*)"
+    ],
+    "ask": [
+      "Bash(alembic downgrade:*)",
+      "Bash(docker compose down:*)",
+      "Bash(psql:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
