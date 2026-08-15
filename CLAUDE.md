@@ -9,6 +9,11 @@ The authoritative design documents live in `docs/`:
 
 - `docs/COHAB_PRD.md` and `docs/COHAB_MATCHING_SPEC.md` are **authoritative**.
 - `docs/COHAB_BUILD_PLAN.md` sets the build order and the working method.
+- `docs/DECISIONS.md` is the **running decisions log** — non-obvious choices and
+  deliberate deviations taken during the build, with the spec section and code
+  each relates to. It is not authoritative design (the PRD and matching spec are),
+  but read it before re-deciding something already settled, and **append a new
+  entry** when you make a design decision the specs do not fix.
 - The SDD and SRS are **earlier, superseded documents** and are not kept in this
   repo. The PRD and matching spec override them. Do not go looking for them or
   treat them as the current design.
