@@ -1,9 +1,11 @@
 """Crude seed data for Phase 1 — COHAB_BUILD_PLAN.md §4.
 
-Deterministic (fixed seed), ~500 rows, no correlation between matching
-fields (budget, move-in date, questionnaire answers). Its only job is to
-make Phase 2 (the matcher) testable against a non-trivial pool, including a
-few unverified/suspended accounts for the eligibility filter to exclude.
+Deterministic (fixed seed), ~500 rows per COHAB_BUILD_PLAN.md's target.
+Dev/test data only, never used in production or a demo (real profiles come
+from the Phase 4 signup flow). No correlation between matching fields
+(budget, move-in date, questionnaire answers). Its only job is to make
+Phase 2 (the matcher) testable against a non-trivial pool, including a few
+unverified/suspended accounts for the eligibility filter to exclude.
 
 Name pools are hand-curated for regional/religious/ethnic diversity
 reflecting the real Christ University, Bangalore population (confirmed with
