@@ -53,6 +53,10 @@ class Candidate:
     # Stage 2 scored answers — the 24 keys of preference.QUESTIONNAIRE_KEYS.
     questionnaire: dict[str, Any] = field(default_factory=dict)
 
+    # The attribute-vector keys this user marked "most important" on screen 6
+    # (spec §3). Drives directional blending (spec §9). Empty = platform defaults.
+    important_attributes: frozenset[str] = frozenset()
+
     # Cached text vector (populated at profile save in Phase 4; unused by the
     # Phase 2 headless path, which fits TF-IDF over the pool in report.py).
     text_vector: dict | list | None = None
@@ -103,6 +107,9 @@ class Candidate:
             pet_tolerance=profile.pet_tolerance,
             smoking_dealbreaker=profile.smoking_dealbreaker,
             questionnaire=dict(profile.questionnaire or {}),
+            important_attributes=frozenset(
+                w.attribute_name for w in user.attribute_weights if w.is_selected_important
+            ),
             text_vector=profile.text_vector,
             text_vector_kind=profile.text_vector_kind,
         )

@@ -59,6 +59,7 @@ def make_candidate(
     has_pet: bool = False,
     pet_tolerance: str = "comfortable",
     smoking_dealbreaker: bool = False,
+    important_attributes: frozenset[str] | set[str] | None = None,
     answers: dict[str, Any] | None = None,
 ) -> Candidate:
     """Build a Candidate. `answers` is merged over BASELINE_QUESTIONNAIRE; a value
@@ -88,5 +89,6 @@ def make_candidate(
         has_pet=has_pet,
         pet_tolerance=pet_tolerance,
         smoking_dealbreaker=smoking_dealbreaker,
+        important_attributes=frozenset(important_attributes or ()),
         questionnaire=questionnaire,
     )
