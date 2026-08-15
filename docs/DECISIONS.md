@@ -223,3 +223,21 @@ remains the safe v1 default with no install/network dependency.
 
 **Code:** `cohab/services/matching/text.py` (`EmbeddingSimilarity`),
 `tests/matching/test_text.py`, `cohab/services/matching/tuning.py` (§7).
+
+### D-3.4 `text_vector`/`text_vector_kind` still unpersisted — first written in Phase 4
+
+**Spec/plan:** CLAUDE.md ("Text embeddings are computed once on profile save
+and cached. Never encode inside the match request path"); build plan §4
+Phase 4 (profile CRUD).
+
+**Status:** both `TfidfSimilarity` and `EmbeddingSimilarity` are fit and run
+**in memory**, at `tuning.py`/`report.py` run time, exactly as Phase 2 left
+them. No row anywhere yet writes `text_vector`/`text_vector_kind` to
+`preference_profile`. This is correct for Phase 3 — there is no profile-save
+endpoint for the cache-on-save rule to attach to — but it means the rule is
+still unimplemented, not just untested, and Phase 4's profile-save handler
+has to write this cache for the first time rather than merely wire an
+existing path.
+
+**Code:** `cohab/services/matching/text.py`; not yet: `cohab/api/` (Phase 4),
+`cohab/models/preference_profile.py`.
