@@ -80,13 +80,45 @@ the business logic importable and testable without FastAPI or a database
 
 **Code:** `candidate.py`.
 
-### D-2.5 Filter-yield finding on the crude seed
+### D-2.5 Filter-yield finding on the crude seed, and how it is fixed
 
 **Spec:** §11 tuning check 1; build plan §3 (*"find out your filter yield early"*).
 
-**Finding (measured, not just predicted):** over 40 sample subjects against the
-500-row crude seed, the median eligible pool is **≈ 4** (min 0, max 51), with
-`budget_no_overlap` the dominant exclusion. This is a property of the *crude,
-uncorrelated* seeder, not the matcher. **Phase 3** addresses it with correlated
-budgets and, if needed, a wider `MOVE_IN_TOLERANCE_DAYS`. Reproduce with
+**Finding (measured, not just predicted):** the median eligible pool is **≈ 4–5**
+(min 0), well under the target of 10, with `budget_no_overlap` the dominant
+exclusion by a wide margin. This is a property of the *crude, uncorrelated*
+seeder, **not** the matcher or the constraints. Reproduce with
 `python -m cohab.services.matching.report`.
+
+**Sensitivity probe** (120 sample subjects, 500-row pool; read-only, throwaway):
+
+| Change | Median eligible pool |
+|---|---|
+| Current (move-in 30 days) | 5 |
+| Move-in 60 days | 9 |
+| Move-in 90 days | 10 |
+| **Budget constraint removed** (proxy for correlated budgets) | **21** |
+| Budget removed + move-in 60 days | 40 |
+
+Budget is the whole story: making budgets realistic ~4×'s the yield on its own,
+while move-in has to stretch to 90 days just to reach 10. The crude seeder draws
+budgets independently and uniformly (`seed.py`), so bands rarely overlap by
+chance; real campus users cluster.
+
+**Important — "realistic seed" is synthetic, not real customers.** Cohab has no
+real users and is not expected to (PRD §6.6: every profile is synthetic, and
+synthetic data *"validates the machine, not the theory"*). Phase 3's "realistic
+seed" is simply an upgrade to the `seed.py` generator to draw **correlated**
+distributions (budget by area, move-in clustered around term start, templated
+notes) — deterministic and reproducible, buildable now, no customers required.
+
+**Decision:** leave the matcher and **all** hard constraints unchanged in Phase 2.
+Fix the yield in **Phase 3** by making the synthetic seed correlated, then
+re-measure. `MOVE_IN_TOLERANCE_DAYS` (config, not a constant) is the cheap backup
+lever if the correlated seed still falls short of 10; scoping the pilot to one
+campus/area is the product-level backstop (build plan §3). No config change is
+made now — we decide the move-in window against the Phase 3 number.
+
+**What not to do:** do not weaken the real deal-breakers (`gender_preference`,
+pets, smoking, city) to inflate the yield. Those exclusions are correct; padding
+the number by loosening them just manufactures matches users reject.
