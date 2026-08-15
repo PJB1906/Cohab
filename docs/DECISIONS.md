@@ -122,3 +122,104 @@ made now — we decide the move-in window against the Phase 3 number.
 **What not to do:** do not weaken the real deal-breakers (`gender_preference`,
 pets, smoking, city) to inflate the yield. Those exclusions are correct; padding
 the number by loosening them just manufactures matches users reject.
+
+---
+
+## Phase 3 — Realistic seed, tuning, embeddings
+
+### D-3.1 Seed generator upgraded in place, with proposed (not spec-derived) budget tiers
+
+**Spec:** build plan §3/§4 Phase 3 ("upgrade the seeder properly when you
+reach tuning"); PRD §6.6 (filter-yield analysis "depends on the *marginal
+distributions* of budget, locality and move-in date, which can be modelled
+realistically").
+
+**Decision:** `seed.py` was upgraded in place rather than forked into a
+parallel module — the crude-seed finding (D-2.5) is already a permanent
+record independent of whether the file that produced it still runs, and the
+build plan's own wording is "upgrade," not "add a second seeder." Volume
+raised from 500 to 1,500 rows (build plan §3: 1,000–2,000 for tuning).
+
+Three correlations were added: **budget by locality** (a latent
+`target_locality`, unpersisted for `needs_place` members since v1 filters by
+city only — spec §2 — shapes the budget band via `LOCALITY_BUDGET_RANGE`;
+`has_place` listings draw rent from the same table); **move-in clustered
+around a `TERM_START`** (~70% within ±10 days, echoing PRD §11's "one intake
+cohort... four-week window"); and **templated, correlated lifestyle notes**
+(composed from `life_stage`/`sociability`/`daytime_presence` fragments so
+TF-IDF/embeddings have real signal, instead of five fixed strings).
+
+**The `LOCALITY_BUDGET_RANGE` ₹ figures are proposed, not sourced from any
+document** — plausible Bangalore per-person rent tiers, ordered relative to
+each other (Koramangala/Indiranagar/HSR pricier than Electronic
+City/Marathahalli/etc.), flagged as such in the module docstring. Likewise
+the per-attribute `QUESTIONNAIRE_WEIGHTS` (non-uniform but non-degenerate
+categorical distributions — spec §11 item 6 specifically warns
+`cost_split_preference` must not collapse onto `flexible`) and the light
+cross-attribute conditioning (smoking/alcohol tolerance vs behaviour, diet
+vs non-veg cooking tolerance, so rows aren't self-contradictory) are
+proposed generator design, not spec numbers.
+
+**Code:** `cohab/seed.py`.
+
+### D-3.2 Tuning checkpoint: yield fixed by the correlated seed alone, no config or weight change made
+
+**Spec:** §11's tuning checklist, run via the new `cohab/services/matching/tuning.py`.
+
+**Measured** (60-subject sample, 1,500-profile pool, weight_set v2):
+
+| Check | Result |
+|---|---|
+| Filter yield | median **34.5** (min 1, max 314) — clears spec §11's 10 and PRD §2's 15 |
+| Dominant exclusion | `budget_no_overlap`, as expected once overall yield is healthy |
+| Score distribution | 0.518–0.883, 100% inside spec's [0.35, 0.90]; 57% inside [0.70, 0.80] |
+| Directional spread | median 0.042; only 26% of pairs near-zero (<0.02) |
+| Ablation (`sharing_norm`, `home_orientation`, `sociability`, `cost_split_preference`) | none hit the "never moves the ranking" threshold; `sharing_norm`/`home_orientation` changed the #1 pick for 3/15 and 5/15 sample subjects despite their low weights (0.04, 0.02) |
+
+**Decision:** `MOVE_IN_TOLERANCE_DAYS` stays at **30** — D-2.5 already
+identified uncorrelated budgets, not the tolerance window, as the yield
+problem; the correlated seed (D-3.1) confirms that diagnosis directly, so
+there is nothing left to widen. `weight_set` stays at **v2** — the ablation
+gives no clean signal to zero out or reweight any of the four attributes
+spec §11 flagged as worth scrutiny; the sample (15 subjects) is also too
+small a basis to publish an immutable weight_set version on. Per CLAUDE.md,
+this is recorded as a measured-and-considered non-change rather than left
+implicit.
+
+**Open, not acted on:** the score distribution's 57% concentration in
+[0.70, 0.80], while still within spec's healthy range, is compressed. This
+may simply be inherent to a ~20-attribute weighted sum with mostly
+gentle-floored matrices (a single bad attribute is diluted across the
+whole vector) rather than a defect — flagged for the Phase 9 evaluation
+chapter rather than adjusted here.
+
+**Code:** `cohab/services/matching/tuning.py`.
+
+### D-3.3 TF-IDF vs `EmbeddingSimilarity` comparison
+
+**Spec:** §7 (`TfidfSimilarity` in v1, `EmbeddingSimilarity` swapped in "once
+the pipeline is proven end-to-end"); PRD §7 ("the comparison between the two
+becomes a reportable result").
+
+**Decision:** `EmbeddingSimilarity` (`all-MiniLM-L6-v2`, spec §7/PRD §15)
+implements the same `TextSimilarity` protocol as `TfidfSimilarity`, model
+loaded lazily so importing the module never requires `sentence-transformers`
+or a model download — tests inject a fake encoder (`test_text.py`) and stay
+hermetic. `TfidfSimilarity` remains the default powering the main tuning
+report (fast, no install risk); `EmbeddingSimilarity` runs only in the
+report's isolated comparison section, over a bounded sample of pairs, since
+each call is a real transformer forward pass.
+
+**Measured** (150 sampled pairs of profiles with non-empty
+`lifestyle_notes`): Pearson r(TF-IDF, embedding) = **0.694** — correlated but
+meaningfully different — mean |difference| = **0.301**. The largest
+disagreements are paraphrases TF-IDF scores near 0 (no shared vocabulary)
+that the embedding model scores 0.6+ (e.g. "working a day job, home most
+evenings" vs. "working full-time and keeping fairly regular hours" —
+tfidf=0.04, embed=0.61). This is the reportable result PRD §7 asks for:
+embeddings catch semantic equivalence TF-IDF structurally cannot, which is
+the case for swapping it in once time allows (build plan §2), while TF-IDF
+remains the safe v1 default with no install/network dependency.
+
+**Code:** `cohab/services/matching/text.py` (`EmbeddingSimilarity`),
+`tests/matching/test_text.py`, `cohab/services/matching/tuning.py` (§7).
