@@ -23,6 +23,7 @@ from cohab.services.matching.matrices import (
     budget_similarity,
     jaccard_similarity,
     ordinal_similarity,
+    vector_cosine_similarity,
 )
 from cohab.services.matching.text import NeutralTextSimilarity, TextSimilarity
 
@@ -116,7 +117,21 @@ def _interests(a: Candidate, b: Candidate, ctx: ScoringContext) -> tuple[float, 
 
 
 def _notes(a: Candidate, b: Candidate, ctx: ScoringContext) -> tuple[float, float]:
-    s = ctx.text_similarity.similarity(a.lifestyle_notes, b.lifestyle_notes)
+    # Prefer the cached vectors written at profile save (CLAUDE.md, spec §7 —
+    # "never encode inside the match request path") when both sides carry one
+    # of the same kind. Falls back to the live text-similarity collaborator —
+    # a raw-text transform — for a pool member saved before this cache
+    # existed, or for the offline report.py/tuning.py callers that never
+    # populate it at all.
+    if (
+        a.text_vector is not None
+        and b.text_vector is not None
+        and a.text_vector_kind is not None
+        and a.text_vector_kind == b.text_vector_kind
+    ):
+        s = vector_cosine_similarity(a.text_vector, b.text_vector)
+    else:
+        s = ctx.text_similarity.similarity(a.lifestyle_notes, b.lifestyle_notes)
     return s, s
 
 

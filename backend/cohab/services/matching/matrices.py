@@ -179,3 +179,26 @@ def jaccard_similarity(a: list[str] | None, b: list[str] | None) -> float:
 def budget_similarity(mid_a: float, mid_b: float) -> float:
     """spec §7: max(0, 1 - |mid_a - mid_b| / BUDGET_SPREAD)."""
     return max(0.0, 1.0 - abs(mid_a - mid_b) / BUDGET_SPREAD)
+
+
+def vector_cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Plain cosine over two already-computed vectors (spec §7 text
+    similarity) — no transform, for comparing two cached `text_vector`s
+    without re-encoding either side in the match request path (CLAUDE.md).
+
+    A length mismatch (e.g. two `tfidf` vectors cached under vectorizers from
+    different process-lifetimes, with different fitted vocabularies — the
+    TF-IDF vectorizer is refit once per process start, matcher-reviewer
+    finding, Phase 4) degrades to neutral rather than raising, matching the
+    zero-norm and unfit-vectorizer cases below: this is reachable live-API
+    state, not a caller bug.
+    """
+    if len(a) != len(b):
+        return TEXT_NEUTRAL
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = sum(x * x for x in a) ** 0.5
+    norm_b = sum(y * y for y in b) ** 0.5
+    if norm_a == 0 or norm_b == 0:
+        return TEXT_NEUTRAL
+    score = dot / (norm_a * norm_b)
+    return max(0.0, min(1.0, score))

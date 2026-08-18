@@ -34,6 +34,13 @@ collect the data it needs.
 + the profile CRUD, and populate `Candidate.from_orm` from it. Then the
 constraint activates with no matcher change.
 
+**Resolved in Phase 4:** `kitchen_allergens` (`JSONB NOT NULL DEFAULT '[]'`)
+added to `preference_profile`; `Candidate.from_orm` reads it; no change to
+`eligibility.py` was needed — the constraint was already correct, just
+inert. Confirmed by the Phase 4 matcher-reviewer pass. Still inert on the
+*seeded* pool (`cohab/seed.py` never populates it, only `severe_allergy`),
+which is fine — it's real only once real profile saves populate it.
+
 **Code:** `candidate.py` (`kitchen_allergens`), `eligibility.py`
 (`Reason.SEVERE_ALLERGY`), `tests/matching/test_eligibility.py`.
 
@@ -241,3 +248,186 @@ existing path.
 
 **Code:** `cohab/services/matching/text.py`; not yet: `cohab/api/` (Phase 4),
 `cohab/models/preference_profile.py`.
+
+**Resolved in Phase 4 — see D-4.4 below for the write *and* read side.** The
+write side alone (populating the columns) would have left the rule cosmetic;
+D-4.4 records why the scorer had to change too.
+
+---
+
+## Phase 4 — Auth, verification, profile/listing CRUD, matches API
+
+### D-4.1 `seeker_type` and `gender` collected at registration, not a separate post-verification step
+
+**Spec:** PRD §8.1's onboarding sequence diagram shows seeker-type
+declaration as its own screen, after OTP verification and before the
+questionnaire.
+
+**Gap:** the Phase 1 schema has `user.seeker_type` `NOT NULL` with no
+default (`models/user.py`), so a literal reading of the diagram needs a
+migration to make it nullable, plus a new `PATCH` endpoint for the
+standalone step. `gender` is `NOT NULL` too, with no screen in PRD §9 that
+collects it at all.
+
+**Decision (confirmed with the user, Phase 4 planning):** both are collected
+in `POST /auth/register` alongside email/name/password, not as a separate
+step. Treats the PRD sequence diagram as a simplification rather than a
+literal contract — consistent with how `gender` already has to be collected
+up front for the identical structural reason, and avoids a nullable-column
+migration for a workflow difference with no scoring consequence (Stage 1/2
+only ever read the final, settled value).
+
+**Code:** `cohab/services/auth.py` (`AuthService.register`), `cohab/api/schemas.py`
+(`RegisterRequest`).
+
+### D-4.2 Listing CRUD built in Phase 4, extending the build plan's "profile CRUD" bullet
+
+**Spec:** build plan §4 Phase 4 lists "profile CRUD" only; `listing` is a
+separate entity (PRD §5.2).
+
+**Decision (confirmed with the user, Phase 4 planning):** `GET/PUT /listing`
+ships alongside `GET/PUT /profile` in this phase, not deferred to Phase 5.
+Without it a `has_place` user has no way to reach the state
+`Candidate.from_orm` needs (it reads `user.listing` for the effective budget
+band, `candidate.py`) — `has_place` would be a structurally dead seeker type
+in the API surface this phase ships. Listing CRUD is a small, independent
+addition (an 8-column table, no scoring logic) so pulling it forward costs
+little.
+
+**Code:** `cohab/services/listing.py`, `cohab/api/listing.py`.
+
+### D-4.3 Institution resolution by email-domain suffix, not exact equality
+
+**Spec:** not specified — `institution.email_domain` (PRD §5.2) is a bare
+string with no stated matching rule.
+
+**Decision (confirmed with the user, Phase 4 planning):** the part of an
+email after `@` resolves to an institution if it equals `email_domain` *or*
+ends with `"." + email_domain`, so a departmental subdomain
+(`msds.christuniversity.in`) resolves to the `christuniversity.in` row. Real
+institutional addresses carry a department subdomain; exact-match alone
+would reject genuine institutional accounts.
+
+**Code:** `cohab/services/auth.py` (`_resolve_institution`),
+`tests/api/test_auth.py::test_register_rejects_subdomain_of_a_registered_domain`.
+
+### D-4.4 Wiring the text-vector cache into scoring — the read side, not just the write side
+
+**Spec:** CLAUDE.md / spec §7: "computed at profile save and cached. Never
+encode inside the match request path." D-3.4 flagged that neither the write
+nor the read side existed yet.
+
+**Decision:** closing this required three coordinated changes, not one:
+
+1. **Write side.** A single `TfidfSimilarity` is fit **once per process**, at
+   FastAPI startup, over whatever `lifestyle_notes` exist in the DB at that
+   moment (`cohab/main.py` lifespan handler). `TfidfSimilarity.encode(text)`
+   (transform-only, no fit) populates `text_vector`/`text_vector_kind` on
+   every `PUT /profile`. New vocabulary appearing after that startup is
+   out-of-vocabulary until the next restart — a documented limitation, not a
+   bug; a periodic refit is Phase-8-shaped work (alongside the weight-set
+   recompute job already noted there), not built now.
+2. **Read side.** Before this phase, `attributes.py`'s `_notes` scorer always
+   called `ctx.text_similarity.similarity(raw_a, raw_b)` — a live transform of
+   raw text — regardless of whether a cache existed, because nothing ever
+   populated the cache to prefer. It now prefers cosine over the two
+   candidates' cached `text_vector`s (`matrices.vector_cosine_similarity`,
+   new) when both sides carry one of the same `text_vector_kind`, and only
+   falls back to the raw-text transform when a cache is missing or the kinds
+   differ (covers pool members saved before this feature, and keeps
+   `report.py`/`tuning.py`'s whole-pool offline fitting working unchanged).
+   Without this half, the cache columns would have been written but never
+   read — cosmetic, not load-bearing (matcher-reviewer finding).
+3. **Live API never falls back to a live transform.** The `_notes` fallback
+   still calls into a `TextSimilarity`, and the live API deliberately wires
+   that fallback to `NeutralTextSimilarity()` rather than the shared
+   `TfidfSimilarity` instance (`cohab/api/matches.py`). With every `PUT
+   /profile` now populating the cache, the only remaining callers of a live
+   raw-text transform are the offline `report.py`/`tuning.py` scripts, which
+   fit their own pool-scoped vectorizer per run — that's correct there and
+   would be the one live-request-path encode this whole change was meant to
+   remove if it weren't kept neutral instead.
+
+**Two related robustness fixes made while wiring this** (matcher-reviewer
+findings): `TfidfSimilarity.similarity()` used to raise `RuntimeError` if
+called before `.fit()`; it now degrades to the neutral score, since an unfit
+vectorizer is reachable live-API state (a brand-new, near-empty pilot
+database) and not only a caller bug. `vector_cosine_similarity` degrades to
+neutral on a vector-length mismatch rather than raising, since two `tfidf`
+vectors cached under vectorizers fit in different process lifetimes (a
+server restart) can legitimately have different vocabulary sizes despite
+sharing the `"tfidf"` kind tag.
+
+**Code:** `cohab/main.py`, `cohab/services/matching/text.py`,
+`cohab/services/matching/matrices.py` (`vector_cosine_similarity`),
+`cohab/services/matching/attributes.py` (`_notes`), `cohab/api/matches.py`.
+
+### D-4.5 OTP storage shape and delivery
+
+**Spec:** PRD §8.1 names the flow (`POST /auth/register` → email OTP →
+`POST /auth/verify`) but not the storage or hashing scheme; build plan §4
+says "email-OTP verification."
+
+**Decision:** `verification_record` gained `otp_hash`, `otp_expires_at`,
+`otp_attempts` (migration `1221949ea658`). The OTP is hashed with
+HMAC-SHA256 keyed on `SECRET_KEY`, not `bcrypt` — deliberately a different,
+cheaper primitive than password hashing: a 6-digit code is short-lived
+(`OTP_TTL_MINUTES`, proposed: 10) and rate-limited (`OTP_MAX_ATTEMPTS`,
+proposed: 5), so the actual defence is the attempt cap, not hash cost.
+Delivery goes through an `OTPSender` protocol (mirroring `TextSimilarity`'s
+swap-behind-an-interface pattern) with `ConsoleOTPSender` — logs the code —
+as the only implementation: this project has no SMTP credentials configured,
+so a real email sender is a documented future swap-in. `SESSION_TTL_DAYS`
+(14), `OTP_LENGTH` (6) are likewise proposed values, not sourced from any
+document.
+
+**Code:** `cohab/core/config.py`, `cohab/core/security.py`,
+`cohab/services/otp.py`, `cohab/services/auth.py`, migration
+`1221949ea658_phase_4_auth_fields.py`.
+
+### D-4.6 `match_score` upsert-on-read, and the reproducibility question it defers
+
+**Spec:** PRD §7.1 Stage A ("compute on read... no caching") describes the
+scoring architecture; PRD §8.1's onboarding sequence diagram separately shows
+`M->>DB: Persist match scores` after scoring. The two aren't the same
+instruction and this phase had to reconcile them.
+
+**Decision:** `GET /matches` still recomputes Stage 1 + Stage 2 fresh on
+every call (Stage A, cheap at pilot pool sizes) but **upserts** a
+`match_score` row per eligible pair rather than leaving the table empty: a
+row is required for `GET /matches/{id}/explanation` to have something stable
+to read and for `state`/`interested_by_*` to have somewhere to live (PRD
+§8.2's lifecycle). The upsert refreshes score/breakdown/`weight_set_id` but
+never touches `state` or `interested_by_*`, so a rescore can't silently erase
+a user's recorded interest.
+
+Because `MatchRanker.rank()` always scores with `a=subject` but
+`match_score` requires canonical `user_id_a < user_id_b` storage (PRD §5.2:
+`CHECK (user_id_a < user_id_b)`, one row per unordered pair), a new pure
+function `flip()` (`cohab/services/matching/canonical.py`) rearranges an
+already-computed `MatchResult` — scores, and each breakdown cell's
+`sim_a/sim_b` and `w_a/w_b` — into the other party's viewpoint. It's used
+both to canonicalise a result before storage and to reconstruct a stored
+row from whichever party didn't originally request the score. Matcher-reviewer
+verified `flip` is correct for every attribute type the matcher produces
+(similarity/tolerance/absolute/continuous/semantic) and is its own inverse.
+
+**Left open, not solved here:** always-refresh-on-read is only safe while a
+single `weight_set` is active. CLAUDE.md's immutability guarantee — an
+explanation shown once must remain reproducible — has nothing to violate yet
+because Phase 8 hasn't published a second `weight_set` version. Once it does,
+unconditionally overwriting a `viewed`-or-later row's `breakdown` on every
+`GET /matches` would retroactively change an explanation a user has already
+seen, which is exactly what immutability forbids. Revisit then: candidates are
+"never refresh past `state='suggested'`" or "always refresh, but keep a
+version history instead of overwriting." Not decided now because there is no
+evidence yet to decide between them — Phase 8's own recompute-job design is
+where that evidence will exist.
+
+`GET /matches`'s default `limit=10` is a proposed value — neither PRD nor
+spec sets one; PRD's `rank_matches(user, limit)` signature (§7.1) takes it
+as caller-supplied with no default given.
+
+**Code:** `cohab/services/matching/canonical.py`, `cohab/services/matches.py`,
+`cohab/api/matches.py`, `tests/matching/test_canonical.py`,
+`tests/api/test_matches.py`.

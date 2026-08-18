@@ -110,3 +110,14 @@ def test_budget_similarity() -> None:
     assert m.budget_similarity(10000, 12000) == pytest.approx(0.8667, abs=1e-3)
     # Never negative.
     assert m.budget_similarity(10000, 40000) == 0.0
+
+
+def test_vector_cosine_similarity() -> None:
+    assert m.vector_cosine_similarity([1.0, 0.0], [1.0, 0.0]) == pytest.approx(1.0)
+    assert m.vector_cosine_similarity([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
+    # Zero vector (empty/degenerate cache) — neutral rather than a division by zero.
+    assert m.vector_cosine_similarity([0.0, 0.0], [1.0, 0.0]) == 0.5
+    # Length mismatch — e.g. two `tfidf` vectors cached under vectorizers fit
+    # over different corpora across process restarts — degrades to neutral
+    # rather than raising (matcher-reviewer finding, Phase 4).
+    assert m.vector_cosine_similarity([1.0, 0.0], [1.0, 0.0, 0.0]) == 0.5

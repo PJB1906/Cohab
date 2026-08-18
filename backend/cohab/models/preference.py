@@ -79,13 +79,19 @@ class PreferenceProfile(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
     move_in_date: Mapped[date] = mapped_column(Date, nullable=False)
     gender_preference: Mapped[str] = mapped_column(String, nullable=False, default="any")
     severe_allergy: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # Allergens this person cooks with / needs in the shared kitchen — the
+    # asymmetric counterpart to severe_allergy (spec §2; D-2.1). Phase 2 coded
+    # the constraint against this field before it existed; Phase 4 adds it.
+    kitchen_allergens: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     has_pet: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     pet_tolerance: Mapped[str] = mapped_column(String, nullable=False, default="comfortable")
     smoking_dealbreaker: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # --- Stage 2 scored attributes, plus cached text vector ---
     questionnaire: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    text_vector: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    # A plain vector, never a dict — matches TfidfSimilarity.encode's /
+    # EmbeddingSimilarity's return shape, the only writers (Phase 4).
+    text_vector: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     text_vector_kind: Mapped[str | None] = mapped_column(String, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="preference_profile")

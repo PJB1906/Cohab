@@ -46,16 +46,35 @@ def test_empty_text_scores_neutral() -> None:
     assert sim.similarity("", "") == 0.5
 
 
-def test_unfitted_raises_when_both_nonempty() -> None:
+def test_unfitted_scores_neutral_when_both_nonempty() -> None:
+    # A brand-new, near-empty database (day one of the pilot) rather than a
+    # caller error: nothing has ever been fit yet, so there's no vocabulary to
+    # compare against. Degrades to neutral rather than raising.
     sim = TfidfSimilarity()
-    with pytest.raises(RuntimeError):
-        sim.similarity("some text", "other text")
+    assert sim.similarity("some text", "other text") == 0.5
 
 
 def test_empty_corpus_leaves_only_neutral_path() -> None:
     sim = TfidfSimilarity().fit([None, "", "  "])
     # No fitted vocabulary; the only reachable path is the neutral one.
     assert sim.similarity(None, "x") == 0.5
+
+
+def test_encode_matches_manual_transform() -> None:
+    sim = _fitted()
+    vec = sim.encode(CORPUS[0])
+    assert vec is not None
+    # cosine(encode(x), encode(x)) should agree with similarity(x, x): both
+    # go through the same fitted vectorizer, just via different call paths.
+    from cohab.services.matching.matrices import vector_cosine_similarity
+
+    assert vector_cosine_similarity(vec, vec) == pytest.approx(1.0)
+
+
+def test_encode_returns_none_for_empty_or_unfitted() -> None:
+    assert _fitted().encode(None) is None
+    assert _fitted().encode("   ") is None
+    assert TfidfSimilarity().encode("some text") is None
 
 
 def test_neutral_similarity_and_protocol() -> None:

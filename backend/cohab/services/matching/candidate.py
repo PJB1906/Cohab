@@ -42,9 +42,9 @@ class Candidate:
     severe_allergy: list[str] = field(default_factory=list)
     # Allergens this person cooks with / needs in the shared kitchen. Spec §2's
     # allergy rule is asymmetric — "A allergic ⇒ B must not require it" — so it
-    # needs this counterpart signal, which the Phase 1 schema does not yet carry.
-    # Empty until a Phase 4 profile field populates it; the constraint is
-    # therefore structurally present but inert on current seed data. Flagged.
+    # needs this counterpart signal. Populated from `PreferenceProfile.
+    # kitchen_allergens` since Phase 4 (D-2.1); the constraint was inert before
+    # that only for lack of the schema field, not a matcher gap.
     kitchen_allergens: list[str] = field(default_factory=list)
     has_pet: bool = False
     pet_tolerance: str = "comfortable"
@@ -59,7 +59,9 @@ class Candidate:
 
     # Cached text vector (populated at profile save in Phase 4; unused by the
     # Phase 2 headless path, which fits TF-IDF over the pool in report.py).
-    text_vector: dict | list | None = None
+    # Always a plain vector, never a dict — matches `TfidfSimilarity.encode`'s
+    # / `EmbeddingSimilarity`'s return shape, the only writers.
+    text_vector: list[float] | None = None
     text_vector_kind: str | None = None
 
     @property
@@ -103,6 +105,7 @@ class Candidate:
             move_in_date=profile.move_in_date,
             gender_preference=profile.gender_preference,
             severe_allergy=list(profile.severe_allergy or []),
+            kitchen_allergens=list(profile.kitchen_allergens or []),
             has_pet=profile.has_pet,
             pet_tolerance=profile.pet_tolerance,
             smoking_dealbreaker=profile.smoking_dealbreaker,

@@ -1,0 +1,88 @@
+"""GET /matches, GET /matches/{id}/explanation — build plan §4 Phase 4.
+
+The live API's `_notes` fallback (`attributes.py`) uses a plain neutral
+comparator, never a live TF-IDF transform: with the profile-save path now
+always populating `text_vector` (D-4.x), a live-transform fallback here would
+be the one remaining place text ever gets encoded inside the match request
+path. Keeping it neutral makes CLAUDE.md's "never encode in the request
+path" rule absolute rather than "usually true".
+"""
+
+from __future__ import annotations
+
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from cohab.api.deps import get_active_weight_set, get_db, require_verified_user
+from cohab.api.schemas import ExplanationCard, MatchExplanationResponse, MatchListItem
+from cohab.models import User, WeightSet
+from cohab.services.matches import MatchesService, MatchNotFound, NotAParty
+from cohab.services.matching.text import NeutralTextSimilarity
+
+router = APIRouter(prefix="/matches", tags=["matches"])
+
+
+def _service(db: Session, weight_set: WeightSet) -> MatchesService:
+    return MatchesService(db, weight_set, NeutralTextSimilarity())
+
+
+@router.get("", response_model=list[MatchListItem])
+def get_matches(
+    limit: int = 10,  # proposed — not specified in PRD/spec (matcher-reviewer finding)
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+    weight_set: WeightSet = Depends(get_active_weight_set),
+) -> list[MatchListItem]:
+    entries = _service(db, weight_set).get_matches(user, limit=limit)
+    return [
+        MatchListItem(
+            match_id=e.match_id,
+            candidate_id=e.candidate.user_id,
+            candidate_name=e.candidate.name,
+            combined_score=e.combined_score,
+            agreements=[c.text for c in e.explanation.agreements],
+            divergence=e.explanation.divergence.text if e.explanation.divergence else None,
+        )
+        for e in entries
+    ]
+
+
+@router.get("/{match_id}/explanation", response_model=MatchExplanationResponse)
+def get_explanation(
+    match_id: uuid.UUID,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+    weight_set: WeightSet = Depends(get_active_weight_set),
+) -> MatchExplanationResponse:
+    try:
+        r = _service(db, weight_set).get_explanation(user, match_id)
+    except MatchNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
+    except NotAParty:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+
+    return MatchExplanationResponse(
+        match_id=r.match_id,
+        candidate_id=r.candidate.user_id,
+        candidate_name=r.candidate.name,
+        combined_score=r.result.combined_score,
+        score_towards_candidate=r.result.score_ab,
+        score_from_candidate=r.result.score_ba,
+        breakdown=r.result.breakdown,
+        agreements=[
+            ExplanationCard(attribute=c.attribute, kind=c.kind, text=c.text, score=c.score)
+            for c in r.explanation.agreements
+        ],
+        divergence=(
+            ExplanationCard(
+                attribute=r.explanation.divergence.attribute,
+                kind=r.explanation.divergence.kind,
+                text=r.explanation.divergence.text,
+                score=r.explanation.divergence.score,
+            )
+            if r.explanation.divergence
+            else None
+        ),
+    )

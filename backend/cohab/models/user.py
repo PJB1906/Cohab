@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -85,5 +85,12 @@ class VerificationRecord(Base, UUIDPKMixin, CreatedAtMixin):
     id_document_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(nullable=True)
     document_deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    # Pending email-OTP state (Phase 4). Hashed, never the raw code; cleared
+    # once verified. `otp_attempts` is the rate-limit counter for guessing.
+    otp_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    otp_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    otp_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     user: Mapped["User"] = relationship(back_populates="verification_record")

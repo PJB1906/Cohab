@@ -61,6 +61,8 @@ def make_candidate(
     smoking_dealbreaker: bool = False,
     important_attributes: frozenset[str] | set[str] | None = None,
     answers: dict[str, Any] | None = None,
+    text_vector: list[float] | None = None,
+    text_vector_kind: str | None = None,
 ) -> Candidate:
     """Build a Candidate. `answers` is merged over BASELINE_QUESTIONNAIRE; a value
     of None in `answers` deletes that key (to test the missing-answer path)."""
@@ -91,4 +93,6 @@ def make_candidate(
         smoking_dealbreaker=smoking_dealbreaker,
         important_attributes=frozenset(important_attributes or ()),
         questionnaire=questionnaire,
+        text_vector=text_vector,
+        text_vector_kind=text_vector_kind,
     )

@@ -63,12 +63,24 @@ class TfidfSimilarity:
         if _is_empty(a) or _is_empty(b):
             return TEXT_NEUTRAL
         if self._vectorizer is None:
-            raise RuntimeError("TfidfSimilarity.fit() must be called before similarity()")
+            # Nothing was fit — a fresh, near-empty database (e.g. the first
+            # few registrations of a pilot) rather than a caller error. Degrade
+            # to neutral instead of raising; there is no vocabulary to compare
+            # against yet.
+            return TEXT_NEUTRAL
         vecs = self._vectorizer.transform([a, b])
         score = float(cosine_similarity(vecs[0], vecs[1])[0, 0])
         # TF-IDF vectors are non-negative, so cosine is already in [0, 1]; clamp
         # defensively against floating-point drift.
         return max(0.0, min(1.0, score))
+
+    def encode(self, text: str | None) -> list[float] | None:
+        """Transform-only (no fit) — the cache-at-save path (CLAUDE.md, spec
+        §7). None when there's no text or nothing was ever fit; the caller
+        stores that as "no cached vector" rather than a zero vector."""
+        if _is_empty(text) or self._vectorizer is None:
+            return None
+        return self._vectorizer.transform([text]).toarray()[0].tolist()
 
 
 class EmbeddingSimilarity:
