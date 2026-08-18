@@ -51,6 +51,9 @@ class User(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
     # Cosmetic only, not read by any hard constraint or score — addition beyond
     # COHAB_PRD.md §5.2's ERD, confirmed with the user (Phase 1 planning).
     course: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Cosmetic only, same precedent as `course` — served from UPLOAD_DIR via
+    # the /media static mount (Phase 5, cohab/api/uploads.py).
+    avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
     institution: Mapped["Institution"] = relationship(back_populates="users")
     verification_record: Mapped["VerificationRecord"] = relationship(

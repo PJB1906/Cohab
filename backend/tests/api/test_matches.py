@@ -244,3 +244,158 @@ def test_ineligible_candidate_excluded_by_hard_constraints(
     resp = client.get(f"/matches?limit={LARGE_LIMIT}")
     ids = {item["candidate_id"] for item in resp.json()}
     assert deepa_id not in ids
+
+
+# --- Phase 5 enrichment: list-card fields, listing block, express interest -
+
+def test_match_list_item_carries_seeker_type_city_and_budget(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    item = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)
+    assert item["seeker_type"] == "needs_place"
+    assert item["city"] == "Bangalore"
+    assert item["budget_min"] == 10000
+    assert item["budget_max"] == 15000
+    assert item["avatar_url"] is None
+
+
+def _onboard_has_place(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture, *, name: str, email_local: str, questionnaire: dict
+) -> str:
+    email = f"{email_local}@{institution.email_domain}"
+    with caplog.at_level(logging.INFO, logger="cohab.otp"):
+        resp = client.post(
+            "/auth/register",
+            json={
+                "email": email,
+                "password": PASSWORD,
+                "full_name": name,
+                "gender": "female",
+                "seeker_type": "has_place",
+            },
+        )
+    user_id = resp.json()["user_id"]
+    code = next(r.args[1] for r in caplog.records if r.name == "cohab.otp")
+    caplog.clear()
+
+    client.post("/auth/verify", json={"user_id": user_id, "code": code})
+    listing_resp = client.put(
+        "/listing",
+        json={
+            "locality": "Koramangala",
+            "rent_per_person": 12000,
+            "deposit": 24000,
+            "room_type": "private",
+            "available_from": "2026-09-01",
+            "amenities": ["wifi"],
+            "current_housemates": 1,
+        },
+    )
+    assert listing_resp.status_code == 200, listing_resp.text
+    profile_resp = client.put(
+        "/profile",
+        json={
+            "city": "Bangalore",
+            "budget_min": 12000,
+            "budget_max": 12000,
+            "move_in_date": "2026-09-01",
+            "gender_preference": "any",
+            "questionnaire": questionnaire,
+            "important_attributes": [],
+        },
+    )
+    assert profile_resp.status_code == 200, profile_resp.text
+    return user_id
+
+
+def test_explanation_includes_listing_for_has_place_candidate(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    asha_id = _onboard(client, institution, caplog, name="Asha", email_local="asha", questionnaire=ASHA_ANSWERS)
+    esha_id = _onboard_has_place(client, institution, caplog, name="Esha", email_local="esha", questionnaire=ASHA_ANSWERS)
+
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), esha_id)["match_id"]
+
+    resp = client.get(f"/matches/{match_id}/explanation")
+    assert resp.status_code == 200, resp.text
+    listing = resp.json()["listing"]
+    assert listing is not None
+    assert listing["locality"] == "Koramangala"
+    assert listing["rent_per_person"] == 12000
+
+
+def test_explanation_listing_is_null_for_needs_place_candidate(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    resp = client.get(f"/matches/{match_id}/explanation")
+    assert resp.json()["listing"] is None
+
+
+def test_express_interest_requires_authentication(client: TestClient) -> None:
+    resp = client.post("/matches/00000000-0000-0000-0000-000000000000/interest")
+    assert resp.status_code == 401
+
+
+def test_express_interest_404_for_nonexistent_match(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    _login(client, f"asha@{institution.email_domain}")
+    resp = client.post("/matches/00000000-0000-0000-0000-000000000000/interest")
+    assert resp.status_code == 404
+
+
+def test_express_interest_403_for_a_non_party(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    _onboard(client, institution, caplog, name="Chitra", email_local="chitra", questionnaire=ASHA_ANSWERS)
+    resp = client.post(f"/matches/{match_id}/interest")
+    assert resp.status_code == 403
+
+
+def test_express_interest_one_side_transitions_to_interested(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    resp = client.post(f"/matches/{match_id}/interest")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["state"] == "interested"
+
+    row = db_session.get(MatchScore, match_id)
+    db_session.refresh(row)
+    assert row.state == "interested"
+    a_id, _ = sorted([asha_id, bala_id])
+    assert (row.interested_by_a if asha_id == a_id else row.interested_by_b) is True
+    assert (row.interested_by_b if asha_id == a_id else row.interested_by_a) is False
+
+
+def test_express_interest_both_sides_transitions_to_mutual(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    client.post(f"/matches/{match_id}/interest")
+
+    _login(client, f"bala@{institution.email_domain}")
+    resp = client.post(f"/matches/{match_id}/interest")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["state"] == "mutual"
+
+    row = db_session.get(MatchScore, match_id)
+    db_session.refresh(row)
+    assert row.state == "mutual"
+    assert row.interested_by_a is True
+    assert row.interested_by_b is True

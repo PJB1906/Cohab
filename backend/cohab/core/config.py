@@ -27,3 +27,10 @@ COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "True").strip().lower() == "true
 OTP_LENGTH = 6  # proposed — not specified in any document
 OTP_TTL_MINUTES = 10  # proposed — not specified in any document
 OTP_MAX_ATTEMPTS = 5  # proposed — not specified in any document
+
+# Phase 5 photo uploads — local disk for the pilot (docs/DECISIONS.md): no
+# object-storage service exists anywhere in this stack, and CLAUDE.md defers
+# Redis on the same "no new infra the pilot doesn't need" grounds. Served
+# back via the /media StaticFiles mount (cohab/main.py).
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
+MAX_UPLOAD_MB = 5  # proposed — not specified in any document

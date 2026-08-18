@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+/* Design tokens decoded from the two root-level mockups (docs/DECISIONS.md
+   D-5.1) — both agree on every value here. */
+@theme {
+  --font-sans:
+    'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  --color-cohab-primary: #0f5f52;
+  --color-cohab-primary-dark: #0a473d;
+  --color-cohab-accent: #a8442a;
+  --color-cohab-bg: #eceae5;
+  --color-cohab-card: #ffffff;
+  --color-cohab-border: #cfd3cf;
+  --color-cohab-border-soft: #e3e1dc;
+  --color-cohab-ink: #14201f;
+  --color-cohab-muted: #63706d;
+  --color-cohab-subtle: #7d8a86;
+  --color-cohab-placeholder: #9aa5a1;
+  --color-cohab-tint: #eef4f2;
+  --color-cohab-accent-tint: #faf1ed;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cohab-bg);
+  color: var(--color-cohab-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-cohab-placeholder);
+}

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from cohab.models import MatchScore, User, WeightSet
+from cohab.models import Listing, MatchScore, User, WeightSet
 from cohab.services.matching.candidate import Candidate
 from cohab.services.matching.canonical import flip
 from cohab.services.matching.explanations import Explanation, build_explanation
@@ -58,6 +58,8 @@ class MatchExplanationResult:
     candidate: Candidate
     result: MatchResult
     explanation: Explanation
+    state: str
+    listing: Listing | None
 
 
 def _load_candidate(session: Session, user_id: uuid.UUID) -> Candidate | None:
@@ -128,6 +130,31 @@ class MatchesService:
         self.session.flush()
         return row
 
+    def express_interest(self, subject_user: User, match_id: uuid.UUID) -> str:
+        """PRD §8.2: Viewed -> Interested on the caller's own flag; Interested
+        -> Mutual once both `interested_by_*` flags are set. The only two
+        transitions anything in this phase can actually produce — there's no
+        reject/expire endpoint yet, so this doesn't try to model the rest of
+        the state machine."""
+        row = self.session.get(MatchScore, match_id)
+        if row is None:
+            raise MatchNotFound(match_id)
+        if subject_user.id not in (row.user_id_a, row.user_id_b):
+            raise NotAParty(match_id)
+
+        if subject_user.id == row.user_id_a:
+            row.interested_by_a = True
+        else:
+            row.interested_by_b = True
+
+        if row.state in ("suggested", "viewed"):
+            row.state = "interested"
+        if row.interested_by_a and row.interested_by_b:
+            row.state = "mutual"
+
+        self.session.commit()
+        return row.state
+
     def get_matches(self, subject_user: User, limit: int = 10) -> list[MatchListEntry]:
         subject = _load_candidate(self.session, subject_user.id)
         if subject is None:
@@ -177,4 +204,15 @@ class MatchesService:
             row.state = "viewed"
             self.session.commit()
 
-        return MatchExplanationResult(match_id=row.id, candidate=other, result=result, explanation=explanation)
+        listing = None
+        if other.seeker_type == "has_place":
+            listing = self.session.scalar(select(Listing).where(Listing.user_id == other_id))
+
+        return MatchExplanationResult(
+            match_id=row.id,
+            candidate=other,
+            result=result,
+            explanation=explanation,
+            state=row.state,
+            listing=listing,
+        )

@@ -161,3 +161,19 @@ def test_logout_clears_cookie_when_authenticated(client: TestClient, institution
     )
     resp = client.post("/auth/logout")
     assert resp.status_code == 204
+
+
+# --- me (Phase 5: session restore on page refresh) ------------------------
+
+def test_me_requires_authentication(client: TestClient) -> None:
+    resp = client.get("/auth/me")
+    assert resp.status_code == 401
+
+
+def test_me_returns_current_user(client: TestClient, institution: Institution) -> None:
+    body = _register(client, institution)
+    client.post("/auth/login", json={"email": _email(institution), "password": REGISTER_PAYLOAD["password"]})
+    resp = client.get("/auth/me")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["id"] == body["user_id"]
+    assert resp.json()["email"] == _email(institution)

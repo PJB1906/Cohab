@@ -64,6 +64,12 @@ class Candidate:
     text_vector: list[float] | None = None
     text_vector_kind: str | None = None
 
+    # Cosmetic only, never read by Stage 1 or Stage 2 — same precedent as
+    # `User.course` (Phase 1). Carried here so the API layer can enrich match
+    # responses (Phase 5) without a second ORM lookup per candidate.
+    course: str | None = None
+    avatar_url: str | None = None
+
     @property
     def budget_midpoint(self) -> float:
         """spec §7: midpoint of the effective band."""
@@ -115,4 +121,6 @@ class Candidate:
             ),
             text_vector=profile.text_vector,
             text_vector_kind=profile.text_vector_kind,
+            course=user.course,
+            avatar_url=user.avatar_url,
         )

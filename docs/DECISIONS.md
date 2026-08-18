@@ -431,3 +431,178 @@ as caller-supplied with no default given.
 **Code:** `cohab/services/matching/canonical.py`, `cohab/services/matches.py`,
 `cohab/api/matches.py`, `tests/matching/test_canonical.py`,
 `tests/api/test_matches.py`.
+
+---
+
+## Phase 5 — Core UI
+
+### D-5.1 §13 wireframe reference resolved to PRD §9 + the two root-level mockups
+
+**Spec:** build plan §4 Phase 5 says "Follow the §13 wireframes and the
+desktop/mobile mockups." The PRD's current §13 is "Open questions", not
+wireframes — the screen table is §9.
+
+**Decision:** treated PRD §9 (screens 1–8) as the authoritative content
+contract for this phase, and `Cohab Desktop.html` / `Cohab Prototype.html`
+(bundled Claude-artifact exports at the repo root, decompressed to read —
+gzip+base64 JS payloads, not plain HTML) as the visual/interaction
+reference. Both mockups encode `COHAB_MATCHING_SPEC.md` §3/§10 almost
+verbatim (the 12 conflict questions and the "Worth discussing" divergence
+copy match word-for-word), confirming they were built from that document.
+
+**Two content gaps found in both mockups, resolved rather than copied:**
+1. Neither mockup asks a `needs_place` user for budget, move-in date, gender
+   preference, pets, allergies, or the smoking dealbreaker — all Stage-1
+   hard constraints (spec §2) that `PUT /profile` requires, and which the
+   `has_place` listing screen collects but nothing else does. Resolved by
+   giving the required-questionnaire screen a preamble section ("Where and
+   when are you looking") ahead of the 12 conflict questions. `city` stays
+   fixed to the schema default (`"Bangalore"`) and isn't user-facing —
+   single-campus pilot, PRD §3.1.
+2. Signup mockups collect name/email/phone only, then a *separate* screen
+   after OTP verification for seeker type, and never collect `gender`. This
+   contradicts **D-4.1**: `gender`/`seeker_type` are collected in
+   `POST /auth/register` itself. Resolved by making sign-up a short wizard —
+   pick "I need a place"/"I have a place" first, then name/email/gender
+   /password, then OTP — one `POST /auth/register` call at the end.
+3. Both mockups show a header "Chat" link and an "Open chat" button on match
+   detail. Chat (`services/chat.py`, `api/chat.py`) does not exist yet —
+   only its table (`models/chat.py`) was pre-designed in Phase 1. Omitted
+   from this phase's UI entirely rather than linking to nothing; match
+   detail's only action is "Express interest".
+4. Spec §3 Q12 says the alcohol sub-question is "same structure" as smoking
+   but gives no alcohol-specific labels, and `matrices.py`'s `alcohol`
+   tolerance matrix already reuses smoking's exact option codes
+   (`none`/`outside`/`indoors`, `fine`/`outside_ok`/`smoke_free`). The
+   questionnaire screen writes parallel display labels for those same codes
+   applied to drinking — proposed copy, not spec text.
+
+**Code:** `frontend/src/features/auth/`, `frontend/src/features/onboarding/`.
+
+### D-5.2 Three small, additive API extensions, confirmed with the user
+
+**Gap:** building the match-list and match-detail screens against the
+Phase 4 API surface exposed three real holes: no way to restore a session on
+page refresh, no endpoint for match detail's required "express interest"
+action (PRD §9 row 8), and `MatchListItem`/`MatchExplanationResponse` didn't
+carry the candidate's listing summary PRD §9 row 8 also requires ("listing
+if applicable").
+
+**Decision (confirmed with the user):** closed all three in this phase
+rather than shipping dead UI elements or deferring to Phase 6:
+- `GET /auth/me` — thin passthrough of the existing `get_current_user`
+  dependency.
+- `POST /matches/{id}/interest` — `MatchesService.express_interest` sets
+  whichever `interested_by_a`/`interested_by_b` flag is the caller's side
+  (reusing the same `user_id_a < user_id_b` canonical ordering as
+  `_upsert`), and transitions `state`: `suggested`/`viewed` → `interested`;
+  both flags set → `mutual` (PRD §8.2). No new columns — `MatchScore` has
+  carried both since Phase 1 and nothing had ever written to them. Only
+  models the two transitions anything in this phase can produce; there's no
+  reject/expire endpoint yet, so the rest of the lifecycle isn't simulated.
+- `MatchListItem` gained `seeker_type`/`city`/`budget_min`/`budget_max`
+  /`avatar_url` (already on `Candidate`, zero extra query cost).
+  `MatchExplanationResponse` gained `state`, `candidate_course`,
+  `candidate_avatar_url`, and an optional `listing` block populated from the
+  candidate's `Listing` row when `seeker_type == "has_place"`.
+
+**Code:** `cohab/api/auth.py` (`GET /me`), `cohab/services/matches.py`
+(`express_interest`, `MatchExplanationResult.listing`/`.state`),
+`cohab/api/matches.py`, `cohab/api/schemas.py` (`MatchListingSummary`,
+`ExpressInterestResponse`), `tests/api/test_auth.py`,
+`tests/api/test_matches.py`.
+
+### D-5.3 Photo uploads, added mid-phase per user feedback — local disk, no object store
+
+**Gap:** neither a profile-photo field nor a working way to populate
+`Listing.photos` existed. Raised during this phase's plan review; the user
+asked for both a property/listing and a profile photo.
+
+**Decision:** no object-storage service exists anywhere in this stack, and
+CLAUDE.md already defers Redis on "no new infra the pilot doesn't need"
+grounds — same reasoning applied here rather than introducing S3/Cloudinary.
+Uploads land on local disk under `UPLOAD_DIR` (default `backend/uploads/`,
+gitignored), served back through a `/media` `StaticFiles` mount. Flagged as
+a build-time choice, not spec-sourced; swapping in real object storage is a
+documented future step if this goes past pilot scale.
+
+`POST /uploads/image` takes `kind: "avatar" | "listing"`. `kind="avatar"`
+writes `user.avatar_url` immediately in the same call — an avatar isn't part
+of the onboarding wizard's single-`PUT /profile` batch, so applying it on
+upload is simpler than holding it in client state. `kind="listing"` only
+returns the URL; the frontend holds it in its listing draft and saves it
+with the existing `PUT /listing`. Validates content-type (`jpeg`/`png`
+/`webp`) and a proposed 5 MB cap; no resizing/thumbnailing — a documented
+gap, not built for the pilot. `user.avatar_url` is a new nullable column
+(migration `1298c43d216d`); `Listing.photos` already existed (Phase 1) and
+needed no schema change, only a way to populate it.
+
+**Code:** `cohab/services/uploads.py`, `cohab/api/uploads.py`,
+`cohab/core/config.py` (`UPLOAD_DIR`, `MAX_UPLOAD_MB`), `cohab/main.py`
+(`/media` mount), `cohab/models/user.py` (`avatar_url`),
+`cohab/services/matching/candidate.py` (`avatar_url`/`course` passthrough),
+migration `1298c43d216d_phase_5_avatar_url.py`, `tests/api/test_uploads.py`.
+
+### D-5.4 Importance-weighting tile set corrected against the real attribute registry
+
+**Gap:** the Desktop mockup's screen-6 tile set (`WT` array) uses display
+ids (`cleanliness`, `payment`, `chores`, `communication`, `split`) that
+don't match any real `weight_set` attribute name — `PUT /profile` validates
+`important_attributes` against `attributes.py`'s `ATTRIBUTES` registry
+(`cleanliness_level`, `payment_reliability`, `chore_approach`,
+`communication_style`, `cost_split_preference`), so the mockup's ids would
+have 400'd. Worse, its "Smoking and alcohol" tile only ever sends
+`smoking` — `alcohol` (a distinct, separately-weighted spec §8 attribute)
+has no tile at all, and neither does `sleep_schedule` despite being one of
+the largest Tier 1 weights (0.09).
+
+**Decision:** rebuilt the tile set from `attributes.py`'s registry directly:
+all of Tier 1 except `budget_proximity` (already enforced as a hard
+constraint — not a meaningful "priority" to weight separately) plus
+`life_stage` and `sociability` from Tier 2 — 15 tiles, every id a real,
+independently-selectable attribute name.
+
+**Code:** `frontend/src/data/questionnaire.ts` (`WEIGHT_TILES`).
+
+### D-5.5 Full attribute breakdown shows scores, not raw answers
+
+**Gap:** the mockups' match-detail breakdown table has a "You" / "[Name]"
+column pair showing each side's actual questionnaire answer alongside the
+score. `GET /matches/{id}/explanation`'s `breakdown` field only ever
+carried `{sim_a, sim_b}` per attribute (COHAB_MATCHING_SPEC.md §9) — never
+either party's raw answer. That level of detail exists only for the
+top-3-agreements-plus-1-divergence the API already renders as finished
+sentences (`agreements`/`divergence`, D-2.3).
+
+**Decision:** the full breakdown renders attribute name + type (a static
+lookup mirroring `attributes.py`, not per-user data) + the directional
+scores, with a note when `sim_a`/`sim_b` diverge by more than 0.15 — real
+data throughout, rather than fabricating plausible-looking "you said X"
+values the API was never asked to expose. Extending the API to carry raw
+answers is a larger, privacy-relevant decision (should a candidate's exact
+answer to every question be visible, or only the ones already selected for
+agreement/divergence copy?) left for a future phase, not decided here.
+
+**Code:** `frontend/src/data/attributes.ts`, `frontend/src/components/AttributeRow.tsx`.
+
+### D-5.6 `ConsoleOTPSender`'s output was silently going nowhere outside pytest
+
+**Found while verifying this phase's UI end-to-end in a real browser** (not
+just against `TestClient`, where pytest's `caplog` force-captures log
+records regardless of level). `ConsoleOTPSender.send()` (`services/otp.py`)
+logs the OTP via `logging.getLogger("cohab.otp").info(...)`, but nothing in
+the app ever configured the root logger — `uvicorn`'s default logging setup
+only attaches handlers to its own `uvicorn`/`uvicorn.error`/`uvicorn.access`
+loggers, not root. Confirmed live: `curl`-triggering `POST /auth/register`
+against a plain `uvicorn cohab.main:app` produced the access-log line but no
+OTP line anywhere. The registration flow was unusable outside the test
+suite since Phase 4 — masked because Phase 4 had no browser-based
+verification step to surface it.
+
+**Decision:** `cohab/main.py` now calls `logging.basicConfig(level=logging.INFO,
+format="%(name)s: %(message)s")` at import time, giving the root logger a
+handler before `cohab.otp` (or any other app logger) ever fires. Minimal,
+standard-library fix — no new dependency, no change to `ConsoleOTPSender`
+itself, which was already correct.
+
+**Code:** `cohab/main.py`.

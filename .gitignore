@@ -20,6 +20,9 @@ dist/
 *.db
 *.sqlite3
 
+# User-uploaded photos (local-disk storage, Phase 5 — docs/DECISIONS.md)
+backend/uploads/
+
 # OS / editor
 .DS_Store
 Thumbs.db

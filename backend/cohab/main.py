@@ -1,16 +1,31 @@
+import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
 from cohab.api.auth import router as auth_router
 from cohab.api.listing import router as listing_router
 from cohab.api.matches import router as matches_router
 from cohab.api.profile import router as profile_router
+from cohab.api.uploads import router as uploads_router
+from cohab.core.config import UPLOAD_DIR
 from cohab.db import SessionLocal
 from cohab.models import PreferenceProfile
 from cohab.services.matching.text import TfidfSimilarity
+
+# Found live: `ConsoleOTPSender` (services/otp.py) logs the OTP via
+# `logging.getLogger("cohab.otp").info(...)`, which only ever reached a
+# terminal under pytest's `caplog` (it force-captures regardless of level).
+# Nothing configured the root logger for a real `uvicorn` run, so the code a
+# developer needs to complete registration never printed — the OTP flow was
+# silently unusable outside the test suite. `ConsoleOTPSender`'s own
+# docstring says it exists so the flow works without real SMTP; this is what
+# makes that true.
+logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
 
 
 @asynccontextmanager
@@ -38,6 +53,11 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(listing_router)
 app.include_router(matches_router)
+app.include_router(uploads_router)
+
+# Phase 5 photo uploads — local disk, served back at /media (docs/DECISIONS.md).
+Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")
 
 
 @app.get("/health")

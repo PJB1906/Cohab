@@ -60,6 +60,8 @@ class UserOut(BaseModel):
     seeker_type: str
     verification_status: str
     account_status: str
+    course: str | None = None
+    avatar_url: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -147,6 +149,14 @@ class MatchListItem(BaseModel):
     combined_score: float
     agreements: list[str]
     divergence: str | None
+    # Enrichment beyond PRD §9 row 7's minimum ("name, score, three agreement
+    # tags, one divergence tag") — a bare card with none of these read as
+    # unfinished; all four are already on `Candidate` at zero extra query cost.
+    seeker_type: str
+    city: str
+    budget_min: int
+    budget_max: int
+    avatar_url: str | None = None
 
 
 class ExplanationCard(BaseModel):
@@ -154,6 +164,18 @@ class ExplanationCard(BaseModel):
     kind: Literal["agreement", "divergence"]
     text: str
     score: float
+
+
+class MatchListingSummary(BaseModel):
+    """PRD §9 row 8: match detail shows "listing if applicable"."""
+
+    locality: str
+    rent_per_person: int
+    deposit: int
+    room_type: str
+    available_from: date
+    amenities: list[str]
+    photos: list[str]
 
 
 class MatchExplanationResponse(BaseModel):
@@ -166,3 +188,11 @@ class MatchExplanationResponse(BaseModel):
     breakdown: dict[str, dict[str, Any]]
     agreements: list[ExplanationCard]
     divergence: ExplanationCard | None
+    state: str
+    candidate_course: str | None = None
+    candidate_avatar_url: str | None = None
+    listing: MatchListingSummary | None = None
+
+
+class ExpressInterestResponse(BaseModel):
+    state: str

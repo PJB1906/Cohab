@@ -16,7 +16,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_active_weight_set, get_db, require_verified_user
-from cohab.api.schemas import ExplanationCard, MatchExplanationResponse, MatchListItem
+from cohab.api.schemas import (
+    ExplanationCard,
+    ExpressInterestResponse,
+    MatchExplanationResponse,
+    MatchListingSummary,
+    MatchListItem,
+)
 from cohab.models import User, WeightSet
 from cohab.services.matches import MatchesService, MatchNotFound, NotAParty
 from cohab.services.matching.text import NeutralTextSimilarity
@@ -44,6 +50,11 @@ def get_matches(
             combined_score=e.combined_score,
             agreements=[c.text for c in e.explanation.agreements],
             divergence=e.explanation.divergence.text if e.explanation.divergence else None,
+            seeker_type=e.candidate.seeker_type,
+            city=e.candidate.city,
+            budget_min=e.candidate.budget_min,
+            budget_max=e.candidate.budget_max,
+            avatar_url=e.candidate.avatar_url,
         )
         for e in entries
     ]
@@ -85,4 +96,36 @@ def get_explanation(
             if r.explanation.divergence
             else None
         ),
+        state=r.state,
+        candidate_course=r.candidate.course,
+        candidate_avatar_url=r.candidate.avatar_url,
+        listing=(
+            MatchListingSummary(
+                locality=r.listing.locality,
+                rent_per_person=r.listing.rent_per_person,
+                deposit=r.listing.deposit,
+                room_type=r.listing.room_type,
+                available_from=r.listing.available_from,
+                amenities=list(r.listing.amenities or []),
+                photos=list(r.listing.photos or []),
+            )
+            if r.listing is not None
+            else None
+        ),
     )
+
+
+@router.post("/{match_id}/interest", response_model=ExpressInterestResponse)
+def express_interest(
+    match_id: uuid.UUID,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+    weight_set: WeightSet = Depends(get_active_weight_set),
+) -> ExpressInterestResponse:
+    try:
+        state = _service(db, weight_set).express_interest(user, match_id)
+    except MatchNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
+    except NotAParty:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    return ExpressInterestResponse(state=state)
