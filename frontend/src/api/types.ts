@@ -206,6 +206,12 @@ export interface BlockRequest {
   blocked_id: string
 }
 
+export interface BlockedUserOut {
+  id: string
+  full_name: string
+  avatar_url: string | null
+}
+
 // --- moderation -----------------------------------------------------------
 
 export type ReportSanction = 'warn' | 'suspend' | 'ban'

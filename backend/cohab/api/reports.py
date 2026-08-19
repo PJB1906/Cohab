@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_db, require_verified_user
-from cohab.api.schemas import BlockRequest, ReportOut, ReportRequest
+from cohab.api.schemas import BlockedUserOut, BlockRequest, ReportOut, ReportRequest
 from cohab.models import User
 from cohab.services.safety import (
     BlockedUserNotFound,
@@ -71,9 +71,12 @@ def delete_block(
     BlockService(db).unblock(user, blocked_id)
 
 
-@router.get("/blocks", response_model=list[uuid.UUID])
+@router.get("/blocks", response_model=list[BlockedUserOut])
 def list_blocks(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> list[uuid.UUID]:
-    return BlockService(db).list_blocked(user)
+) -> list[BlockedUserOut]:
+    return [
+        BlockedUserOut(id=u.id, full_name=u.full_name, avatar_url=u.avatar_url)
+        for u in BlockService(db).list_blocked(user)
+    ]

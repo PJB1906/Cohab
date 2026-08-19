@@ -167,10 +167,18 @@ class BlockService:
             self.session.delete(row)
             self.session.commit()
 
-    def list_blocked(self, blocker: User) -> list[uuid.UUID]:
+    def list_blocked(self, blocker: User) -> list[User]:
+        """The full `User` rows, not just ids — the one caller of this
+        (the "who have I blocked" screen, PRD §10: blocking "cannot be
+        undone by the blocked party," which implies the blocker *can* undo
+        it, and needs somewhere to do that from) has to display who each
+        block actually is, not a bare UUID."""
         return list(
             self.session.scalars(
-                select(UserBlock.blocked_id).where(UserBlock.blocker_id == blocker.id)
+                select(User)
+                .join(UserBlock, UserBlock.blocked_id == User.id)
+                .where(UserBlock.blocker_id == blocker.id)
+                .order_by(User.full_name)
             ).all()
         )
 

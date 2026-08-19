@@ -255,6 +255,15 @@ class BlockRequest(BaseModel):
     blocked_id: uuid.UUID
 
 
+class BlockedUserOut(BaseModel):
+    """PRD §10: blocking "cannot be undone by the blocked party" implies
+    the blocker *can* — this is what a "who have I blocked" screen renders."""
+
+    id: uuid.UUID
+    full_name: str
+    avatar_url: str | None = None
+
+
 # --- moderation (PRD §8.3, §9 screen 13) ------------------------------------
 
 

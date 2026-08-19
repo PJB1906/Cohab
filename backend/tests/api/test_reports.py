@@ -180,7 +180,9 @@ def test_block_then_list(client: TestClient, two_users: tuple[str, str]) -> None
 
     listed = client.get("/blocks")
     assert listed.status_code == 200
-    assert bala_id in listed.json()
+    body = listed.json()
+    assert [b["id"] for b in body] == [bala_id]
+    assert body[0]["full_name"] == "Bala"
 
 
 def test_cannot_block_self(client: TestClient, two_users: tuple[str, str]) -> None:
@@ -214,3 +216,4 @@ def test_unblock_only_works_for_the_blocker(
         select(UserBlock).where(UserBlock.blocker_id == asha_id, UserBlock.blocked_id == bala_id)
     )
     assert gone is None
+    assert client.get("/blocks").json() == []

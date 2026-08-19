@@ -1126,3 +1126,38 @@ navigation and unique per-run names.
 **Code:** `frontend/src/features/safety/BlockConfirmDialog.tsx`,
 `frontend/src/features/safety/ReportDialog.tsx`,
 `backend/migrations/versions/4b7c9f2a1d63_phase_7_safety.py`.
+
+### D-7.8 A blocked pair had no way back through the UI — added a "Blocked users" screen
+
+**Found on a post-commit review pass, requested by the user** ("check if
+there is any bugs, inconsistency, lack of feature... left"). PRD §10 says
+blocking "cannot be undone by the blocked party" — which, read carefully,
+implies the *blocker* can undo it, and `BlockService.unblock`
+(`DELETE /blocks/{id}`) has existed since D-7.5 for exactly that. But
+nothing in the frontend ever called it: once blocked, the other party's
+match detail page 403s (`ensure_pair_active` inside `get_explanation`,
+D-7.5), and there was no other screen a user could reach it from. A
+mistaken block was, in practice, permanent from the UI's point of view,
+even though the backend never intended that.
+
+**Not in PRD §9's screen table** — this is new scope, so it was raised
+with the user rather than built silently; they asked for it built now
+rather than documented as deferred.
+
+**Decision:** `GET /blocks` changed from returning bare `blocked_id`s to
+full `BlockedUserOut` (`id`, `full_name`, `avatar_url`) — a "who have I
+blocked" list needs to show *who*, not a UUID. `BlockService.list_blocked`
+now returns the actual `User` rows (a join, not a second query per id).
+New route `/blocked` (linked from `AppShell`'s nav, next to Matches) lists
+them with an Unblock button per row; unblocking updates the cache directly
+(`setQueryData`) and invalidates `['matches']`, the same pattern D-7.7's
+fixes established, so the person becomes available again without a manual
+reload. Verified live: block someone, confirm they render by name (not an
+id) on `/blocked`, unblock, confirm the list empties and they're eligible
+again in a fresh `/matches` query — all with no console errors.
+
+**Code:** `cohab/services/safety.py` (`BlockService.list_blocked`),
+`cohab/api/schemas.py` (`BlockedUserOut`), `cohab/api/reports.py`,
+`frontend/src/features/safety/BlockedUsers.tsx`,
+`frontend/src/components/AppShell.tsx`, `frontend/src/App.tsx`,
+`tests/api/test_reports.py`.
