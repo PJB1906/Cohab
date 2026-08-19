@@ -994,6 +994,16 @@ caller's own `Moderator` row (`NotAssignedModerator` otherwise, mapped to
 403). Not requested in the build-plan or PRD text — a judgement call made
 during the build, recorded here per CLAUDE.md rather than left implicit.
 
+**Left as-is, judged a non-issue at this scale, not fixed:** `claim()` has
+a narrow TOCTOU race — two moderators claiming the same open report at the
+exact same instant could both read `status == "open"` before either
+commits, and both "succeed." Same class of gap the project already
+accepted for chat's rate limit (D-6.6: "not worth row-locking complexity
+for a pilot's generous headroom"); a handful of moderators reviewing a
+pilot's report volume makes simultaneous claims on the identical report
+implausible enough not to warrant the complexity now. Revisit if the
+moderation team or report volume grows.
+
 **Code:** `cohab/services/moderation_queue.py` (`ModerationService.resolve`,
 `._maybe_reactivate`, `NotAssignedModerator`), `cohab/models/safety.py`
 (`Report.sanction`), `tests/api/test_moderation.py`.
