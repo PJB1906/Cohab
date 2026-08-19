@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { AttributeRow } from '@/components/AttributeRow'
+import { SafetyActions } from '@/features/safety/SafetyActions'
 import { scorePercent, scoreBand, BAND_COLOR } from '@/lib/score'
 
 export function MatchDetail() {
@@ -65,6 +66,7 @@ export function MatchDetail() {
                 <p className="text-[13.5px] text-cohab-muted mt-0.5">{data.candidate_course}</p>
               )}
             </div>
+            <SafetyActions userId={data.candidate_id} userName={data.candidate_name} />
           </div>
 
           <div className="mt-5 pt-5 border-t border-cohab-border-soft flex items-end gap-4">

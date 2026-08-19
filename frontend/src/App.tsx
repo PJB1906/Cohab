@@ -9,12 +9,35 @@ import { MatchList } from '@/features/matches/MatchList'
 import { MatchDetail } from '@/features/matches/MatchDetail'
 import { ChatThread } from '@/features/chat/ChatThread'
 import { ContactShare } from '@/features/chat/ContactShare'
+import { ModerationQueue } from '@/features/moderation/ModerationQueue'
+import { ReportReview } from '@/features/moderation/ReportReview'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { useSession } from '@/hooks/useSession'
 
 function Onboarding({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
       <OnboardingProvider>{children}</OnboardingProvider>
+    </ProtectedRoute>
+  )
+}
+
+/** Phase 7 (docs/DECISIONS.md D-7.1): moderator auth is just an
+ * `is_moderator` flag on the caller's own session — assumed already
+ * resolved by the enclosing `ProtectedRoute`, so this only adds the
+ * role check on top. */
+function ModeratorGate({ children }: { children: React.ReactNode }) {
+  const { data: user } = useSession()
+  if (!user?.is_moderator) {
+    return <Navigate to="/matches" replace />
+  }
+  return <>{children}</>
+}
+
+function Moderation({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <ModeratorGate>{children}</ModeratorGate>
     </ProtectedRoute>
   )
 }
@@ -33,6 +56,9 @@ export default function App() {
       <Route path="/matches/:matchId" element={<ProtectedRoute><MatchDetail /></ProtectedRoute>} />
       <Route path="/matches/:matchId/chat" element={<ProtectedRoute><ChatThread /></ProtectedRoute>} />
       <Route path="/matches/:matchId/contact-share" element={<ProtectedRoute><ContactShare /></ProtectedRoute>} />
+
+      <Route path="/moderation" element={<Moderation><ModerationQueue /></Moderation>} />
+      <Route path="/moderation/reports/:reportId" element={<Moderation><ReportReview /></Moderation>} />
 
       <Route path="/" element={<Navigate to="/matches" replace />} />
       <Route path="*" element={<Navigate to="/matches" replace />} />

@@ -20,7 +20,7 @@ from cohab.api.schemas import ContactStatusOut, MessageOut, SendMessageRequest
 from cohab.models import User
 from cohab.services.chat import ChatMessage, ChatService, PIIDetected, RateLimited, ThreadNotOpen
 from cohab.services.contact_share import ChatNotOpenYet, ContactShareService
-from cohab.services.match_access import MatchNotFound, NotAParty
+from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -42,6 +42,8 @@ def list_messages(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
     except ThreadNotOpen:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "chat isn't open for this match yet")
     return [_to_message_out(m) for m in messages]
@@ -60,6 +62,8 @@ def send_message(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
     except ThreadNotOpen:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "chat isn't open for this match yet")
     except RateLimited as exc:
@@ -84,6 +88,8 @@ def get_contact_status(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
     return ContactStatusOut(**status_.__dict__)
 
 
@@ -99,6 +105,8 @@ def share_contact(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
     except ChatNotOpenYet:
         raise HTTPException(status.HTTP_409_CONFLICT, "open chat with this match before sharing contact")
     return ContactStatusOut(**status_.__dict__)

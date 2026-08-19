@@ -33,6 +33,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               Matches
             </NavLink>
+            {user?.is_moderator && (
+              <NavLink
+                to="/moderation"
+                className={({ isActive }) =>
+                  cn(
+                    'text-sm pb-1 border-b-2',
+                    isActive
+                      ? 'font-semibold text-cohab-ink border-cohab-primary'
+                      : 'text-cohab-muted border-transparent',
+                  )
+                }
+              >
+                Moderation
+              </NavLink>
+            )}
           </nav>
           <div className="flex-1" />
           {user && <Avatar name={user.full_name} src={user.avatar_url} size={30} />}

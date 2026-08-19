@@ -42,6 +42,7 @@ export interface UserOut {
   course?: string | null
   avatar_url?: string | null
   phone_number?: string | null
+  is_moderator: boolean
 }
 
 export interface ProfileUpsertRequest {
@@ -174,4 +175,77 @@ export interface ContactStatus {
   you_consented: boolean
   other_consented: boolean
   other_phone: string | null
+}
+
+// --- reports & blocks ---------------------------------------------------
+
+/** Mirrors cohab/models/safety.py REPORT_REASONS. */
+export type ReportReason =
+  | 'harassment'
+  | 'threats'
+  | 'sexual_harassment'
+  | 'spam'
+  | 'scam_or_fraud'
+  | 'fake_profile'
+  | 'inappropriate_behaviour'
+  | 'other'
+
+export interface ReportRequest {
+  reported_user_id: string
+  reason: ReportReason
+  details?: string | null
+}
+
+export interface ReportOut {
+  id: string
+  status: string
+  escalated: boolean
+}
+
+export interface BlockRequest {
+  blocked_id: string
+}
+
+// --- moderation -----------------------------------------------------------
+
+export type ReportSanction = 'warn' | 'suspend' | 'ban'
+
+export interface ReportSummaryOut {
+  id: string
+  reporter_name: string
+  reported_user_name: string
+  reason: string
+  status: string
+  escalated: boolean
+  created_at: string
+}
+
+export interface FlaggedMessageOut {
+  id: string
+  sender_id: string
+  body: string
+  created_at: string
+}
+
+export interface ReportDetailOut {
+  id: string
+  reporter_id: string
+  reporter_name: string
+  reported_user_id: string
+  reported_user_name: string
+  reason: string
+  details: string | null
+  status: string
+  escalated: boolean
+  resolution_note: string | null
+  sanction: string | null
+  created_at: string
+  resolved_at: string | null
+  evidence: FlaggedMessageOut[]
+}
+
+export interface ResolveReportRequest {
+  finding: 'substantiated' | 'dismissed'
+  sanction?: ReportSanction | null
+  note?: string | null
 }

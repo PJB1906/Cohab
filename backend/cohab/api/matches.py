@@ -24,6 +24,7 @@ from cohab.api.schemas import (
     MatchListItem,
 )
 from cohab.models import User, WeightSet
+from cohab.services.match_access import PairBlocked
 from cohab.services.matches import MatchesService, MatchNotFound, NotAParty
 from cohab.services.matching.text import NeutralTextSimilarity
 
@@ -73,6 +74,8 @@ def get_explanation(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this match is not available")
 
     return MatchExplanationResponse(
         match_id=r.match_id,
@@ -129,4 +132,6 @@ def express_interest(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this match is not available")
     return ExpressInterestResponse(state=state)

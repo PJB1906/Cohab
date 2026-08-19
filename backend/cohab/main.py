@@ -11,7 +11,9 @@ from cohab.api.auth import router as auth_router
 from cohab.api.chat import router as chat_router
 from cohab.api.listing import router as listing_router
 from cohab.api.matches import router as matches_router
+from cohab.api.moderation import router as moderation_router
 from cohab.api.profile import router as profile_router
+from cohab.api.reports import router as reports_router
 from cohab.api.uploads import router as uploads_router
 from cohab.core.config import UPLOAD_DIR
 from cohab.db import SessionLocal
@@ -56,6 +58,8 @@ app.include_router(profile_router)
 app.include_router(listing_router)
 app.include_router(matches_router)
 app.include_router(uploads_router)
+app.include_router(reports_router)
+app.include_router(moderation_router)
 
 # Phase 5 photo uploads — local disk, served back at /media (docs/DECISIONS.md).
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)

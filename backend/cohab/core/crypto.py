@@ -33,3 +33,21 @@ def decrypt_message(token: str) -> str:
         return _fernet().decrypt(token.encode("utf-8")).decode("utf-8")
     except InvalidToken:
         raise ValueError("cannot decrypt message — wrong key or corrupted token")
+
+
+UNDECRYPTABLE_PLACEHOLDER = "[message could not be decrypted]"
+
+
+def decrypt_message_safe(token: str) -> str:
+    """`decrypt_message`, but never raises. A wrong/rotated key or a
+    corrupted row must not crash whatever's listing messages — found in
+    code review (Phase 6): an uncaught `ValueError` here used to 500 an
+    entire thread after other per-message mutations in the same request had
+    already committed. Shared by `services/chat.py` (message list) and
+    `services/moderation_queue.py` (moderator evidence view) — both need the
+    identical fallback, so it lives next to `decrypt_message` rather than in
+    either caller."""
+    try:
+        return decrypt_message(token)
+    except ValueError:
+        return UNDECRYPTABLE_PLACEHOLDER

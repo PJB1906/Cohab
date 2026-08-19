@@ -179,6 +179,19 @@ def test_non_party_cannot_read_or_send(
     assert client.post(f"/chat/{match_id}/messages", json={"body": "hi"}).status_code == 403
 
 
+def test_blocked_pair_cannot_read_or_send(client: TestClient, mutual_pair: tuple[str, str, str]) -> None:
+    """docs/DECISIONS.md D-7.5: PRD §10 — blocking "hides existing
+    threads." Opens the thread first so there's something to hide."""
+    _, bala_id, match_id = mutual_pair
+    client.get(f"/chat/{match_id}/messages")  # mutual -> chatting
+
+    resp = client.post("/blocks", json={"blocked_id": bala_id})
+    assert resp.status_code == 204, resp.text
+
+    assert client.get(f"/chat/{match_id}/messages").status_code == 403
+    assert client.post(f"/chat/{match_id}/messages", json={"body": "hi"}).status_code == 403
+
+
 def test_account_rate_limit_trips(client: TestClient, mutual_pair: tuple[str, str, str]) -> None:
     _, _, match_id = mutual_pair
     for i in range(CHAT_RATE_LIMIT_PER_ACCOUNT_PER_MIN):

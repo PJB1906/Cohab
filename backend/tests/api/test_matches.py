@@ -246,6 +246,26 @@ def test_ineligible_candidate_excluded_by_hard_constraints(
     assert deepa_id not in ids
 
 
+def test_blocked_candidate_excluded_from_matches(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    """docs/DECISIONS.md D-2.6 closure: `EligibilityFilter`'s `blocked_pairs`
+    handling has been correct and unit-tested since Phase 2
+    (tests/matching/test_eligibility.py), but had no live caller until Phase
+    7 wired `BlockService`'s data into `MatchesService.get_matches`. This
+    proves the live wiring, not just the underlying function."""
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)  # eligible before blocking
+
+    resp = client.post("/blocks", json={"blocked_id": bala_id})
+    assert resp.status_code == 204, resp.text
+
+    resp = client.get(f"/matches?limit={LARGE_LIMIT}")
+    ids = {item["candidate_id"] for item in resp.json()}
+    assert bala_id not in ids
+
+
 # --- Phase 5 enrichment: list-card fields, listing block, express interest -
 
 def test_match_list_item_carries_seeker_type_city_and_budget(

@@ -19,12 +19,15 @@ from typing import Any, Literal
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from cohab.models.preference import GENDER_PREFERENCES, PET_TOLERANCES, QUESTIONNAIRE_KEYS
+from cohab.models.safety import REPORT_REASONS, REPORT_SANCTIONS
 from cohab.models.user import GENDERS, SEEKER_TYPES
 
 Gender = Literal[GENDERS]  # type: ignore[valid-type]
 SeekerType = Literal[SEEKER_TYPES]  # type: ignore[valid-type]
 GenderPreference = Literal[GENDER_PREFERENCES]  # type: ignore[valid-type]
 PetTolerance = Literal[PET_TOLERANCES]  # type: ignore[valid-type]
+ReportReason = Literal[REPORT_REASONS]  # type: ignore[valid-type]
+ReportSanction = Literal[REPORT_SANCTIONS]  # type: ignore[valid-type]
 
 
 # --- auth --------------------------------------------------------------
@@ -64,6 +67,8 @@ class UserOut(BaseModel):
     course: str | None = None
     avatar_url: str | None = None
     phone_number: str | None = None
+    # Phase 7 — gates the moderator queue link/route in the SPA.
+    is_moderator: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -225,3 +230,73 @@ class ContactStatusOut(BaseModel):
     you_consented: bool
     other_consented: bool
     other_phone: str | None = None
+
+
+# --- reports & blocks (PRD §8.3, §9 screen 11, §10) ------------------------
+
+
+class ReportRequest(BaseModel):
+    reported_user_id: uuid.UUID
+    reason: ReportReason
+    details: str | None = Field(default=None, max_length=2000)
+
+
+class ReportOut(BaseModel):
+    """Deliberately minimal — mirrors `ExpressInterestResponse`'s ack shape.
+    The reporter doesn't need the full case record back, just confirmation
+    of what was filed and whether it escalated."""
+
+    id: uuid.UUID
+    status: str
+    escalated: bool
+
+
+class BlockRequest(BaseModel):
+    blocked_id: uuid.UUID
+
+
+# --- moderation (PRD §8.3, §9 screen 13) ------------------------------------
+
+
+class ReportSummaryOut(BaseModel):
+    """Queue list row."""
+
+    id: uuid.UUID
+    reporter_name: str
+    reported_user_name: str
+    reason: str
+    status: str
+    escalated: bool
+    created_at: datetime
+
+
+class FlaggedMessageOut(BaseModel):
+    id: uuid.UUID
+    sender_id: uuid.UUID
+    body: str
+    created_at: datetime
+
+
+class ReportDetailOut(BaseModel):
+    id: uuid.UUID
+    reporter_id: uuid.UUID
+    reporter_name: str
+    reported_user_id: uuid.UUID
+    reported_user_name: str
+    reason: str
+    details: str | None
+    status: str
+    escalated: bool
+    resolution_note: str | None
+    sanction: str | None
+    created_at: datetime
+    resolved_at: datetime | None
+    # The reported user's flagged messages only — not the whole thread
+    # (services/moderation_queue.py: `list_flagged_evidence`).
+    evidence: list[FlaggedMessageOut]
+
+
+class ResolveReportRequest(BaseModel):
+    finding: Literal["substantiated", "dismissed"]
+    sanction: ReportSanction | None = None
+    note: str | None = Field(default=None, max_length=2000)

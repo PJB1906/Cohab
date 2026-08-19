@@ -9,6 +9,7 @@ import { AppShell } from '@/components/AppShell'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { SafetyActions } from '@/features/safety/SafetyActions'
 import { cn } from '@/lib/utils'
 
 /** Screen 9 (PRD §9): moderated thread, no contact details visible until
@@ -82,7 +83,8 @@ export function ChatThread() {
 
         <div className="flex items-center gap-3 mb-5">
           <Avatar name={match.candidate_name} src={match.candidate_avatar_url} size={40} />
-          <h1 className="text-lg font-semibold">{match.candidate_name}</h1>
+          <h1 className="text-lg font-semibold flex-1">{match.candidate_name}</h1>
+          <SafetyActions userId={match.candidate_id} userName={match.candidate_name} />
         </div>
 
         <div className="flex flex-col gap-2.5">

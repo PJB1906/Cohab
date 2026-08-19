@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cohab.models import ContactShare, MatchScore, User
-from cohab.services.match_access import MatchNotFound, NotAParty, load_match
+from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked, ensure_pair_active, load_match
 
 __all__ = [
     "ChatNotOpenYet",
@@ -25,6 +25,7 @@ __all__ = [
     "ContactStatus",
     "MatchNotFound",
     "NotAParty",
+    "PairBlocked",
 ]
 
 _OPT_IN_ALLOWED_STATES = {"chatting", "contact_shared"}
@@ -71,10 +72,12 @@ class ContactShareService:
 
     def get_status(self, user: User, match_id: uuid.UUID) -> ContactStatus:
         row = load_match(self.session, user, match_id)
+        ensure_pair_active(self.session, row)
         return self._status(user, row)
 
     def opt_in(self, user: User, match_id: uuid.UUID) -> ContactStatus:
         row = load_match(self.session, user, match_id)
+        ensure_pair_active(self.session, row)
         if row.state not in _OPT_IN_ALLOWED_STATES:
             raise ChatNotOpenYet(match_id)
 

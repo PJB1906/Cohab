@@ -158,9 +158,24 @@ construction once blocking has a live write path, so the schema-level
 guarantee spec §2 requires actually holds at the API layer, not just in the
 unit-tested function.
 
+**Resolved in Phase 7 — see D-7.4/D-7.5 below.** `services/safety.py` gives
+`UserBlock` its first live write path (`BlockService.block`/`.unblock`, via
+`POST`/`DELETE /blocks`), and `MatchesService.get_matches` now sets
+`self.ranker.filter.blocked_pairs` from `blocked_pairs_for(session,
+subject_user.id)` before ranking — the exact wiring this follow-up asked
+for. `get_explanation`/`express_interest` additionally gained a per-pair
+`ensure_pair_active` guard, which D-2.6 itself didn't anticipate (it only
+scoped Stage 1 filtering) — without it, a pair could still open an existing
+`match_id`'s explanation or re-express interest after blocking each other,
+even though neither would appear in the other's `GET /matches` any more.
+Confirmed by `tests/api/test_matches.py::test_blocked_candidate_excluded_from_matches`,
+which (unlike Phase 2's unit tests) exercises the real HTTP path end to end.
+
 **Code:** `cohab/services/matching/eligibility.py` (`Reason.BLOCKED`),
-`tests/matching/test_eligibility.py`; not yet: `cohab/services/matches.py`,
-`cohab/models/safety.py` (`UserBlock`, unwritten).
+`tests/matching/test_eligibility.py`; `cohab/services/safety.py`,
+`cohab/services/matches.py`, `cohab/services/match_access.py`
+(`PairBlocked`, `ensure_pair_active`), `cohab/models/safety.py`
+(`UserBlock`, now written).
 
 ---
 
@@ -850,3 +865,264 @@ pilot scale and left as-is (documented below), six were real and fixed:
 `cohab/api/chat.py`, `frontend/src/features/chat/ContactShare.tsx`,
 `tests/test_pii.py`, `tests/test_moderation.py`,
 `tests/api/test_matches.py`.
+
+---
+
+## Phase 7 — Safety and moderation
+
+### D-7.1 Moderator auth is a flag on the caller's own account, not a second login flow
+
+**Spec:** build plan §4 Phase 7 ("moderator admin view"); PRD §9 screen 13
+("Moderator queue"). Neither names an auth mechanism — `moderator`
+(`name`/`email`, no password) has existed since Phase 1 with no login path,
+and `report.assigned_moderator_id` already FKs to it.
+
+**Decision (confirmed with the user, Phase 7 planning):** `user.is_moderator`
+(`Boolean NOT NULL DEFAULT false`) gates a new `require_moderator` dependency
+(`api/deps.py`), layered on top of the existing `require_verified_user` — so
+a moderator authenticates with the exact same session cookie as everyone
+else. `moderator` is kept as the reviewer/audit entity `report
+.assigned_moderator_id` already pointed at, given a new `user_id` FK
+(`UNIQUE`, `NOT NULL` — the table has had no writer since Phase 1, so this
+is safe with no backfill) so it's linked to a real account rather than a
+freestanding name/email pair. `get_or_create_moderator` resolves — and, on
+first use, creates — the caller's own `Moderator` row from their `User`
+record, so there's no separate provisioning step beyond flipping the flag.
+The alternative (a distinct `moderator.password_hash` and a second
+`POST /moderation/login`) was rejected as doubling the auth surface for a
+pilot with a handful of moderators, all of whom are already platform users.
+
+**Code:** `cohab/models/user.py` (`is_moderator`), `cohab/models/safety.py`
+(`Moderator.user_id`), `cohab/api/deps.py` (`require_moderator`),
+`cohab/services/moderation_queue.py` (`get_or_create_moderator`), migration
+`4b7c9f2a1d63_phase_7_safety.py`.
+
+### D-7.2 Full PRD §8.3 report policy, not just CRUD + the state machine
+
+**Spec:** PRD §8.3 ("This corrects the SRS...") lists four automations
+beyond report CRUD and the `Open -> UnderReview -> Substantiated/Dismissed
+-> ActionTaken` state machine: reports alleging threats/sexual harassment
+escalate immediately and may suspend pending review; three or more
+independent reports from unconnected users auto-suspend; report submission
+is rate limited; repeated reports by one user against the same person
+collapse into a single case.
+
+**Decision (confirmed with the user, Phase 7 planning):** build the
+complete policy this phase rather than deferring the automations. All four
+live in `ReportService.file_report` (`services/safety.py`):
+
+- **Duplicate collapse.** An existing `open`/`under_review` report from the
+  same reporter against the same target is updated in place (`reason`,
+  `details` overwritten with the new filing) rather than inserted as a
+  second row — the same plain-overwrite "upsert" precedent as
+  `MatchesService._upsert` (D-4.6), not an append/merge of the two
+  filings' text. Only `open`/`under_review` collapse; a report that's
+  already been through review is a closed case, and a fresh filing after
+  that is treated as a new incident.
+- **Escalation.** `ESCALATING_REASONS = (harassment, threats,
+  sexual_harassment)` — PRD names the latter two; `harassment` is added to
+  the pair, flagged here as proposed rather than spec text, since a
+  plain-language harassment allegation is the same order of urgency and
+  screen 11 gives no separate, narrower category for it. Escalating a
+  report sets `escalated=True` and suspends the reported user
+  (`account_status: active -> suspended`) immediately. Escalation is
+  **monotonic** — a later, calmer duplicate filing from the same reporter
+  never un-escalates an already-escalated case.
+- **Volume auto-suspend.** `REPORT_AUTOSUSPEND_THRESHOLD = 3` — the one
+  number PRD §8.3 actually gives ("three or more"). The count is of
+  **distinct `reporter_id`s** with a report against the target whose status
+  isn't `dismissed` (open/under_review/substantiated/action_taken all
+  count; a report a moderator already reviewed and rejected shouldn't keep
+  counting as evidence). PRD's "unconnected users" has no relationship
+  graph in this schema to check against — distinct reporters is the honest
+  proxy, not a literal implementation of "unconnected," and is recorded
+  here as such rather than silently approximated.
+- **Rate limit.** `REPORT_RATE_LIMIT_PER_DAY = 5` — proposed, not
+  spec-sourced (PRD only says "rate limited"). Counts the reporter's own
+  reports in the last 24h; a duplicate-collapse update doesn't consume the
+  cap (only genuinely new cases do), so a reporter can always add detail to
+  a case they've already opened.
+
+Both suspend paths (escalation, volume) route through one `_maybe_suspend`
+helper that only ever moves `active -> suspended` — it never downgrades an
+existing `banned` sanction, and is a no-op if the account is already
+suspended, so filing an *n*-th report against an already-actioned user is
+harmless.
+
+**Code:** `cohab/services/safety.py`, `cohab/core/config.py`
+(`REPORT_RATE_LIMIT_PER_DAY`, `REPORT_AUTOSUSPEND_THRESHOLD`),
+`cohab/models/safety.py` (`REPORT_REASONS`, `ESCALATING_REASONS`),
+`tests/api/test_reports.py`.
+
+### D-7.3 Finding and sanction recorded separately; a "pending review" suspension is provisional
+
+**Spec:** PRD §8.3: "Finding and sanction are recorded separately, so the
+audit trail shows what was concluded as well as what was done."
+
+**Decision:** `Report.status` (already `substantiated`/`dismissed`
+/`action_taken` since Phase 1) carries the **finding**; a new
+`Report.sanction` column (`warn`/`suspend`/`ban`, nullable) carries the
+**sanction**, set only on `action_taken` and left `NULL` on `dismissed`.
+`ModerationService.resolve` requires a sanction whenever the finding is
+`substantiated` (`SanctionRequired` otherwise) — `warn` is record-only
+(no `account_status` change); `suspend`/`ban` write straight to
+`account_status`.
+
+**A gap found while writing this, not in the original plan:** PRD's own
+wording for escalation is "may suspend **pending review**" — which implies
+the suspension is provisional on the outcome of that review, not a
+standing sanction. Without handling this, a report that turns out to be
+groundless (`dismissed`) would leave its target permanently suspended with
+no code path back to `active`, which is a real correctness bug, not a
+nuance to defer. `ModerationService._maybe_reactivate` closes it: on
+`dismissed`, if the reported user's account is `suspended` (never touches
+`banned` — a concluded sanction, not a pending one) **and** no other
+`open`/`under_review` report remains against them, it reactivates to
+`active`. Left deliberately narrow — it only ever reads `account_status`
+and other `Report` rows, never a report's own history, so it can't
+misfire based on stale state from an unrelated case.
+
+**Also decided while implementing `resolve`:** the method takes the calling
+moderator as a parameter but, in an early draft, never used it — any
+moderator could resolve any claimed report, not just the one who claimed
+it. Reconsidered as a real gap rather than dropping the unused parameter:
+claiming assigns responsibility for a case (PRD §8.3's own "moderator
+claims"), and letting a second moderator close it out from under the first
+invites two reviewers reaching different verdicts on the same case.
+`resolve` now requires `report.assigned_moderator_id` to match the
+caller's own `Moderator` row (`NotAssignedModerator` otherwise, mapped to
+403). Not requested in the build-plan or PRD text — a judgement call made
+during the build, recorded here per CLAUDE.md rather than left implicit.
+
+**Code:** `cohab/services/moderation_queue.py` (`ModerationService.resolve`,
+`._maybe_reactivate`, `NotAssignedModerator`), `cohab/models/safety.py`
+(`Report.sanction`), `tests/api/test_moderation.py`.
+
+### D-7.4 `blocked_pairs` wired into `MatchesService` — closes D-2.6
+
+See D-2.6 above (updated in place) for the full resolution. In summary:
+`services/safety.py` gives `UserBlock` its first live write path, and
+`MatchesService.get_matches` sets the ranker's `blocked_pairs` from it per
+request — the eligibility-filter logic itself (`Reason.BLOCKED`) was
+already correct and unit-tested since Phase 2; this phase is entirely about
+giving it real data to run on.
+
+### D-7.5 Blocking hides existing threads through one shared guard; unblock is blocker-only
+
+**Spec:** PRD §10: blocking "removes the pair from each other's eligible
+pool at Stage 1, hides existing threads, and cannot be undone by the
+blocked party."
+
+**Decision:** a new `PairBlocked` exception and `ensure_pair_active(session,
+row)` helper in `services/match_access.py` — the module D-6.6 already
+consolidated `chat.py`'s and `contact_share.py`'s shared
+lookup-and-authorize logic onto — is called immediately after `load_match`
+in `ChatService.send_message`/`.list_messages`,
+`ContactShareService.get_status`/`.opt_in`, and
+`MatchesService.get_explanation`/`.express_interest`. One code path for
+"is this pair blocked", reused across all three services, rather than a
+block check hand-rolled per call site.
+
+`BlockService.unblock` (`DELETE /blocks/{blocked_id}`) only ever deletes a
+row where `blocker_id` is the **caller's own** id — there is no endpoint
+shape by which the blocked party can remove a block against them (the path
+parameter names who's blocked, not who's asking to be unblocked by
+someone else), so "cannot be undone by the blocked party" holds structurally,
+not just by a permission check. Calling it with nothing of the caller's to
+delete is a silent no-op (204), not an error — deliberately, so the
+frontend never has to distinguish "already unblocked" from "never
+blocked" as a failure case. Verified by
+`tests/api/test_reports.py::test_unblock_only_works_for_the_blocker`.
+
+**Code:** `cohab/services/match_access.py` (`PairBlocked`,
+`ensure_pair_active`), `cohab/services/chat.py`,
+`cohab/services/contact_share.py`, `cohab/services/matches.py`,
+`cohab/services/safety.py` (`BlockService`), `cohab/api/chat.py`,
+`cohab/api/matches.py`, `cohab/api/reports.py`,
+`tests/api/test_chat.py::test_blocked_pair_cannot_read_or_send`.
+
+### D-7.6 Moderator evidence is the reported user's flagged messages only, decrypted server-side
+
+**Spec:** PRD §10: chat is "encrypted at rest under a server-held key... The
+product promises moderation: that abusive content is detectable and that
+reports about what was said can be acted on" — server-side readability
+exists *for* moderation, which is what this phase is the first thing to
+actually exercise. The evidence-scoping choice itself (flagged-only, not
+the whole thread) is not spec-mandated — a decision made here, flagged as
+such.
+
+**Decision:** `ModerationService.list_flagged_evidence` queries
+`Message.sender_id == report.reported_user_id AND Message.flagged.is_(True)`
+— never the reporter's own messages, and never the reported user's
+non-flagged ones. A moderator reviewing a report sees exactly the content
+that was automatically flagged from the person being reported, not a
+transcript of a private conversation the reporter is also a party to.
+Broader disclosure (the full thread, on request, for a
+`substantiated`/escalated case) is a plausible future extension but wasn't
+asked for and isn't built here.
+
+**Found while wiring this:** `services/chat.py` already had a private
+`_safe_decrypt`/`_UNDECRYPTABLE_PLACEHOLDER` pair (D-6.6, item 3) for
+exactly this "don't 500 the caller over one corrupted or wrong-key row"
+problem, and the moderator evidence view needs the identical behaviour.
+Rather than a second private copy in `moderation_queue.py` (which drifts —
+e.g. someone changes the placeholder text in one file and not the other) or
+reaching into another module's underscore-prefixed name, both were moved
+into `core/crypto.py` as public `decrypt_message_safe`/
+`UNDECRYPTABLE_PLACEHOLDER`, next to `decrypt_message` itself; `chat.py`
+now imports the shared version instead of defining its own.
+
+**Code:** `cohab/services/moderation_queue.py`
+(`ModerationService.list_flagged_evidence`), `cohab/core/crypto.py`
+(`decrypt_message_safe`), `cohab/services/chat.py` (updated to use it),
+`tests/api/test_moderation.py::test_evidence_returns_only_flagged_messages_from_the_reported_user`.
+
+### D-7.7 Live-verification findings: two stale-cache bugs and a migration round-trip gap, all fixed
+
+**Found while manually verifying this phase in a real two-account browser
+session** (CLAUDE.md's UI-testing rule — the same category of bug as
+D-5.6/D-6.5/D-6.6, invisible to API-level tests since TanStack Query's
+client-side cache doesn't exist in a `TestClient` run; driven with
+Playwright rather than a person, but the same principle — actually render
+the screens, don't just assert on HTTP responses). Verification also
+surfaced one false alarm worth recording: an ambiguous `getByText(name)`
+locator matched a same-named leftover account from an earlier verification
+pass against this shared, never-reset dev DB, and briefly looked like a
+regression in the real fix below until re-run with a `matchId`-scoped
+navigation and unique per-run names.
+
+1. **Blocking someone didn't refresh the match list before redirecting to
+   it.** `BlockConfirmDialog`'s `onSuccess` navigated straight to
+   `/matches` without touching the `['matches']` query cache — the
+   just-blocked person rendered on screen for one frame regardless.
+   TanStack Query's default `staleTime: 0` still paints the pre-block
+   cached list synchronously on the fresh mount, before its own background
+   refetch resolves; calling `invalidateQueries` alone (before `/matches`
+   is even mounted) doesn't prevent that first paint, it only guarantees
+   the refetch happens once mounted. Fixed by also stripping the blocked
+   candidate directly via `queryClient.setQueryData` — the same pattern
+   `MatchDetail.tsx`'s interest mutation already used — so the very first
+   render is correct, not eventually correct.
+2. **The identical gap existed on the escalating-report path.** An
+   escalating reason (D-7.2) suspends the reported user immediately,
+   server-side, which should also drop them from the reporter's list —
+   `ReportDialog` had no cache handling at all. Fixed the same way, gated
+   on the response's `escalated` flag (certain, since the backend only
+   ever sets it when it actually suspended someone — not an inferred
+   condition) so an ordinary, non-escalating report's harmless no-op
+   filter never even runs.
+3. **The migration's `downgrade()` broke a subsequent re-upgrade once any
+   moderator had actually been created.** `DELETE FROM moderator` (added
+   to keep `upgrade()`'s `ADD COLUMN user_id ... NOT NULL` valid on a
+   re-upgrade — see D-7.1's migration) itself failed on
+   `report.assigned_moderator_id`'s FK to `moderator` (nullable since
+   Phase 1, `f0f781556f25`) if any report had been claimed. Fixed by
+   nulling that column first. This was only caught by actually running
+   `alembic downgrade -1` then `alembic upgrade head` against a database
+   that had gone through real Phase-7 activity — reading the migration
+   would not have surfaced it, since the table genuinely is empty on a
+   first-ever upgrade.
+
+**Code:** `frontend/src/features/safety/BlockConfirmDialog.tsx`,
+`frontend/src/features/safety/ReportDialog.tsx`,
+`backend/migrations/versions/4b7c9f2a1d63_phase_7_safety.py`.

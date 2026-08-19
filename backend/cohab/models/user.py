@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,6 +57,11 @@ class User(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
     # Withheld from every response until both `contact_share` rows exist for
     # a match (PRD §10) — Phase 6, docs/DECISIONS.md D-6.1.
     phone_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Phase 7, docs/DECISIONS.md D-7.1: gates `api.deps.require_moderator`.
+    # Moderator auth reuses this account's existing session cookie rather
+    # than a second login flow — set directly in the DB/seed for the pilot,
+    # no self-service "become a moderator" endpoint.
+    is_moderator: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     institution: Mapped["Institution"] = relationship(back_populates="users")
     verification_record: Mapped["VerificationRecord"] = relationship(

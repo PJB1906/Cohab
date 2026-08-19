@@ -24,12 +24,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from cohab.models import Listing, MatchScore, User, WeightSet
+from cohab.services.match_access import ensure_pair_active
 from cohab.services.matching.candidate import Candidate
 from cohab.services.matching.canonical import flip
 from cohab.services.matching.explanations import Explanation, build_explanation
 from cohab.services.matching.ranker import MatchRanker
 from cohab.services.matching.scoring import CompatibilityMatcher, MatchResult
 from cohab.services.matching.text import TextSimilarity
+from cohab.services.safety import blocked_pairs_for
 
 
 class MatchesError(Exception):
@@ -148,6 +150,7 @@ class MatchesService:
             raise MatchNotFound(match_id)
         if subject_user.id not in (row.user_id_a, row.user_id_b):
             raise NotAParty(match_id)
+        ensure_pair_active(self.session, row)
 
         if subject_user.id == row.user_id_a:
             row.interested_by_a = True
@@ -176,6 +179,13 @@ class MatchesService:
             return []
         pool = _load_pool(self.session, subject_user.id)
 
+        # Block-awareness depends on the calling user, who isn't known until
+        # here — `MatchesService` is constructed once per request (before
+        # the subject is known), so this can't be set at __init__ time.
+        # Closes docs/DECISIONS.md D-2.6: Stage 1's `blocked_pairs` param has
+        # been correct and unit-tested since Phase 2 but had no live caller.
+        self.ranker.filter.blocked_pairs = blocked_pairs_for(self.session, subject_user.id)
+
         ranked = self.ranker.rank(subject, pool)[:limit]
         entries = [
             MatchListEntry(
@@ -195,6 +205,7 @@ class MatchesService:
             raise MatchNotFound(match_id)
         if subject_user.id not in (row.user_id_a, row.user_id_b):
             raise NotAParty(match_id)
+        ensure_pair_active(self.session, row)
 
         other_id = row.user_id_b if subject_user.id == row.user_id_a else row.user_id_a
         other = _load_candidate(self.session, other_id)

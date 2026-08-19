@@ -40,3 +40,11 @@ MAX_UPLOAD_MB = 5  # proposed — not specified in any document
 # people quickly"). Proposed values, not sourced from any document.
 CHAT_RATE_LIMIT_PER_ACCOUNT_PER_MIN = 20
 CHAT_RATE_LIMIT_PER_THREAD_PER_MIN = 30
+
+# Phase 7 report policy (PRD §8.3). The rate limit is a proposed value —
+# PRD only says "report submission is rate limited" with no number.
+# REPORT_AUTOSUSPEND_THRESHOLD is the one number PRD §8.3 actually gives:
+# "three or more independent reports from unconnected users trigger
+# automatic temporary suspension."
+REPORT_RATE_LIMIT_PER_DAY = 5  # proposed — not specified in any document
+REPORT_AUTOSUSPEND_THRESHOLD = 3

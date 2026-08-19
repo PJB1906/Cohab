@@ -26,9 +26,9 @@ from cohab.core.config import (
     CHAT_RATE_LIMIT_PER_ACCOUNT_PER_MIN,
     CHAT_RATE_LIMIT_PER_THREAD_PER_MIN,
 )
-from cohab.core.crypto import decrypt_message, encrypt_message
+from cohab.core.crypto import decrypt_message_safe, encrypt_message
 from cohab.models import ContactShare, MatchScore, Message, User
-from cohab.services.match_access import MatchNotFound, NotAParty, load_match
+from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked, ensure_pair_active, load_match
 from cohab.services.moderation import AbuseFlagger, KeywordAbuseFlagger
 from cohab.services.pii import detect_pii
 
@@ -39,6 +39,7 @@ __all__ = [
     "NotAParty",
     "PIIDetected",
     "PII_WARNING",
+    "PairBlocked",
     "RateLimited",
     "ThreadNotOpen",
 ]
@@ -98,21 +99,6 @@ def _open_thread(row: MatchScore) -> None:
         raise ThreadNotOpen(row.id)
 
 
-_UNDECRYPTABLE_PLACEHOLDER = "[message could not be decrypted]"
-
-
-def _safe_decrypt(body_encrypted: str) -> str:
-    """A wrong/rotated key or a corrupted row must not 500 the whole thread
-    for every message in it — found in code review: `decrypt_message`'s
-    `ValueError` was uncaught here, and by this point `list_messages` had
-    already committed the is_read/state mutations for the call, so a crash
-    left those durably applied underneath an error response."""
-    try:
-        return decrypt_message(body_encrypted)
-    except ValueError:
-        return _UNDECRYPTABLE_PLACEHOLDER
-
-
 def _fully_contact_shared(session: Session, match_id: uuid.UUID) -> bool:
     count = session.scalar(
         select(func.count()).select_from(ContactShare).where(ContactShare.match_score_id == match_id)
@@ -139,6 +125,7 @@ class ChatService:
         self, sender: User, match_id: uuid.UUID, body: str, confirm: bool = False
     ) -> ChatMessage:
         row = load_match(self.session, sender, match_id)
+        ensure_pair_active(self.session, row)
         _open_thread(row)
 
         window_start = datetime.now(timezone.utc) - timedelta(minutes=1)
@@ -179,6 +166,7 @@ class ChatService:
         self, reader: User, match_id: uuid.UUID, since: datetime | None = None
     ) -> list[ChatMessage]:
         row = load_match(self.session, reader, match_id)
+        ensure_pair_active(self.session, row)
         _open_thread(row)
 
         stmt = select(Message).where(Message.match_score_id == match_id).order_by(Message.created_at)
@@ -195,7 +183,7 @@ class ChatService:
             ChatMessage(
                 id=m.id,
                 sender_id=m.sender_id,
-                body=_safe_decrypt(m.body_encrypted),
+                body=decrypt_message_safe(m.body_encrypted),
                 created_at=m.created_at,
                 is_read=m.is_read,
             )

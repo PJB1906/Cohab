@@ -42,6 +42,15 @@ def require_verified_user(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def require_moderator(user: User = Depends(require_verified_user)) -> User:
+    """Phase 7 (docs/DECISIONS.md D-7.1): moderator auth is a flag on the
+    caller's own account, reusing the same session cookie — no second login
+    flow. Gates every `/moderation/*` route."""
+    if not user.is_moderator:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "moderator access required")
+    return user
+
+
 def get_text_encoder(request: Request) -> TfidfSimilarity:
     """The vectorizer fit once at app startup (`main.py`) over the DB's
     corpus at that moment — transform-only from here on (CLAUDE.md: never
