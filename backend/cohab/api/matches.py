@@ -97,6 +97,7 @@ def get_explanation(
             else None
         ),
         state=r.state,
+        you_expressed_interest=r.you_expressed_interest,
         candidate_course=r.candidate.course,
         candidate_avatar_url=r.candidate.avatar_url,
         listing=(

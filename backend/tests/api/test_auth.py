@@ -60,6 +60,22 @@ def test_register_creates_unverified_user_and_pending_otp(
     assert _extract_otp(caplog).isdigit()
 
 
+def test_register_persists_phone_number_and_verify_returns_it(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger="cohab.otp"):
+        resp = client.post(
+            "/auth/register",
+            json={**REGISTER_PAYLOAD, "email": _email(institution), "phone_number": "9876543210"},
+        )
+    body = resp.json()
+    code = _extract_otp(caplog)
+
+    verify_resp = client.post("/auth/verify", json={"user_id": body["user_id"], "code": code})
+    assert verify_resp.status_code == 200, verify_resp.text
+    assert verify_resp.json()["phone_number"] == "9876543210"
+
+
 def test_register_rejects_unknown_email_domain(client: TestClient) -> None:
     resp = client.post("/auth/register", json={**REGISTER_PAYLOAD, "email": "someone@not-an-institution.example"})
     assert resp.status_code == 400

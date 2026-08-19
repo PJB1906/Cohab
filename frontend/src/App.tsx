@@ -7,6 +7,8 @@ import { ImportanceWeights } from '@/features/onboarding/ImportanceWeights'
 import { OnboardingProvider } from '@/features/onboarding/OnboardingContext'
 import { MatchList } from '@/features/matches/MatchList'
 import { MatchDetail } from '@/features/matches/MatchDetail'
+import { ChatThread } from '@/features/chat/ChatThread'
+import { ContactShare } from '@/features/chat/ContactShare'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 function Onboarding({ children }: { children: React.ReactNode }) {
@@ -29,6 +31,8 @@ export default function App() {
 
       <Route path="/matches" element={<ProtectedRoute><MatchList /></ProtectedRoute>} />
       <Route path="/matches/:matchId" element={<ProtectedRoute><MatchDetail /></ProtectedRoute>} />
+      <Route path="/matches/:matchId/chat" element={<ProtectedRoute><ChatThread /></ProtectedRoute>} />
+      <Route path="/matches/:matchId/contact-share" element={<ProtectedRoute><ContactShare /></ProtectedRoute>} />
 
       <Route path="/" element={<Navigate to="/matches" replace />} />
       <Route path="*" element={<Navigate to="/matches" replace />} />

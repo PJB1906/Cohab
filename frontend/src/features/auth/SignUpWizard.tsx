@@ -30,6 +30,7 @@ export function SignUpWizard({
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [gender, setGender] = useState<Gender | ''>('')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [password, setPassword] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -49,6 +50,7 @@ export function SignUpWizard({
         full_name: fullName,
         gender,
         seeker_type: seekerType,
+        phone_number: phoneNumber || null,
       })
       setUserId(res.user_id)
       setStep('otp')
@@ -143,6 +145,19 @@ export function SignUpWizard({
           onChange={(e) => setEmail(e.target.value)}
           className="mb-4"
         />
+
+        <Label htmlFor="su-phone">Phone number</Label>
+        <Input
+          id="su-phone"
+          type="tel"
+          placeholder="98765 43210"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          className="mb-1"
+        />
+        <p className="text-xs text-cohab-subtle mb-4">
+          Stays private until you and a match both opt in to share contact details.
+        </p>
 
         <Label htmlFor="su-gender">Gender</Label>
         <select

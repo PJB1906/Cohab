@@ -59,6 +59,13 @@ class MatchExplanationResult:
     result: MatchResult
     explanation: Explanation
     state: str
+    # `state` is shared by both parties — it flips to "interested" as soon as
+    # *either* side clicks, so the UI can't use it to decide whether *this*
+    # viewer already has. This is the per-viewer flag for that (found live
+    # while manually verifying Phase 6: without it, the second party's
+    # button reads "Interest sent" before they've ever clicked it, and the
+    # match can never reach Mutual through the UI).
+    you_expressed_interest: bool
     listing: Listing | None
 
 
@@ -149,7 +156,15 @@ class MatchesService:
 
         if row.state in ("suggested", "viewed"):
             row.state = "interested"
-        if row.interested_by_a and row.interested_by_b:
+        # Guard against regressing a pair that has already moved past Mutual
+        # (chatting/contact_shared/...) back down to it — a repeat POST with
+        # both flags already True (stale tab, client retry) would otherwise
+        # silently undo real lifecycle progress (found in code review).
+        if (
+            row.interested_by_a
+            and row.interested_by_b
+            and row.state in ("suggested", "viewed", "interested", "mutual")
+        ):
             row.state = "mutual"
 
         self.session.commit()
@@ -208,11 +223,16 @@ class MatchesService:
         if other.seeker_type == "has_place":
             listing = self.session.scalar(select(Listing).where(Listing.user_id == other_id))
 
+        you_expressed_interest = (
+            row.interested_by_a if subject_user.id == row.user_id_a else row.interested_by_b
+        )
+
         return MatchExplanationResult(
             match_id=row.id,
             candidate=other,
             result=result,
             explanation=explanation,
             state=row.state,
+            you_expressed_interest=you_expressed_interest,
             listing=listing,
         )

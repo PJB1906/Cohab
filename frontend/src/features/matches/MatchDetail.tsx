@@ -21,7 +21,7 @@ export function MatchDetail() {
     mutationFn: () => matchesApi.expressInterest(matchId!),
     onSuccess: (res) => {
       queryClient.setQueryData(['match', matchId], (prev: typeof data) =>
-        prev ? { ...prev, state: res.state } : prev,
+        prev ? { ...prev, state: res.state, you_expressed_interest: true } : prev,
       )
     },
   })
@@ -46,8 +46,8 @@ export function MatchDetail() {
   const band = scoreBand(pct)
   const towards = scorePercent(data.score_towards_candidate)
   const from = scorePercent(data.score_from_candidate)
-  const alreadyInterested = data.state !== 'suggested' && data.state !== 'viewed'
-  const mutual = data.state === 'mutual'
+  const alreadyInterested = data.you_expressed_interest
+  const canChat = ['mutual', 'chatting', 'contact_shared', 'cohabiting'].includes(data.state)
 
   return (
     <AppShell>
@@ -146,16 +146,22 @@ export function MatchDetail() {
 
       <div className="fixed bottom-0 inset-x-0 bg-white border-t border-cohab-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex flex-col items-center gap-1.5">
-          <Button
-            onClick={() => interestMutation.mutate()}
-            disabled={alreadyInterested || interestMutation.isPending}
-            className="w-full"
-          >
-            {mutual ? "It's a mutual match" : alreadyInterested ? 'Interest sent' : 'Express interest'}
-          </Button>
+          {canChat ? (
+            <Link to={`/matches/${matchId}/chat`} className="w-full">
+              <Button className="w-full">Open chat</Button>
+            </Link>
+          ) : (
+            <Button
+              onClick={() => interestMutation.mutate()}
+              disabled={alreadyInterested || interestMutation.isPending}
+              className="w-full"
+            >
+              {alreadyInterested ? 'Interest sent' : 'Express interest'}
+            </Button>
+          )}
           <p className="text-[11.5px] text-cohab-subtle text-center">
-            {mutual
-              ? 'You can both see this — chat opens once messaging ships.'
+            {canChat
+              ? "It's a mutual match — you can both see this conversation."
               : "They'll see that you're interested. It becomes mutual only if they are too."}
           </p>
         </div>

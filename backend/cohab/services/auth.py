@@ -83,6 +83,7 @@ class AuthService:
         gender: str,
         seeker_type: str,
         course: str | None = None,
+        phone_number: str | None = None,
     ) -> User:
         email = email.strip().lower()
         institution = _resolve_institution(self.session, email)
@@ -98,6 +99,7 @@ class AuthService:
             gender=gender,
             seeker_type=seeker_type,
             course=course,
+            phone_number=phone_number,
             verification_status="unverified",
             account_status="active",
         )

@@ -3,8 +3,9 @@ import { useSession } from '@/hooks/useSession'
 import { Avatar } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
-/** Sticky top nav for the signed-in app. No "Chat" link — chat doesn't
- * exist yet (Phase 6), see docs/DECISIONS.md D-5.1. */
+/** Sticky top nav for the signed-in app. No "Chat" link in the global nav —
+ * chat is per-match, reached from match detail once a match is mutual or
+ * later (PRD has no chat-inbox screen). */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: user } = useSession()
 

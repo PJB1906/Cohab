@@ -5,9 +5,18 @@
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
-    super(message)
+  /** The raw `detail` field from the response body, before string coercion.
+   * Most endpoints return a plain string here, which is also `message`
+   * unchanged. A few (e.g. chat's PII interrupt) return a structured object
+   * a caller needs to branch on — `Error`'s constructor coerces whatever's
+   * passed to `message` via ToString (so a plain object becomes the useless
+   * "[object Object]"), so callers that need the real shape read `detail`
+   * instead of `message`. */
+  detail: unknown
+  constructor(status: number, detail: unknown) {
+    super(typeof detail === 'string' ? detail : JSON.stringify(detail))
     this.status = status
+    this.detail = detail
   }
 }
 

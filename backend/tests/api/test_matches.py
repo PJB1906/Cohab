@@ -399,3 +399,56 @@ def test_express_interest_both_sides_transitions_to_mutual(
     assert row.state == "mutual"
     assert row.interested_by_a is True
     assert row.interested_by_b is True
+
+
+def test_express_interest_replay_does_not_regress_state_past_mutual(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    """Regression: once both `interested_by_*` flags are set, a repeat
+    POST (stale tab, client retry) used to unconditionally reset `state`
+    back to "mutual" even if the pair had already progressed further —
+    found in code review."""
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    client.post(f"/matches/{match_id}/interest")
+    _login(client, f"bala@{institution.email_domain}")
+    client.post(f"/matches/{match_id}/interest")
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "contact_shared"  # simulate lifecycle progress past mutual
+    db_session.commit()
+
+    resp = client.post(f"/matches/{match_id}/interest")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["state"] == "contact_shared"  # not regressed to "mutual"
+
+    db_session.refresh(row)
+    assert row.state == "contact_shared"
+
+
+def test_you_expressed_interest_is_per_viewer_not_shared_state(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    """Regression: `state` flips to "interested" as soon as *either* side
+    clicks, so the UI can't use `state` alone to decide whether *this*
+    viewer already has (found live while manually verifying Phase 6 — it
+    left the second party's button permanently disabled before they'd
+    clicked anything, so a match could never reach Mutual through the UI)."""
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    client.post(f"/matches/{match_id}/interest")
+
+    # Bala hasn't clicked yet — the shared `state` is already "interested",
+    # but Bala's own explanation must say she personally has not.
+    _login(client, f"bala@{institution.email_domain}")
+    resp = client.get(f"/matches/{match_id}/explanation")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["state"] == "interested"
+    assert body["you_expressed_interest"] is False
+
+    client.post(f"/matches/{match_id}/interest")
+    resp = client.get(f"/matches/{match_id}/explanation")
+    assert resp.json()["you_expressed_interest"] is True

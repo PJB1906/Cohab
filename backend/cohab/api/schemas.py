@@ -13,7 +13,7 @@ frontend. A bad option value fails at match time (`KeyError` in
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -36,6 +36,7 @@ class RegisterRequest(BaseModel):
     gender: Gender
     seeker_type: SeekerType
     course: str | None = None
+    phone_number: str | None = None
 
 
 class RegisterResponse(BaseModel):
@@ -62,6 +63,7 @@ class UserOut(BaseModel):
     account_status: str
     course: str | None = None
     avatar_url: str | None = None
+    phone_number: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -189,6 +191,7 @@ class MatchExplanationResponse(BaseModel):
     agreements: list[ExplanationCard]
     divergence: ExplanationCard | None
     state: str
+    you_expressed_interest: bool
     candidate_course: str | None = None
     candidate_avatar_url: str | None = None
     listing: MatchListingSummary | None = None
@@ -196,3 +199,29 @@ class MatchExplanationResponse(BaseModel):
 
 class ExpressInterestResponse(BaseModel):
     state: str
+
+
+# --- chat -----------------------------------------------------------------
+
+class SendMessageRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+    # PRD §9.1 item 1: the PII interrupt can be overridden once shown once
+    # (e.g. a false positive) rather than being a permanent hard block.
+    confirm: bool = False
+
+
+class MessageOut(BaseModel):
+    """Deliberately omits `flagged`/`pii_detected` — internal moderation
+    signals (Phase 7's queue), not shown to the user whose message it is."""
+
+    id: uuid.UUID
+    sender_id: uuid.UUID
+    body: str
+    created_at: datetime
+    is_read: bool
+
+
+class ContactStatusOut(BaseModel):
+    you_consented: bool
+    other_consented: bool
+    other_phone: str | None = None

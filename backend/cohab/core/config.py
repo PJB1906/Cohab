@@ -34,3 +34,9 @@ OTP_MAX_ATTEMPTS = 5  # proposed — not specified in any document
 # back via the /media StaticFiles mount (cohab/main.py).
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
 MAX_UPLOAD_MB = 5  # proposed — not specified in any document
+
+# Phase 6 chat rate limits (PRD §9.1 item 3: "the mechanical precondition for
+# both spam and harassment is the ability to send unlimited messages to many
+# people quickly"). Proposed values, not sourced from any document.
+CHAT_RATE_LIMIT_PER_ACCOUNT_PER_MIN = 20
+CHAT_RATE_LIMIT_PER_THREAD_PER_MIN = 30

@@ -1,0 +1,101 @@
+"""Mutual contact-sharing consent — build plan §4 Phase 6, PRD §8.2/§10.
+
+`contact_share`: `UNIQUE (score_id, user_id)` — one row per participant, so
+"both consented" is a count of two (PRD §5.2). Opting in requires the thread
+to already be open (`chatting` or later): PRD screen order puts Chat (9)
+before Contact share (10), and the state diagram only has Chatting ->
+ContactShared, never Mutual -> ContactShared directly.
+"""
+
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from cohab.models import ContactShare, MatchScore, User
+from cohab.services.match_access import MatchNotFound, NotAParty, load_match
+
+__all__ = [
+    "ChatNotOpenYet",
+    "ContactShareService",
+    "ContactStatus",
+    "MatchNotFound",
+    "NotAParty",
+]
+
+_OPT_IN_ALLOWED_STATES = {"chatting", "contact_shared"}
+
+
+class ContactShareError(Exception):
+    """Base for contact-share-specific failures. `MatchNotFound`/`NotAParty`
+    are the shared lookup+authorize errors from `match_access` — see
+    `chat.py`'s `ChatError` docstring for why they're imported, not
+    redefined, here."""
+
+
+class ChatNotOpenYet(ContactShareError):
+    """PRD screen order: chat (9) precedes contact share (10)."""
+
+
+@dataclass(frozen=True)
+class ContactStatus:
+    you_consented: bool
+    other_consented: bool
+    other_phone: str | None
+
+
+class ContactShareService:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def _status(self, user: User, row: MatchScore) -> ContactStatus:
+        other_id = row.user_id_b if user.id == row.user_id_a else row.user_id_a
+        shares = self.session.scalars(
+            select(ContactShare).where(ContactShare.match_score_id == row.id)
+        ).all()
+        you_consented = any(s.user_id == user.id for s in shares)
+        other_consented = any(s.user_id == other_id for s in shares)
+
+        other_phone = None
+        if you_consented and other_consented:
+            other = self.session.get(User, other_id)
+            other_phone = other.phone_number if other is not None else None
+
+        return ContactStatus(
+            you_consented=you_consented, other_consented=other_consented, other_phone=other_phone
+        )
+
+    def get_status(self, user: User, match_id: uuid.UUID) -> ContactStatus:
+        row = load_match(self.session, user, match_id)
+        return self._status(user, row)
+
+    def opt_in(self, user: User, match_id: uuid.UUID) -> ContactStatus:
+        row = load_match(self.session, user, match_id)
+        if row.state not in _OPT_IN_ALLOWED_STATES:
+            raise ChatNotOpenYet(match_id)
+
+        existing = self.session.scalar(
+            select(ContactShare).where(
+                ContactShare.match_score_id == match_id, ContactShare.user_id == user.id
+            )
+        )
+        if existing is None:
+            self.session.add(
+                ContactShare(
+                    match_score_id=match_id,
+                    user_id=user.id,
+                    consented_at=datetime.now(timezone.utc),
+                )
+            )
+            self.session.flush()
+
+        status = self._status(user, row)
+        if status.you_consented and status.other_consented and row.state == "chatting":
+            row.state = "contact_shared"  # PRD §8.2: Chatting -> ContactShared, both opt in
+
+        self.session.commit()
+        return self._status(user, row)

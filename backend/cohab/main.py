@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
 from cohab.api.auth import router as auth_router
+from cohab.api.chat import router as chat_router
 from cohab.api.listing import router as listing_router
 from cohab.api.matches import router as matches_router
 from cohab.api.profile import router as profile_router
@@ -50,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Cohab", lifespan=lifespan)
 app.include_router(auth_router)
+app.include_router(chat_router)
 app.include_router(profile_router)
 app.include_router(listing_router)
 app.include_router(matches_router)

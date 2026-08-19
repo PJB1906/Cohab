@@ -14,6 +14,7 @@ export interface RegisterRequest {
   gender: Gender
   seeker_type: SeekerType
   course?: string | null
+  phone_number?: string | null
 }
 
 export interface RegisterResponse {
@@ -40,6 +41,7 @@ export interface UserOut {
   account_status: string
   course?: string | null
   avatar_url?: string | null
+  phone_number?: string | null
 }
 
 export interface ProfileUpsertRequest {
@@ -132,6 +134,7 @@ export interface MatchExplanationResponse {
   agreements: ExplanationCard[]
   divergence: ExplanationCard | null
   state: string
+  you_expressed_interest: boolean
   candidate_course?: string | null
   candidate_avatar_url?: string | null
   listing?: MatchListingSummary | null
@@ -143,4 +146,32 @@ export interface ExpressInterestResponse {
 
 export interface UploadImageResponse {
   url: string
+}
+
+// --- chat -------------------------------------------------------------
+
+export interface ChatMessage {
+  id: string
+  sender_id: string
+  body: string
+  created_at: string
+  is_read: boolean
+}
+
+export interface SendMessageRequest {
+  body: string
+  confirm?: boolean
+}
+
+/** Shape of the 422 response body when a send is interrupted for PII
+ * (cohab/api/chat.py: `{"detail": "pii_detected", "message": "..."}`). */
+export interface PiiWarning {
+  detail: 'pii_detected'
+  message: string
+}
+
+export interface ContactStatus {
+  you_consented: boolean
+  other_consented: boolean
+  other_phone: string | null
 }

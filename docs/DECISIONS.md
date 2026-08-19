@@ -606,3 +606,210 @@ standard-library fix — no new dependency, no change to `ConsoleOTPSender`
 itself, which was already correct.
 
 **Code:** `cohab/main.py`.
+
+---
+
+## Phase 6 — Chat and contact sharing
+
+### D-6.1 `user.phone_number` added at registration — a schema gap `contact_share` needed closed
+
+**Spec:** PRD §9 screen 1 ("States plainly that the phone number stays
+private until both parties opt in"); §10 ("Phone numbers and addresses are
+absent from every response until two consent rows exist").
+
+**Gap:** no phone-number field existed anywhere in the schema — not on
+`User`, not on `preference_profile` — despite `contact_share` (built Phase
+1, unused until now) existing specifically to reveal one. Missed in Phases
+1/4/5 because nothing exercised the reveal path until this phase.
+
+**Decision (confirmed with the user, Phase 6 planning):** `user.phone_number`
+(nullable `String`, migration `1eac5ce1061c`), collected in
+`POST /auth/register` alongside `gender`/`seeker_type`/`course` — same
+precedent as D-4.1, and the field a real user already sees privacy language
+about at sign-up (PRD screen 1). Optional at the schema level (mirrors
+`course`) so existing seeded/test accounts without one don't need a backfill.
+
+**Code:** `cohab/models/user.py`, `cohab/api/schemas.py`
+(`RegisterRequest`/`UserOut`), `cohab/services/auth.py`,
+`frontend/src/features/auth/SignUpWizard.tsx`, migration
+`1eac5ce1061c_phase_6_phone_number.py`.
+
+### D-6.2 Chat encryption at rest implements what Phase 1 flagged as deferred
+
+**Spec:** PRD §10: "Chat is encrypted at rest under a server-held key, and
+is not end-to-end encrypted." `models/chat.py`'s `Message.body_encrypted`
+carried a comment since Phase 1 saying plaintext was fine for then because
+"the encryption mechanism is a Phase 6 concern."
+
+**Decision:** `Fernet` (symmetric, authenticated) keyed by
+`sha256(SECRET_KEY)` — same reasoning as D-4.5's OTP HMAC: this app has
+exactly one server-held secret already required at deploy time, and
+standing up separate key-management infra for a pilot is what CLAUDE.md's
+Redis-deferral logic argues against generally. New dependency:
+`cryptography` (not pulled in transitively by `pyjwt`/`bcrypt`, which don't
+need it for HS256/bcrypt). PII detection and abuse flagging run on plaintext
+before encryption, obviously — only the stored `body_encrypted` column is
+ciphertext.
+
+**Code:** `cohab/core/crypto.py`, `cohab/services/chat.py`,
+`tests/core/test_crypto.py`.
+
+### D-6.3 PII detection interrupts the send; abuse flagging never does
+
+**Spec:** PRD §9.1's own wording contrasts the two: item 1 (PII) says
+"interrupt" the send; item 2 (abuse) says "flag for review; does not block
+outright, to avoid suppressing legitimate conversation."
+
+**Decision:** `ChatService.send_message` raises `PIIDetected` **before**
+persisting anything when a phone number/email/handle is detected and the
+pair hasn't fully exchanged contact yet (item 1's own qualifier: "before
+`contact_share` consent exists"); the API returns a 422 with a structured
+`{"detail": "pii_detected", "message": "..."}` body rather than a plain
+string, and the frontend renders a dialog with "Edit," "Use Share Contact
+instead," and "Send anyway" (`confirm: true` resend) rather than silently
+sending or hard-blocking forever — the PRD's warning copy is a redirect, not
+an absolute prohibition, and a false positive (e.g. "call me at the leasing
+office ext. 4021") needs an escape hatch. Abuse content, by contrast, is
+always persisted with `flagged=True` for Phase 7's moderation queue and
+never blocks. Both `flagged`/`pii_detected` are deliberately excluded from
+`MessageOut` — internal moderation signals, not shown to the user whose
+message it is.
+
+**Code:** `cohab/services/pii.py` (regex heuristic — phone/email/handle,
+documented as MVP-not-exhaustive, same framing as `TfidfSimilarity`),
+`cohab/services/moderation.py` (`KeywordAbuseFlagger`, same
+swap-behind-a-protocol pattern as `TextSimilarity`/`OTPSender`),
+`cohab/services/chat.py`, `cohab/api/chat.py`, `cohab/api/schemas.py`
+(`MessageOut`), `frontend/src/api/chat.ts`
+(`PiiInterruptError`), `frontend/src/features/chat/ChatThread.tsx`.
+
+### D-6.4 A chat "thread" is a state flip on `match_score`, not a new entity; rate limits are DB-query-based
+
+**Spec:** PRD §8.2's lifecycle (Mutual → Chatting: "thread created");
+§9.1 item 3 (rate limits, "the mechanical precondition for both spam and
+harassment").
+
+**Decision:** `message.match_score_id` already ties every message to an
+unordered pair (Phase 1 schema) — PRD's "thread created" transition is
+modelled as `mutual → chatting` flipping on first chat access
+(`ChatService`'s `_open_thread`), not a row insert into a new table. Rate
+limits (`CHAT_RATE_LIMIT_PER_ACCOUNT_PER_MIN` / `..._PER_THREAD_PER_MIN`,
+proposed values, not spec-sourced) are enforced by counting `Message` rows
+created in the last 60 seconds via an indexed query, not an in-process
+dict — CLAUDE.md's single-uvicorn-worker pilot note already flags in-process
+state as the thing that breaks first when scaling past one worker, and a DB
+count costs nothing extra here since every send already writes a row.
+`is_read` flips as a side effect of `GET /chat/{id}/messages` (whoever
+fetches marks the other party's messages read) rather than a separate
+endpoint — PRD's own estimate for this feature is "roughly a hundred
+lines," and no read-receipt UI is speced for v1.
+
+**Code:** `cohab/services/chat.py`, `cohab/services/contact_share.py`,
+`cohab/core/config.py`.
+
+### D-6.5 `you_expressed_interest` — found live, blocked the entire Mutual path in the UI
+
+**Found while manually verifying this phase in a real two-account browser
+session** (CLAUDE.md's UI-testing rule — same category of bug as D-5.6,
+invisible to `TestClient`-only coverage). `MatchDetail.tsx`'s "already
+expressed interest" check read the shared `MatchScore.state`
+(`state !== 'suggested' && state !== 'viewed'`) rather than a per-viewer
+flag. `state` flips to `"interested"` as soon as *either* party clicks —
+so the *second* party's own "Express interest" button rendered as
+"Interest sent" and disabled **before they had ever clicked it**. A match
+could reach `Mutual` through the API (the existing
+`test_express_interest_both_sides_transitions_to_mutual` covered that path
+and passed), but never through the live UI, since the second party had no
+way to register their own interest.
+
+**Decision:** `GET /matches/{id}/explanation` now returns
+`you_expressed_interest` — `row.interested_by_a`/`_b` resolved to whichever
+side the caller is — and `MatchDetail.tsx` uses that instead of inferring
+from `state`. `state` is still what gates chat availability (`canChat`),
+which is correctly a shared, not per-viewer, concept.
+
+**Also found in the same verification pass:** `ApiError`'s constructor
+passed the server's `detail` field straight to `Error`'s `message`
+parameter, which the JS `Error` constructor ToString-coerces — a plain
+object (this phase's structured PII-interrupt body) silently became the
+string `"[object Object]"`, so the frontend's PII-detection branch
+(`isPiiWarning(err.message)`) never matched and the interrupt dialog never
+rendered, even though the backend was correctly blocking the send (confirmed
+independently via `tests/api/test_chat.py` and a direct server-side message
+count during the live repro). Fixed by giving `ApiError` a second field,
+`detail`, carrying the raw pre-coercion value for callers that need to
+branch on structure; `message` is unchanged for the plain-string case every
+other caller in the app already relies on.
+
+**Code:** `cohab/services/matches.py` (`MatchExplanationResult
+.you_expressed_interest`), `cohab/api/schemas.py`
+(`MatchExplanationResponse`), `cohab/api/matches.py`,
+`frontend/src/features/matches/MatchDetail.tsx`,
+`frontend/src/api/client.ts` (`ApiError.detail`), `frontend/src/api/chat.ts`,
+`tests/api/test_matches.py`
+(`test_you_expressed_interest_is_per_viewer_not_shared_state`).
+
+### D-6.6 Pre-commit review pass — six more findings, all fixed
+
+**Requested by the user** before committing Phase 6 ("is there any bugs,
+inconsistency, lack of feature or anything left"). A `/code-review high`
+pass over the diff surfaced ten findings; four were judged non-issues at
+pilot scale and left as-is (documented below), six were real and fixed:
+
+1. **Abuse/PII regexes matched as unanchored substrings.** `rape` matched
+   inside "grapes"/"therapeutic"; `insta` matched inside
+   "instantly"/"instance". Both would have silently mis-flagged or
+   mis-blocked ordinary sentences. Fixed with `\b` word-boundary anchors
+   (`moderation.py`) and a redesigned handle pattern that requires either a
+   whole-word app mention or an actual `/`/`:` separator before a handle
+   (`pii.py`). New regression cases in `tests/test_moderation.py`/
+   `tests/test_pii.py`.
+2. **`express_interest` could regress state past Mutual.** No guard
+   stopped a replayed `POST /matches/{id}/interest` (stale tab, client
+   retry) from resetting `state` back to `"mutual"` even after the pair had
+   already reached `chatting`/`contact_shared`. Fixed by only setting
+   `mutual` when the current state hasn't already passed it. New test:
+   `test_express_interest_replay_does_not_regress_state_past_mutual`.
+3. **`decrypt_message`'s `ValueError` was uncaught in `list_messages`.** A
+   corrupted row or rotated `SECRET_KEY` would 500 the whole thread — after
+   the `is_read`/state mutations for that call had already committed.
+   Fixed with `_safe_decrypt`, substituting a placeholder string per
+   message rather than failing the request.
+4. **Three parallel copies of "load a `MatchScore`, verify the caller is a
+   party" existed** (`services/matches.py`, `services/chat.py`,
+   `services/contact_share.py`), each with its own `MatchNotFound`/
+   `NotAParty` pair — `api/chat.py` had to alias-import two of the three
+   just to avoid a name collision. Consolidated `chat.py` and
+   `contact_share.py` (the two Phase 6 files) onto one shared
+   `services/match_access.py`; `services/matches.py` (Phase 4) is left
+   independent — out of this phase's scope to retouch, and not itself part
+   of this diff.
+5. **`ContactShare.tsx` rendered a blank value** when both parties had
+   consented but the other party had never set a phone number (nullable
+   since D-6.1, e.g. older seeded accounts). Fixed with an explicit "They
+   haven't added a phone number yet" fallback.
+
+**Left as-is, judged non-issues at this scale, not fixed:**
+- Rate-limit check has a TOCTOU race under truly concurrent double-submits
+  from the same sender — bypasses a soft 20/min cap by at most one message;
+  not worth row-locking complexity for a pilot's generous headroom limit.
+- `mutual -> chatting` flipping as a side effect of `GET
+  /chat/{id}/messages` — raised as a REST-purity concern, but it's the
+  identical, already-accepted pattern `GET /matches/{id}/explanation` uses
+  for `suggested -> viewed` (D-4.6). Consistent with established
+  convention, not a new anti-pattern.
+- Polling refetches full message history every 3s without using the
+  `since` param the endpoint already supports — real inefficiency at scale,
+  but trivial cost for a pilot's per-thread message counts; adding
+  incremental-merge complexity now would be designing for load that
+  doesn't exist yet.
+- Module docstring in `chat.py` slightly overclaimed REST-only permanence;
+  reworded to match CLAUDE.md's actual "WebSocket once polling latency
+  justifies it" framing — a documentation fix, not a behaviour change.
+
+**Code:** `cohab/services/moderation.py`, `cohab/services/pii.py`,
+`cohab/services/matches.py`, `cohab/services/chat.py`,
+`cohab/services/contact_share.py`, `cohab/services/match_access.py` (new),
+`cohab/api/chat.py`, `frontend/src/features/chat/ContactShare.tsx`,
+`tests/test_pii.py`, `tests/test_moderation.py`,
+`tests/api/test_matches.py`.

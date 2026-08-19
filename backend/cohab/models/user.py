@@ -54,6 +54,9 @@ class User(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
     # Cosmetic only, same precedent as `course` — served from UPLOAD_DIR via
     # the /media static mount (Phase 5, cohab/api/uploads.py).
     avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Withheld from every response until both `contact_share` rows exist for
+    # a match (PRD §10) — Phase 6, docs/DECISIONS.md D-6.1.
+    phone_number: Mapped[str | None] = mapped_column(String, nullable=True)
 
     institution: Mapped["Institution"] = relationship(back_populates="users")
     verification_record: Mapped["VerificationRecord"] = relationship(

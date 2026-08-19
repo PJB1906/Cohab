@@ -52,6 +52,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)) -> RegisterRe
             gender=body.gender,
             seeker_type=body.seeker_type,
             course=body.course,
+            phone_number=body.phone_number,
         )
     except UnknownEmailDomain:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "email domain is not a registered institution")
