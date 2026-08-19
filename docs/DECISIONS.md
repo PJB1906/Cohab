@@ -130,6 +130,38 @@ made now — we decide the move-in window against the Phase 3 number.
 pets, smoking, city) to inflate the yield. Those exclusions are correct; padding
 the number by loosening them just manufactures matches users reject.
 
+### D-2.6 Block-aware eligibility filtering exists but has no live caller yet
+
+**Spec:** §2 — neither party may be blocked by the other.
+
+**Status:** `passes_hard_constraints`/`EligibilityFilter` already accept a
+`blocked_pairs` param and correctly exclude a pair in either direction
+(`eligibility.py`, `Reason.BLOCKED`, unit-tested since this phase) — the
+constraint itself is coded and correct. But no live caller passes real block
+data into it: `MatchesService.get_matches` (Phase 4) constructs its matcher
+with no `blocked_pairs` argument, so the default (`None`) means Stage 1
+currently cannot actually exclude a blocked user from anyone's live match
+list, even once a `user_block` row exists. `UserBlock` itself has existed in
+the schema since Phase 1 but nothing writes to it yet either — there is no
+block/report UI or endpoint.
+
+**Not a Phase 2 bug** — this phase's own scope is the constraint logic
+against hand-written fixtures, and `eligibility.py`'s own comment already
+flagged the gap ("data wired in Phase 7"). Recorded here explicitly, rather
+than left as only a code comment, per CLAUDE.md's rule that gaps like this
+belong in the running decisions log — found missing from it while reviewing
+before the Phase 6 commit.
+
+**Follow-up (Phase 7):** wire a real `blocked_pairs` set (derived from
+`UserBlock` rows for the requesting user) into `MatchesService`'s matcher
+construction once blocking has a live write path, so the schema-level
+guarantee spec §2 requires actually holds at the API layer, not just in the
+unit-tested function.
+
+**Code:** `cohab/services/matching/eligibility.py` (`Reason.BLOCKED`),
+`tests/matching/test_eligibility.py`; not yet: `cohab/services/matches.py`,
+`cohab/models/safety.py` (`UserBlock`, unwritten).
+
 ---
 
 ## Phase 3 — Realistic seed, tuning, embeddings
@@ -788,24 +820,29 @@ pilot scale and left as-is (documented below), six were real and fixed:
    consented but the other party had never set a phone number (nullable
    since D-6.1, e.g. older seeded accounts). Fixed with an explicit "They
    haven't added a phone number yet" fallback.
+6. **`chat.py`'s module docstring slightly overclaimed REST-only
+   permanence** ("REST polling is the only transport"), when CLAUDE.md's
+   actual framing is that WebSocket is a documented later upgrade "once
+   polling latency measurably degrades the experience" — a mis-sourced
+   claim, not just imprecise wording (CLAUDE.md itself forbids "presenting
+   an invented value as specified"). Reworded to match; documentation-only,
+   no behaviour change.
 
 **Left as-is, judged non-issues at this scale, not fixed:**
 - Rate-limit check has a TOCTOU race under truly concurrent double-submits
   from the same sender — bypasses a soft 20/min cap by at most one message;
   not worth row-locking complexity for a pilot's generous headroom limit.
+  Revisit if this ever moves past a single low-traffic pilot instance.
 - `mutual -> chatting` flipping as a side effect of `GET
   /chat/{id}/messages` — raised as a REST-purity concern, but it's the
   identical, already-accepted pattern `GET /matches/{id}/explanation` uses
   for `suggested -> viewed` (D-4.6). Consistent with established
-  convention, not a new anti-pattern.
+  convention; not planned to change.
 - Polling refetches full message history every 3s without using the
   `since` param the endpoint already supports — real inefficiency at scale,
   but trivial cost for a pilot's per-thread message counts; adding
   incremental-merge complexity now would be designing for load that
-  doesn't exist yet.
-- Module docstring in `chat.py` slightly overclaimed REST-only permanence;
-  reworded to match CLAUDE.md's actual "WebSocket once polling latency
-  justifies it" framing — a documentation fix, not a behaviour change.
+  doesn't exist yet. Revisit alongside any future WebSocket work.
 
 **Code:** `cohab/services/moderation.py`, `cohab/services/pii.py`,
 `cohab/services/matches.py`, `cohab/services/chat.py`,
