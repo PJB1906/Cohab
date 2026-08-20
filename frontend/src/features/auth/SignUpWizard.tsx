@@ -36,6 +36,7 @@ export function SignUpWizard({
 
   const [otp, setOtp] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function submitAccount(e: React.FormEvent) {
@@ -55,6 +56,32 @@ export function SignUpWizard({
       setUserId(res.user_id)
       setStep('otp')
     } catch (err) {
+      // A 409 here doesn't have to be a dead end: the account may just be
+      // unverified (e.g. the user closed the tab before entering the code
+      // and came back). Try to recover into the OTP step rather than
+      // stopping at "already registered" — docs/DECISIONS.md D-10.1.
+      if (err instanceof ApiError && err.status === 409) {
+        try {
+          const res = await authApi.resendOtp({ email })
+          setUserId(res.user_id)
+          setNotice("You've already started signing up with this email — we've sent a fresh code.")
+          setStep('otp')
+          return
+        } catch (resendErr) {
+          // Only a second 409 actually means "already registered and
+          // verified" — anything else (a 429 cooldown, a transient
+          // network/500) is a distinct failure and shouldn't be reported
+          // as if the account were the problem (found in code review).
+          setError(
+            resendErr instanceof ApiError && resendErr.status === 409
+              ? 'This email is already registered and verified — log in instead.'
+              : resendErr instanceof ApiError
+                ? resendErr.message
+                : 'Something went wrong',
+          )
+          return
+        }
+      }
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
     } finally {
       setBusy(false)
@@ -72,6 +99,21 @@ export function SignUpWizard({
       setStep('avatar')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function resendOtp() {
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await authApi.resendOtp({ email })
+      setUserId(res.user_id)
+      setNotice('A new code is on its way.')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not resend the code')
     } finally {
       setBusy(false)
     }
@@ -216,9 +258,13 @@ export function SignUpWizard({
           onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
           className="mb-2 tracking-[0.3em] text-center"
         />
+        {notice && <p className="text-sm text-cohab-primary mt-2">{notice}</p>}
         {error && <p className="text-sm text-cohab-accent mt-2">{error}</p>}
         <Button type="submit" disabled={busy} className="w-full mt-4">
           {busy ? 'Verifying…' : 'Verify and continue'}
+        </Button>
+        <Button type="button" variant="ghost" onClick={resendOtp} disabled={busy} className="mt-2">
+          Resend code
         </Button>
       </form>
     )

@@ -5,6 +5,7 @@ IS the auth surface, so it gets real coverage rather than none."""
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -97,6 +98,91 @@ def test_register_rejects_duplicate_email(client: TestClient, institution: Insti
     _register(client, institution)
     resp = client.post("/auth/register", json={**REGISTER_PAYLOAD, "email": _email(institution)})
     assert resp.status_code == 409
+
+
+def test_register_converts_concurrent_duplicate_insert_to_email_already_registered(
+    db_session: Session, institution: Institution, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two near-simultaneous registrations for the same email both pass the
+    uniqueness `SELECT` before either commits — the loser used to hit a raw
+    `IntegrityError` (500) on its own `commit()` instead of the intended 409.
+    Reproduced deterministically: register the email for real, then force a
+    second call's own uniqueness check to (falsely) report "not found," the
+    way it would if it had run just before the first call's row became
+    visible — the real `uq`constraint then catches it on `commit()`."""
+    from cohab.services.auth import AuthService, EmailAlreadyRegistered
+    from cohab.services.otp import ConsoleOTPSender
+
+    email = _email(institution)
+    service = AuthService(db_session, ConsoleOTPSender())
+    service.register(email=email, password="x", full_name="A", gender="female", seeker_type="needs_place")
+
+    monkeypatch.setattr(db_session, "scalar", lambda *a, **kw: None)
+    with pytest.raises(EmailAlreadyRegistered):
+        service.register(email=email, password="y", full_name="B", gender="female", seeker_type="needs_place")
+
+
+# --- resend-otp --------------------------------------------------------------
+
+def _clear_resend_cooldown(db_session: Session, user_id: str) -> None:
+    """`resend_otp`'s cooldown (docs/DECISIONS.md D-10.6) is measured from
+    the current record's `otp_expires_at`. Backdating it here simulates the
+    cooldown having elapsed, the way directly manipulating DB state already
+    does elsewhere in this suite, rather than sleeping real wall-clock
+    seconds in every test that calls resend twice."""
+    record = db_session.scalar(
+        select(VerificationRecord).where(VerificationRecord.user_id == uuid.UUID(user_id))
+    )
+    record.otp_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db_session.commit()
+
+
+def test_resend_otp_issues_a_new_code_and_invalidates_the_old_one(
+    client: TestClient, db_session: Session, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger="cohab.otp"):
+        body = _register(client, institution)
+    old_code = _extract_otp(caplog)
+    caplog.clear()
+    _clear_resend_cooldown(db_session, body["user_id"])
+
+    with caplog.at_level(logging.INFO, logger="cohab.otp"):
+        resp = client.post("/auth/resend-otp", json={"email": _email(institution)})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["user_id"] == body["user_id"]
+    new_code = _extract_otp(caplog)
+    assert new_code != old_code
+
+    stale = client.post("/auth/verify", json={"user_id": body["user_id"], "code": old_code})
+    assert stale.status_code == 400
+
+    fresh = client.post("/auth/verify", json={"user_id": body["user_id"], "code": new_code})
+    assert fresh.status_code == 200, fresh.text
+
+
+def test_resend_otp_within_cooldown_is_429(client: TestClient, institution: Institution) -> None:
+    body = _register(client, institution)
+    resp = client.post("/auth/resend-otp", json={"email": _email(institution)})
+    assert resp.status_code == 429
+    # Untouched by the rejected resend — the original code still works.
+    assert body["user_id"]
+
+
+def test_resend_otp_on_already_verified_account_is_409(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger="cohab.otp"):
+        body = _register(client, institution)
+    code = _extract_otp(caplog)
+    client.post("/auth/verify", json={"user_id": body["user_id"], "code": code})
+
+    resp = client.post("/auth/resend-otp", json={"email": _email(institution)})
+    assert resp.status_code == 409
+
+
+def test_resend_otp_on_unknown_email_is_404(client: TestClient, institution: Institution) -> None:
+    resp = client.post("/auth/resend-otp", json={"email": _email(institution)})
+    assert resp.status_code == 404
 
 
 # --- verify ----------------------------------------------------------------

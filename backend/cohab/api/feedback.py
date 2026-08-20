@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_db, require_verified_user
@@ -59,12 +60,13 @@ def list_pending_feedback(
     db: Session = Depends(get_db),
 ) -> list[PendingFeedbackOut]:
     pending = FeedbackService(db).pending_for(user)
-    others = {p.other_user_id: db.get(User, p.other_user_id) for p in pending}
+    other_ids = {p.other_user_id for p in pending}
+    others = {u.id: u for u in db.scalars(select(User).where(User.id.in_(other_ids)))}
     return [
         PendingFeedbackOut(
             match_id=p.match_id,
             other_user_id=p.other_user_id,
-            other_user_name=(others[p.other_user_id].full_name if others[p.other_user_id] else ""),
+            other_user_name=others[p.other_user_id].full_name if p.other_user_id in others else "",
             state=p.state,
         )
         for p in pending

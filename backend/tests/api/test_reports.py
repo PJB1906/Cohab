@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -189,6 +190,35 @@ def test_cannot_block_self(client: TestClient, two_users: tuple[str, str]) -> No
     asha_id, _ = two_users
     resp = client.post("/blocks", json={"blocked_id": asha_id})
     assert resp.status_code == 400
+
+
+def test_block_converts_concurrent_duplicate_insert_to_existing_row(
+    db_session: Session, two_users: tuple[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two near-simultaneous blocks of the same pair both find `_find(...) is
+    None` before either commits — the loser used to hit a raw `IntegrityError`
+    on `uq_user_block_pair` instead of the intended idempotent "return the
+    existing row" behaviour. Reproduced by forcing the service's own
+    pre-insert check to report "not found" once while a block already
+    exists; the recovery path's own re-query is left real so it can prove it
+    actually finds the row the "other" request inserted."""
+    from cohab.services.safety import BlockService
+
+    asha_id, bala_id = two_users
+    service = BlockService(db_session)
+    blocker = db_session.get(User, uuid.UUID(asha_id))
+    first = service.block(blocker, uuid.UUID(bala_id))
+
+    real_find = service._find
+    calls = {"n": 0}
+
+    def racing_find(*a: object, **kw: object) -> UserBlock | None:
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real_find(*a, **kw)
+
+    monkeypatch.setattr(service, "_find", racing_find)
+    second = service.block(blocker, uuid.UUID(bala_id))
+    assert second.id == first.id
 
 
 def test_unblock_only_works_for_the_blocker(

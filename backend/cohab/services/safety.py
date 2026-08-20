@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from cohab.core.config import REPORT_AUTOSUSPEND_THRESHOLD, REPORT_RATE_LIMIT_PER_DAY
@@ -155,7 +156,15 @@ class BlockService:
         if existing is None:
             existing = UserBlock(blocker_id=blocker.id, blocked_id=blocked_id)
             self.session.add(existing)
-            self.session.commit()
+            try:
+                self.session.commit()
+            except IntegrityError:
+                # Two near-simultaneous blocks of the same pair race on
+                # `uq_user_block_pair`. Idempotency is the intended outcome
+                # here anyway, so recover by returning the row the other
+                # transaction just created rather than erroring.
+                self.session.rollback()
+                existing = self._find(blocker.id, blocked_id)
         return existing
 
     def unblock(self, blocker: User, blocked_id: uuid.UUID) -> None:

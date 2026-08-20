@@ -4,12 +4,13 @@ build plan §4 Phase 6, PRD §8.2/§10."""
 from __future__ import annotations
 
 import logging
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from cohab.models import Institution, MatchScore, WeightSet
+from cohab.models import Institution, MatchScore, User, WeightSet
 
 PASSWORD = "correct horse battery staple"
 
@@ -111,6 +112,46 @@ def test_one_sided_consent_reveals_nothing(client: TestClient, mutual_pair: tupl
     assert body["other_phone"] is None
 
 
+def test_withdraw_undoes_one_sided_consent(client: TestClient, mutual_pair: tuple[str, str, str]) -> None:
+    """Mockup fidelity: the mockups let a user withdraw consent before the
+    other party has accepted; the built ContactShare screen had no way back
+    once opted in. docs/DECISIONS.md D-10.5."""
+    _, _, match_id = mutual_pair
+    client.get(f"/chat/{match_id}/messages")
+    client.post(f"/chat/{match_id}/contact-share")
+
+    resp = client.delete(f"/chat/{match_id}/contact-share")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["you_consented"] is False
+
+    status = client.get(f"/chat/{match_id}/contact-status").json()
+    assert status["you_consented"] is False
+
+
+def test_withdraw_after_mutual_share_is_409(
+    client: TestClient, institution: Institution, mutual_pair: tuple[str, str, str]
+) -> None:
+    _, _, match_id = mutual_pair
+    client.get(f"/chat/{match_id}/messages")
+    client.post(f"/chat/{match_id}/contact-share")
+    _login(client, f"bala@{institution.email_domain}")
+    client.post(f"/chat/{match_id}/contact-share")
+
+    resp = client.delete(f"/chat/{match_id}/contact-share")
+    assert resp.status_code == 409
+
+
+def test_withdraw_with_nothing_to_withdraw_is_a_no_op(
+    client: TestClient, mutual_pair: tuple[str, str, str]
+) -> None:
+    _, _, match_id = mutual_pair
+    client.get(f"/chat/{match_id}/messages")
+
+    resp = client.delete(f"/chat/{match_id}/contact-share")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["you_consented"] is False
+
+
 def test_both_sided_consent_reveals_phone_and_flips_state(
     client: TestClient, institution: Institution, db_session: Session, mutual_pair: tuple[str, str, str]
 ) -> None:
@@ -134,6 +175,31 @@ def test_both_sided_consent_reveals_phone_and_flips_state(
     _login(client, f"asha@{institution.email_domain}")
     status = client.get(f"/chat/{match_id}/contact-status").json()
     assert status["other_phone"] == "9876500000"
+
+
+def test_opt_in_converts_concurrent_duplicate_insert_to_recovered_status(
+    client: TestClient, db_session: Session, mutual_pair: tuple[str, str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two near-simultaneous opt-ins from the same user both find "no
+    existing `ContactShare` row" before either commits — the loser used to
+    hit a raw `IntegrityError` on `uq_contact_share_score_user` on its own
+    `flush()` instead of recovering. Reproduced by forcing the service's own
+    pre-insert check to report "not found" once a row already exists —
+    `_status`'s own read (plural `scalars`, unaffected by this) then proves
+    consent is correctly recorded regardless."""
+    from cohab.services.contact_share import ContactShareService
+
+    asha_id, _bala_id, match_id = mutual_pair
+    client.get(f"/chat/{match_id}/messages")  # opens the thread (mutual -> chatting)
+
+    service = ContactShareService(db_session)
+    asha = db_session.get(User, uuid.UUID(asha_id))
+    first = service.opt_in(asha, uuid.UUID(match_id))
+    assert first.you_consented is True
+
+    monkeypatch.setattr(db_session, "scalar", lambda *a, **kw: None)
+    second = service.opt_in(asha, uuid.UUID(match_id))
+    assert second.you_consented is True
 
 
 def test_contact_share_403_for_non_party(

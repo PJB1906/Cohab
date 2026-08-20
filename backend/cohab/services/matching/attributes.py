@@ -5,8 +5,10 @@ The weight vector (spec §8, `weight_set.weights`) is keyed by *attribute* names
 like `noise`, `guests`, `smoking`, `nonveg_cooking`, `budget_proximity` — which
 do NOT map one-to-one onto the 24 questionnaire fields. Each `Attribute` here
 records its type (spec §1), the field(s) it reads, whether it can be dropped when
-unanswered (spec §8), its explanation template key (spec §10), and a directional
-`score(a, b) -> (sim_a, sim_b)` following the procedure in spec §9.
+unanswered (spec §8), and a directional `score(a, b) -> (sim_a, sim_b)`
+following the procedure in spec §9. Explanation copy (spec §10) is selected by
+`name` directly — see `explanations.py`'s `AGREEMENT_RENDERERS`/
+`DIVERGENCE_RENDERERS` — not by a separate template key.
 """
 
 from __future__ import annotations
@@ -45,7 +47,6 @@ class Attribute:
     type: str  # 'similarity' | 'tolerance' | 'absolute' | 'continuous' | 'semantic'
     fields: tuple[str, ...]  # questionnaire fields read (for the presence check)
     score: Scorer
-    template_key: str | None = None
     # Droppable attributes are removed from the weight vectors when unanswered by
     # either party (spec §8). budget_proximity/interests/lifestyle_notes are never
     # dropped: they are always defined, or carry their own empty-handling
@@ -140,26 +141,26 @@ def _notes(a: Candidate, b: Candidate, ctx: ScoringContext) -> tuple[float, floa
 _ATTRIBUTE_LIST: list[Attribute] = [
     # Tier 1
     Attribute("cleanliness_level", "similarity", ("cleanliness_level",),
-              _similarity_matrix("cleanliness_level", "cleanliness_level"), "cleanliness"),
+              _similarity_matrix("cleanliness_level", "cleanliness_level")),
     Attribute("chore_approach", "similarity", ("chore_approach",),
               _similarity_matrix("chore_approach", "chore_approach")),
     Attribute("sharing_norm", "tolerance", ("sharing_norm",),
-              _tolerance("sharing", "sharing_norm", "sharing_norm"), "sharing"),
+              _tolerance("sharing", "sharing_norm", "sharing_norm")),
     Attribute("sleep_schedule", "similarity", ("sleep_schedule",),
-              _similarity_matrix("sleep_schedule", "sleep_schedule"), "sleep"),
+              _similarity_matrix("sleep_schedule", "sleep_schedule")),
     Attribute("noise", "tolerance", ("noise_preference", "noise_behaviour"),
-              _tolerance("noise", "noise_preference", "noise_behaviour"), "noise"),
+              _tolerance("noise", "noise_preference", "noise_behaviour")),
     Attribute("guests", "tolerance", ("guest_tolerance", "guest_frequency"),
-              _tolerance("guests", "guest_tolerance", "guest_frequency"), "guests"),
+              _tolerance("guests", "guest_tolerance", "guest_frequency")),
     Attribute("payment_reliability", "absolute", ("payment_reliability",),
-              _absolute("payment_reliability"), "payment"),
+              _absolute("payment_reliability")),
     Attribute("cost_split_preference", "similarity", ("cost_split_preference",),
-              _similarity_matrix("cost_split_preference", "cost_split_preference"), "cost_split"),
+              _similarity_matrix("cost_split_preference", "cost_split_preference")),
     Attribute("communication_style", "similarity", ("communication_style",),
               _similarity_matrix("communication_style", "communication_style")),
     Attribute("budget_proximity", "continuous", (), _budget, droppable=False),
     Attribute("diet", "similarity", ("diet",),
-              _similarity_matrix("diet", "diet"), "diet"),
+              _similarity_matrix("diet", "diet")),
     Attribute("nonveg_cooking", "tolerance", ("nonveg_cooking_tolerance", "diet"),
               _tolerance("nonveg_cooking", "nonveg_cooking_tolerance", "diet")),
     Attribute("smoking", "tolerance", ("smoking_tolerance", "smoking_behaviour"),
@@ -168,16 +169,16 @@ _ATTRIBUTE_LIST: list[Attribute] = [
               _tolerance("alcohol", "alcohol_tolerance", "alcohol_behaviour")),
     # Tier 2
     Attribute("life_stage", "similarity", ("life_stage",),
-              _similarity_matrix("life_stage", "life_stage"), "life_stage"),
+              _similarity_matrix("life_stage", "life_stage")),
     Attribute("daytime_presence", "similarity", ("daytime_presence",),
               _ordinal("daytime_presence")),
     Attribute("home_orientation", "similarity", ("home_orientation",),
               _ordinal("home_orientation")),
     Attribute("sociability", "similarity", ("sociability",),
-              _similarity_matrix("sociability", "sociability"), "sociability"),
+              _similarity_matrix("sociability", "sociability")),
     # Tier 3
-    Attribute("interests", "similarity", ("interests",), _interests, "interests", droppable=False),
-    Attribute("lifestyle_notes", "semantic", ("lifestyle_notes",), _notes, "notes", droppable=False),
+    Attribute("interests", "similarity", ("interests",), _interests, droppable=False),
+    Attribute("lifestyle_notes", "semantic", ("lifestyle_notes",), _notes, droppable=False),
 ]
 
 ATTRIBUTES: dict[str, Attribute] = {a.name: a for a in _ATTRIBUTE_LIST}

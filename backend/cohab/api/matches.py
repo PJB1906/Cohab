@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_active_weight_set, get_db, require_verified_user
@@ -42,7 +42,11 @@ def _service(db: Session, weight_set: WeightSet) -> MatchesService:
 
 @router.get("", response_model=list[MatchListItem])
 def get_matches(
-    limit: int = 10,  # proposed — not specified in PRD/spec (matcher-reviewer finding)
+    # Default proposed — not specified in PRD/spec (matcher-reviewer finding).
+    # Upper bound of 5000 sits above the "effectively unlimited" 3000 both
+    # `recompute.py` (`RECOMPUTE_LIMIT`) and the test suite (`LARGE_LIMIT`)
+    # already rely on, not a real usage cap.
+    limit: int = Query(default=10, ge=1, le=5000),
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
     weight_set: WeightSet = Depends(get_active_weight_set),

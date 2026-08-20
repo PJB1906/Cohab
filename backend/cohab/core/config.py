@@ -28,6 +28,12 @@ OTP_LENGTH = 6  # proposed — not specified in any document
 OTP_TTL_MINUTES = 10  # proposed — not specified in any document
 OTP_MAX_ATTEMPTS = 5  # proposed — not specified in any document
 
+# `/auth/resend-otp` (docs/DECISIONS.md D-10.1/D-10.6) has no auth of its own
+# — a cooldown between resends is the cheap guard against both spamming the
+# OTP delivery mechanism and using rapid resends to keep resetting
+# `otp_attempts`. Proposed, same footing as the constants above.
+RESEND_OTP_COOLDOWN_SECONDS = 30
+
 # Phase 5 photo uploads — local disk for the pilot (docs/DECISIONS.md): no
 # object-storage service exists anywhere in this stack, and CLAUDE.md defers
 # Redis on the same "no new infra the pilot doesn't need" grounds. Served

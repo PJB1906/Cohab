@@ -15,10 +15,17 @@ export function ReportDialog({
   reportedUserId,
   reportedUserName,
   onClose,
+  onBlockRequested,
 }: {
   reportedUserId: string
   reportedUserName: string
   onClose: () => void
+  /** Mockup fidelity: both mockups offer blocking right after filing a
+   * report (Desktop: inline checkbox; Prototype: a post-submit offer) —
+   * the built app had Report/Block as two disconnected menu actions.
+   * Optional so this dialog stays usable standalone. docs/DECISIONS.md
+   * D-10.5. */
+  onBlockRequested?: () => void
 }) {
   const [reason, setReason] = useState<ReportReason | null>(null)
   const [details, setDetails] = useState('')
@@ -56,9 +63,16 @@ export function ReportDialog({
           <p className="text-[13.5px] text-cohab-muted mb-5">
             A moderator will review this. Thank you for flagging it.
           </p>
-          <Button onClick={onClose} className="w-full">
-            Done
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button onClick={onClose} className="w-full">
+              Done
+            </Button>
+            {onBlockRequested && (
+              <Button variant="secondary" onClick={onBlockRequested} className="w-full">
+                Also block {reportedUserName}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     )

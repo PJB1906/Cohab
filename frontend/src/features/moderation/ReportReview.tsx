@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { OptionPill } from '@/components/OptionPill'
 import { REASON_LABELS, STATUS_LABELS } from '@/features/safety/copy'
-import type { ReportDetailOut, ReportSanction } from '@/api/types'
+import type { ReportDetailOut, ReportSanction, ReportSummaryOut } from '@/api/types'
 
 const SANCTIONS: { value: ReportSanction; label: string }[] = [
   { value: 'warn', label: 'Warn' },
@@ -36,6 +36,15 @@ export function ReportReview() {
 
   function setReportCache(r: ReportDetailOut) {
     queryClient.setQueryData(['moderation', 'report', reportId], r)
+    // `invalidateQueries` alone isn't enough — see BlockConfirmDialog.tsx's
+    // comment for why: `/moderation` may already be mounted (came here via
+    // back button) with `staleTime` still fresh, so its first paint would
+    // synchronously show the pre-claim/pre-resolve status until the
+    // background refetch lands. Patching the list cache directly, the same
+    // pattern used throughout safety/matches, makes the first render correct.
+    queryClient.setQueryData<ReportSummaryOut[]>(['moderation', 'reports'], (prev) =>
+      prev?.map((row) => (row.id === r.id ? { ...row, status: r.status, escalated: r.escalated } : row)),
+    )
     queryClient.invalidateQueries({ queryKey: ['moderation', 'reports'] })
   }
 

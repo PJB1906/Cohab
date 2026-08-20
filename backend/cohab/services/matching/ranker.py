@@ -45,8 +45,9 @@ class MatchRanker:
             matches.append(RankedMatch(candidate, result, explanation))
 
         # Sort by combined score desc; tie-break prefers the *less lopsided* pair
-        # (higher of the smaller directional score), then user_id asc for a stable
-        # deterministic order.
+        # (higher of the smaller directional score), then user_id asc purely for
+        # a stable, deterministic order — not a meaningful ranking signal itself.
+        # Not spec-derived; rationale recorded in docs/DECISIONS.md D-10.4.
         matches.sort(
             key=lambda m: (
                 -m.result.combined_score,

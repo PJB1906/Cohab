@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_current_user, get_db
 from cohab.models import User
-from cohab.services.uploads import ImageTooLarge, UnsupportedImageType, save_image
+from cohab.services.uploads import ImageTooLarge, UnsupportedImageType, save_image, set_avatar
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
@@ -40,7 +40,6 @@ async def upload_image(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "image is too large")
 
     if kind == "avatar":
-        user.avatar_url = url
-        db.commit()
+        set_avatar(db, user, url)
 
     return {"url": url}

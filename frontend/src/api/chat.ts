@@ -37,4 +37,5 @@ export const chatApi = {
   },
   contactStatus: (matchId: string) => api.get<ContactStatus>(`/chat/${matchId}/contact-status`),
   contactShare: (matchId: string) => api.post<ContactStatus>(`/chat/${matchId}/contact-share`),
+  withdrawContactShare: (matchId: string) => api.delete<ContactStatus>(`/chat/${matchId}/contact-share`),
 }

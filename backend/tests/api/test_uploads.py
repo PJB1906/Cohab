@@ -85,6 +85,35 @@ def test_upload_rejects_unsupported_content_type(
     assert resp.status_code == 400
 
 
+def test_upload_rejects_content_that_does_not_match_the_declared_type(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The declared `Content-Type` header is client-supplied and untrusted
+    on its own — a plaintext body claiming to be a PNG must still be
+    rejected. docs/DECISIONS.md D-10.2."""
+    _register_and_login(client, institution, caplog)
+    resp = client.post(
+        "/uploads/image",
+        data={"kind": "avatar"},
+        files={"file": ("a.png", b"just some plain text, not a real png", "image/png")},
+    )
+    assert resp.status_code == 400
+
+
+def test_uploaded_file_is_served_with_nosniff_header(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    _register_and_login(client, institution, caplog)
+    resp = client.post(
+        "/uploads/image", data={"kind": "listing"}, files={"file": ("room.png", TINY_PNG, "image/png")}
+    )
+    url = resp.json()["url"]
+
+    served = client.get(url)
+    assert served.status_code == 200
+    assert served.headers["x-content-type-options"] == "nosniff"
+
+
 def test_upload_rejects_oversized_file(
     client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
 ) -> None:

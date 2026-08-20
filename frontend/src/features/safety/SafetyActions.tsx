@@ -39,7 +39,12 @@ export function SafetyActions({ userId, userName }: { userId: string; userName: 
       )}
 
       {open === 'report' && (
-        <ReportDialog reportedUserId={userId} reportedUserName={userName} onClose={() => setOpen(null)} />
+        <ReportDialog
+          reportedUserId={userId}
+          reportedUserName={userName}
+          onClose={() => setOpen(null)}
+          onBlockRequested={() => setOpen('block')}
+        />
       )}
       {open === 'block' && (
         <BlockConfirmDialog blockedUserId={userId} blockedUserName={userName} onClose={() => setOpen(null)} />

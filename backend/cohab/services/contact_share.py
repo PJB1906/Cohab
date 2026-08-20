@@ -14,12 +14,14 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from cohab.models import ContactShare, MatchScore, User
 from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked, ensure_pair_active, load_match
 
 __all__ = [
+    "AlreadyMutuallyShared",
     "ChatNotOpenYet",
     "ContactShareService",
     "ContactStatus",
@@ -40,6 +42,12 @@ class ContactShareError(Exception):
 
 class ChatNotOpenYet(ContactShareError):
     """PRD screen order: chat (9) precedes contact share (10)."""
+
+
+class AlreadyMutuallyShared(ContactShareError):
+    """`withdraw()` only undoes a one-sided opt-in — once both parties have
+    consented the share is complete, mirroring how a revealed phone number
+    can't be un-revealed. docs/DECISIONS.md D-10.5."""
 
 
 @dataclass(frozen=True)
@@ -94,11 +102,46 @@ class ContactShareService:
                     consented_at=datetime.now(timezone.utc),
                 )
             )
-            self.session.flush()
+            try:
+                self.session.flush()
+            except IntegrityError:
+                # Two near-simultaneous opt-ins from the same user race on
+                # `uq_contact_share_score_user`. The row now exists from the
+                # other transaction — rollback and continue; `_status` below
+                # re-reads consent fresh (rollback expires `row`, which
+                # re-fetches transparently on next attribute access).
+                self.session.rollback()
 
         status = self._status(user, row)
         if status.you_consented and status.other_consented and row.state == "chatting":
             row.state = "contact_shared"  # PRD §8.2: Chatting -> ContactShared, both opt in
 
         self.session.commit()
+        return self._status(user, row)
+
+    def withdraw(self, user: User, match_id: uuid.UUID) -> ContactStatus:
+        """Undoes the caller's own opt-in, but only while the other party
+        hasn't consented yet — mirrors the mockups' "withdraw before both
+        agree" affordance, which the built app never had (docs/DECISIONS.md
+        D-10.5). Once both sides have consented the share is complete;
+        `row.state` never flipped to `contact_shared` for a one-sided
+        opt-in, so there's no state to unwind here."""
+        row = load_match(self.session, user, match_id)
+        ensure_pair_active(self.session, row)
+
+        status = self._status(user, row)
+        if not status.you_consented:
+            return status  # nothing to withdraw
+        if status.other_consented:
+            raise AlreadyMutuallyShared(match_id)
+
+        existing = self.session.scalar(
+            select(ContactShare).where(
+                ContactShare.match_score_id == match_id, ContactShare.user_id == user.id
+            )
+        )
+        if existing is not None:
+            self.session.delete(existing)
+            self.session.commit()
+
         return self._status(user, row)

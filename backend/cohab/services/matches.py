@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from cohab.models import Listing, MatchScore, User, WeightSet
@@ -144,29 +145,48 @@ class MatchesService:
         else:
             a_id, b_id, canonical = candidate_id, subject_id, flip(result)
 
+        def _refresh_if_suggested(row: MatchScore) -> None:
+            # Once a row has been viewed (or moved further), its
+            # score/breakdown is a record of what the user was actually
+            # shown — CLAUDE.md's weight_set immutability guarantee requires
+            # that stay reproducible, not silently rewritten by a later
+            # rescore under a newly-published weight_set (docs/DECISIONS.md
+            # D-4.6, resolved in Phase 8). Only a still-"suggested" row,
+            # which nobody has looked at yet, is safe to freely refresh.
+            if row.state == "suggested":
+                row.weight_set_id = canonical.weight_set_id
+                row.score_ab = canonical.score_ab
+                row.score_ba = canonical.score_ba
+                row.combined_score = canonical.combined_score
+                row.breakdown = canonical.breakdown
+            # state / interested_by_a / interested_by_b intentionally
+            # untouched — a rescore must not erase a user's recorded interest.
+
         row = self.session.scalar(
             select(MatchScore).where(MatchScore.user_id_a == a_id, MatchScore.user_id_b == b_id)
         )
         if row is None:
             row = MatchScore(user_id_a=a_id, user_id_b=b_id, state="suggested")
             self.session.add(row)
-
-        # Once a row has been viewed (or moved further), its score/breakdown
-        # is a record of what the user was actually shown — CLAUDE.md's
-        # weight_set immutability guarantee requires that stay reproducible,
-        # not silently rewritten by a later rescore under a newly-published
-        # weight_set (docs/DECISIONS.md D-4.6, resolved in Phase 8). Only a
-        # still-"suggested" row, which nobody has looked at yet, is safe to
-        # freely refresh.
-        if row.state == "suggested":
-            row.weight_set_id = canonical.weight_set_id
-            row.score_ab = canonical.score_ab
-            row.score_ba = canonical.score_ba
-            row.combined_score = canonical.combined_score
-            row.breakdown = canonical.breakdown
-        # state / interested_by_a / interested_by_b intentionally untouched —
-        # a rescore must not erase a user's recorded interest.
-        self.session.flush()
+            _refresh_if_suggested(row)
+            try:
+                # A SAVEPOINT, not a full rollback: `get_matches` calls
+                # `_upsert` once per ranked candidate inside one transaction,
+                # so a plain `session.rollback()` here (the pattern used for
+                # the other three check-then-insert races this diff fixed)
+                # would discard every other candidate already upserted in
+                # this same batch, not just this one row's race.
+                with self.session.begin_nested():
+                    self.session.flush()
+            except IntegrityError:
+                row = self.session.scalar(
+                    select(MatchScore).where(MatchScore.user_id_a == a_id, MatchScore.user_id_b == b_id)
+                )
+                _refresh_if_suggested(row)
+                self.session.flush()
+        else:
+            _refresh_if_suggested(row)
+            self.session.flush()
         return row
 
     def _load_pair_row(self, subject_user: User, match_id: uuid.UUID) -> MatchScore:

@@ -10,19 +10,29 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_current_user, get_db
-from cohab.api.schemas import LoginRequest, RegisterRequest, RegisterResponse, UserOut, VerifyOTPRequest
+from cohab.api.schemas import (
+    LoginRequest,
+    RegisterRequest,
+    RegisterResponse,
+    ResendOTPRequest,
+    UserOut,
+    VerifyOTPRequest,
+)
 from cohab.core.config import COOKIE_SECURE, SESSION_COOKIE_NAME, SESSION_TTL_DAYS
 from cohab.core.security import create_session_token
 from cohab.models import User
 from cohab.services.auth import (
     AccountNotActive,
+    AlreadyVerified,
     AuthService,
     EmailAlreadyRegistered,
     InvalidCredentials,
     InvalidOTP,
     OTPExpired,
+    ResendTooSoon,
     TooManyOTPAttempts,
     UnknownEmailDomain,
+    UserNotFound,
 )
 from cohab.services.otp import ConsoleOTPSender
 
@@ -58,6 +68,20 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)) -> RegisterRe
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "email domain is not a registered institution")
     except EmailAlreadyRegistered:
         raise HTTPException(status.HTTP_409_CONFLICT, "this email is already registered")
+    return RegisterResponse(user_id=user.id)
+
+
+@router.post("/resend-otp", response_model=RegisterResponse)
+def resend_otp(body: ResendOTPRequest, db: Session = Depends(get_db)) -> RegisterResponse:
+    service = AuthService(db, ConsoleOTPSender())
+    try:
+        user = service.resend_otp(email=body.email)
+    except UserNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no account found for this email")
+    except AlreadyVerified:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this account is already verified — log in instead")
+    except ResendTooSoon as exc:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, f"wait a moment before requesting another code ({exc})")
     return RegisterResponse(user_id=user.id)
 
 

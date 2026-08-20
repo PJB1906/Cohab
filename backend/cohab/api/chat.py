@@ -19,7 +19,7 @@ from cohab.api.deps import get_db, require_verified_user
 from cohab.api.schemas import ContactStatusOut, MessageOut, SendMessageRequest
 from cohab.models import User
 from cohab.services.chat import ChatMessage, ChatService, PIIDetected, RateLimited, ThreadNotOpen
-from cohab.services.contact_share import ChatNotOpenYet, ContactShareService
+from cohab.services.contact_share import AlreadyMutuallyShared, ChatNotOpenYet, ContactShareService
 from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -109,4 +109,25 @@ def share_contact(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
     except ChatNotOpenYet:
         raise HTTPException(status.HTTP_409_CONFLICT, "open chat with this match before sharing contact")
+    return ContactStatusOut(**status_.__dict__)
+
+
+@router.delete("/{match_id}/contact-share", response_model=ContactStatusOut)
+def withdraw_contact_share(
+    match_id: uuid.UUID,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+) -> ContactStatusOut:
+    try:
+        status_ = ContactShareService(db).withdraw(user, match_id)
+    except MatchNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
+    except NotAParty:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
+    except AlreadyMutuallyShared:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "contact has already been mutually shared and can't be withdrawn"
+        )
     return ContactStatusOut(**status_.__dict__)

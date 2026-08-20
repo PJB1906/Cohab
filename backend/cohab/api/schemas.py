@@ -56,6 +56,10 @@ class VerifyOTPRequest(BaseModel):
     code: str = Field(min_length=1, max_length=16)
 
 
+class ResendOTPRequest(BaseModel):
+    email: EmailStr
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)

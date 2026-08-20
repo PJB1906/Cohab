@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from cohab.models import Feedback, MatchScore, User
@@ -114,7 +115,13 @@ class FeedbackService:
             submitted_at=datetime.now(timezone.utc),
         )
         self.session.add(feedback)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError as err:
+            # A double-submit (double-tap, two open tabs) races the
+            # `existing` check above on `uq_feedback_score_submitter`.
+            self.session.rollback()
+            raise AlreadySubmitted(match_id) from err
         return feedback
 
     def pending_for(self, user: User) -> list[PendingFeedback]:

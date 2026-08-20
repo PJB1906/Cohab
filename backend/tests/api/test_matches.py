@@ -149,6 +149,16 @@ def test_get_matches_returns_eligible_candidate_with_explanation_tags(
     assert item["divergence"] is not None  # sleep_schedule, by design
 
 
+def test_get_matches_rejects_out_of_range_limit(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    _login(client, f"asha@{institution.email_domain}")
+    assert client.get("/matches?limit=0").status_code == 422
+    assert client.get("/matches?limit=-1").status_code == 422
+    assert client.get("/matches?limit=5001").status_code == 422
+    assert client.get(f"/matches?limit={LARGE_LIMIT}").status_code == 200  # still within bounds
+
+
 def test_get_matches_is_idempotent_no_duplicate_rows(
     client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
 ) -> None:

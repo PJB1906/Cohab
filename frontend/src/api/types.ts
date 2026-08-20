@@ -26,6 +26,10 @@ export interface VerifyOtpRequest {
   code: string
 }
 
+export interface ResendOtpRequest {
+  email: string
+}
+
 export interface LoginRequest {
   email: string
   password: string

@@ -62,9 +62,10 @@ def _print_yield(ranker: MatchRanker, subjects: list[Candidate], pool: list[Cand
         for ex in excluded:
             reason_tally[ex.reason] = reason_tally.get(ex.reason, 0) + 1
 
+    median = statistics.median(counts)
     print("=" * 72)
     print(f"STAGE 1 FILTER YIELD  (over {len(subjects)} sample subjects, pool={len(pool)})")
-    print(f"  eligible pool: min={min(counts)}  median={int(statistics.median(counts))}  max={max(counts)}")
+    print(f"  eligible pool: min={min(counts)}  median={median:g}  max={max(counts)}")
     print("  exclusion reasons (most common first):")
     for reason, n in sorted(reason_tally.items(), key=lambda kv: kv[1], reverse=True):
         print(f"    {reason:<24} {n}")

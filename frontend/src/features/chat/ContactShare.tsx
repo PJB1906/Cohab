@@ -32,6 +32,13 @@ export function ContactShare() {
     },
   })
 
+  const withdrawMutation = useMutation({
+    mutationFn: () => chatApi.withdrawContactShare(matchId!),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['chat', matchId, 'contact-status'], updated)
+    },
+  })
+
   if (isLoading || !match) {
     return (
       <AppShell>
@@ -100,13 +107,27 @@ export function ContactShare() {
                 </p>
               )}
             </div>
+          ) : status?.you_consented ? (
+            <>
+              <Button disabled className="w-full mt-4">
+                Waiting for them…
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => withdrawMutation.mutate()}
+                disabled={withdrawMutation.isPending}
+                className="w-full mt-2"
+              >
+                Cancel
+              </Button>
+            </>
           ) : (
             <Button
               onClick={() => shareMutation.mutate()}
-              disabled={status?.you_consented || shareMutation.isPending}
+              disabled={shareMutation.isPending}
               className="w-full mt-4"
             >
-              {status?.you_consented ? 'Waiting for them…' : 'Share my contact details'}
+              Share my contact details
             </Button>
           )}
         </div>

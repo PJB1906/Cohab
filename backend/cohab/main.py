@@ -6,6 +6,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
+from starlette.responses import Response
 
 from cohab.api.analytics import router as analytics_router
 from cohab.api.auth import router as auth_router
@@ -65,9 +66,21 @@ app.include_router(moderation_router)
 app.include_router(feedback_router)
 app.include_router(analytics_router)
 
+class _NoSniffStaticFiles(StaticFiles):
+    """`X-Content-Type-Options: nosniff` on every served file — content
+    sniffing by the browser is exactly the risk the upload-time magic-byte
+    check (services/uploads.py) closes off at write time; this closes the
+    matching gap on the serving side. docs/DECISIONS.md D-10.2."""
+
+    def file_response(self, *args: object, **kwargs: object) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+
 # Phase 5 photo uploads — local disk, served back at /media (docs/DECISIONS.md).
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")
+app.mount("/media", _NoSniffStaticFiles(directory=UPLOAD_DIR), name="media")
 
 
 @app.get("/health")

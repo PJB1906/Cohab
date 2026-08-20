@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload
 
 from cohab.core.crypto import decrypt_message_safe
 from cohab.models import Message, Moderator, Report, User
@@ -64,7 +65,16 @@ def get_or_create_moderator(session: Session, user: User) -> Moderator:
     if moderator is None:
         moderator = Moderator(user_id=user.id, name=user.full_name, email=user.email)
         session.add(moderator)
-        session.flush()
+        try:
+            session.flush()
+        except IntegrityError:
+            # Two near-simultaneous first-uses of `claim`/`resolve` from the
+            # same newly-promoted moderator race on `Moderator.user_id`'s
+            # unique constraint. Safe to fully rollback: this runs before
+            # either caller has mutated the `Report` row it's about to
+            # touch, so there's nothing else to lose.
+            session.rollback()
+            moderator = session.scalar(select(Moderator).where(Moderator.user_id == user.id))
     return moderator
 
 
@@ -81,13 +91,30 @@ class ModerationService:
         self.session = session
 
     def list_reports(self, status: str | None = None) -> list[Report]:
-        stmt = select(Report).order_by(Report.created_at.desc())
+        # Live, moderator-polled endpoint (unlike the offline scripts' N+1s
+        # already accepted in D-9.6) — `_summary`/`_detail`
+        # (api/moderation.py) dereference `.reporter`/`.reported_user` per
+        # report, so this is two extra queries per row without eager
+        # loading. `selectinload` over `joinedload`: avoids duplicate-row
+        # fan-out from two to-one joins on the same query. D-10.3.
+        stmt = (
+            select(Report)
+            .options(selectinload(Report.reporter), selectinload(Report.reported_user))
+            .order_by(Report.created_at.desc())
+        )
         if status is not None:
             stmt = stmt.where(Report.status == status)
         return list(self.session.scalars(stmt).all())
 
     def get_report(self, report_id: uuid.UUID) -> Report:
-        report = self.session.get(Report, report_id)
+        # `session.get` doesn't accept loader options, so this needs a
+        # `select` even for a single row — same eager-loading reasoning as
+        # `list_reports` above (D-10.3): `_detail` also dereferences both.
+        report = self.session.scalar(
+            select(Report)
+            .where(Report.id == report_id)
+            .options(selectinload(Report.reporter), selectinload(Report.reported_user))
+        )
         if report is None:
             raise ReportNotFound(report_id)
         return report
@@ -120,7 +147,14 @@ class ModerationService:
         report.status = "under_review"
         report.assigned_moderator_id = moderator.id
         self.session.commit()
-        return report
+        # `commit()` expires every attribute on every session object
+        # (default `expire_on_commit=True`), including the `reporter`/
+        # `reported_user` relationships `get_report()` just eager-loaded —
+        # the API layer's `_detail()` would otherwise re-trigger a fresh
+        # lazy load per relationship on next access, reintroducing the N+1
+        # this eager load exists to close (D-10.3). Re-fetching gives the
+        # caller a non-expired, still-eager-loaded object.
+        return self.get_report(report_id)
 
     def resolve(
         self,
@@ -165,7 +199,7 @@ class ModerationService:
         # PRD §8.3: "reporter notified" — no notification channel exists
         # this phase (build plan defers it); a documented no-op, not a bug.
         self.session.commit()
-        return report
+        return self.get_report(report_id)  # re-fetch: see claim()'s comment on commit expiry (D-10.3)
 
     def _maybe_reactivate(self, reported_user_id: uuid.UUID) -> None:
         """A dismissal closes this case; if it was the only thing keeping

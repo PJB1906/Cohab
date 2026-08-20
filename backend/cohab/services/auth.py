@@ -10,9 +10,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from cohab.core.config import OTP_MAX_ATTEMPTS, OTP_TTL_MINUTES
+from cohab.core.config import OTP_MAX_ATTEMPTS, OTP_TTL_MINUTES, RESEND_OTP_COOLDOWN_SECONDS
 from cohab.core.security import (
     generate_otp,
     hash_otp,
@@ -54,6 +55,24 @@ class OTPExpired(AuthError):
 
 class TooManyOTPAttempts(AuthError):
     pass
+
+
+class UserNotFound(AuthError):
+    pass
+
+
+class AlreadyVerified(AuthError):
+    pass
+
+
+class ResendTooSoon(AuthError):
+    """`resend_otp` cooldown (docs/DECISIONS.md D-10.6) — cheap guard against
+    an unauthenticated caller spamming the delivery mechanism or using rapid
+    resends to keep resetting `otp_attempts` back to 0."""
+
+    def __init__(self, retry_after_seconds: float) -> None:
+        self.retry_after_seconds = retry_after_seconds
+        super().__init__(f"retry after {retry_after_seconds:.0f}s")
 
 
 def _resolve_institution(session: Session, email: str) -> Institution:
@@ -104,7 +123,15 @@ class AuthService:
             account_status="active",
         )
         self.session.add(user)
-        self.session.flush()  # assigns user.id for the FK below
+        try:
+            self.session.flush()  # assigns user.id for the FK below; hits `uq` on a race
+        except IntegrityError as err:
+            # Two near-simultaneous registrations with the same email: the
+            # earlier `select` above can't see the other transaction's
+            # not-yet-committed insert, so both reach here. The loser gets
+            # the intended 409 instead of a raw 500.
+            self.session.rollback()
+            raise EmailAlreadyRegistered(email) from err
 
         code = generate_otp()
         record = VerificationRecord(
@@ -153,6 +180,44 @@ class AuthService:
         record.otp_expires_at = None
         user.verification_status = "verified"
         self.session.commit()
+        return user
+
+    def resend_otp(self, *, email: str) -> User:
+        """Recovers a stuck-unverified account, whatever the reason the
+        original code is unusable — expired (`OTP_TTL_MINUTES`), attempts
+        exhausted (`OTP_MAX_ATTEMPTS`), or simply lost because the user
+        closed the tab and no longer has `user_id` (`verify_otp`'s own key).
+        Keyed by email instead, so it also closes the "came back later and
+        `register()` just says 409" dead end — docs/DECISIONS.md D-10.1.
+        Returns the user so the caller (the API layer) can hand its id back
+        to a frontend that has no `user_id` of its own to call `verify_otp`
+        with (the register()-409 recovery path)."""
+        email = email.strip().lower()
+        user = self.session.scalar(select(User).where(User.email == email))
+        if user is None:
+            raise UserNotFound(email)
+        if user.verification_status != "unverified":
+            raise AlreadyVerified(email)
+
+        record = self.session.scalars(
+            select(VerificationRecord).where(VerificationRecord.user_id == user.id)
+        ).first()
+        if record is None:
+            raise UserNotFound(email)  # register() always creates one alongside the user
+
+        if record.otp_expires_at is not None:
+            issued_at = record.otp_expires_at - timedelta(minutes=OTP_TTL_MINUTES)
+            elapsed = (datetime.now(timezone.utc) - issued_at).total_seconds()
+            if elapsed < RESEND_OTP_COOLDOWN_SECONDS:
+                raise ResendTooSoon(RESEND_OTP_COOLDOWN_SECONDS - elapsed)
+
+        code = generate_otp()
+        record.otp_hash = hash_otp(code)
+        record.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_TTL_MINUTES)
+        record.otp_attempts = 0
+        self.session.commit()
+
+        self.otp_sender.send(email, code)
         return user
 
     def login(self, *, email: str, password: str) -> User:

@@ -1810,3 +1810,370 @@ alternative); `docs/evaluation/score_distribution.png` and
 each `evaluation.py` run, not hand-authored; `docs/COHAB_EVALUATION.md` is
 the narrated "report" PRD §14's roadmap names, cross-referencing this
 section rather than repeating it.
+
+---
+
+## Phase 10 — Post-Phase-9 hardening pass
+
+A three-agent audit (matcher-reviewer + two general-purpose agents, one
+backend one frontend), run after Phase 9 shipped, read this file in full and
+reported 12 findings not already logged here. Three were clear bugs (fixed
+with no new decision needed — a median-formatting regression in `report.py`,
+missing `IntegrityError` handling on three racy check-then-insert writes, and
+a frontend moderation-queue stale-cache gap in the same family already fixed
+twice, D-7.7/D-8.7); the rest needed a decision, recorded as `D-10.1`
+onward below.
+
+### D-10.1 OTP recovery: an email-keyed resend endpoint, not a `user_id`-keyed one or a `register()` side effect
+
+**Gap:** `AuthService.verify_otp` had no recovery path once
+`otp_attempts >= OTP_MAX_ATTEMPTS` (5) or `otp_expires_at` passed
+(`OTP_TTL_MINUTES`, 10) — it raises forever, and `register()`'s uniqueness
+check (`auth.py`) rejects any repeat call for the same email regardless of
+`verification_status`, so a user who never finishes verifying is
+permanently stuck. Not spec-derived — PRD/matching spec are silent on OTP
+recovery.
+
+**Decision (confirmed with the user):** a new `POST /auth/resend-otp`,
+keyed by **email**, not `user_id`. Two alternatives were considered and
+rejected:
+- A `user_id`-keyed endpoint (matching `verify_otp`'s own key) recovers the
+  "code expired while the tab is still open" case, but not "closed the tab
+  and came back later" — the frontend has no `user_id` to send at that
+  point, only the email the user re-types.
+- Letting `register()` itself re-issue a fresh OTP for an existing,
+  still-unverified account conflates two different intents (sign up vs.
+  resend) into one call and would have required loosening its uniqueness
+  check, which is otherwise a clean, spec-independent invariant.
+
+`AuthService.resend_otp(email)` (`auth.py`) looks the user up by email,
+rejects a nonexistent account (`UserNotFound`, 404) or an already-verified
+one (`AlreadyVerified`, 409), and otherwise regenerates the
+`VerificationRecord` in place — fresh `otp_hash`/`otp_expires_at`,
+`otp_attempts` reset to 0 — mirroring `register()`'s own OTP-issuing block.
+It returns the `User`, and the route returns the same `RegisterResponse`
+shape (`{user_id}`) `register()` does, **not** a bare 204: the frontend's
+main use of this endpoint is recovering from a `register()` 409 with no
+`user_id` of its own, so the response has to hand one back for the
+subsequent `verify_otp` call to use.
+
+`SignUpWizard.tsx`'s account-creation step now catches a 409 from
+`register()` and calls `resend-otp` with the same email before giving up —
+if that succeeds (account exists, still unverified), it proceeds straight
+to the OTP screen with a "we've sent a fresh code" notice instead of
+stopping at a dead-end error; only a second 409 (genuinely already
+verified) surfaces as "log in instead." The OTP screen also gained a
+plain "Resend code" button for the simpler in-session case (code expired
+or attempts exhausted, tab still open).
+
+**Code:** `cohab/services/auth.py` (`AuthService.resend_otp`,
+`UserNotFound`, `AlreadyVerified`), `cohab/api/auth.py`,
+`cohab/api/schemas.py` (`ResendOTPRequest`),
+`tests/api/test_auth.py`; `frontend/src/api/auth.ts`,
+`frontend/src/api/types.ts` (`ResendOtpRequest`),
+`frontend/src/features/auth/SignUpWizard.tsx`.
+
+### D-10.2 Uploaded image content is sniffed, not trusted from the declared `Content-Type`
+
+**Gap:** `uploads.py`'s `save_image` validated only the client-supplied
+`Content-Type` header against `ALLOWED_CONTENT_TYPES` — no check that the
+bytes actually are what they claim to be — before writing to disk and
+serving them back at `/media/<name>` through a plain `StaticFiles` mount
+with no `X-Content-Type-Options` header. Not spec-sourced (PRD/spec don't
+mention file validation at all).
+
+**Decision:** `_sniff_image_type(contents)` (`uploads.py`) checks the
+file's real magic bytes against the three formats `ALLOWED_CONTENT_TYPES`
+already allows — JPEG (`FF D8 FF`), PNG (the 8-byte PNG signature), WebP
+(`RIFF` at offset 0, `WEBP` at offset 8, since WebP is one of several
+RIFF-container formats sharing the same 4-byte prefix). `save_image` now
+rejects (`UnsupportedImageType`, the existing exception — no new one
+needed) whenever the sniffed type doesn't match the declared
+`Content-Type`, on top of the existing header and size checks. The magic-
+byte signatures themselves are implementation detail, not sourced from any
+document, same footing as `LOCALITY_BUDGET_RANGE` (D-3.1) and other
+proposed constants flagged in their own module.
+
+Separately, `/media` now goes through a small `_NoSniffStaticFiles`
+subclass (`main.py`) that adds `X-Content-Type-Options: nosniff` to every
+served response — defence in depth on the serving side, in case a future
+upload path is added that doesn't route through `save_image`'s own check.
+
+**Code:** `cohab/services/uploads.py` (`_sniff_image_type`,
+`_MAGIC_SIGNATURES`), `cohab/main.py` (`_NoSniffStaticFiles`),
+`tests/api/test_uploads.py`.
+
+### D-10.3 N+1 on the moderation queue closed with query-site `selectinload`, not a `relationship()`-level `lazy=`
+
+**Gap:** `Report.reporter`/`Report.reported_user` (`models/safety.py`) have
+no eager-loading, and `api/moderation.py`'s `_summary`/`_detail` both
+dereference `.reporter.full_name`/`.reported_user.full_name` per report —
+two extra queries per row on every `GET /moderation/reports`. Distinct from
+the N+1s already accepted in D-9.6: those are offline, manually-run scripts;
+this is a live, moderator-facing endpoint that's realistically polled.
+
+**Decision:** eager-load at the query call sites in
+`moderation_queue.py` (`list_reports`, and `get_report` — switched from
+`session.get`, which doesn't accept loader options, to an equivalent
+`select`), via `selectinload(Report.reporter)` /
+`selectinload(Report.reported_user)`, rather than adding
+`lazy="selectin"` to the `relationship()` declarations themselves. No
+`lazy=` precedent exists anywhere in `models/` — query-site loading is more
+surgical, since it's this one endpoint that needs it, not necessarily every
+future caller of `Report`. `selectinload` over `joinedload`: both are
+to-one relationships here, so the fan-out risk `joinedload` usually avoids
+`selectinload` on doesn't apply either way, but `selectinload` keeps the
+base `Report` query itself un-joined and easier to read, and matches
+`selectinload`'s established use elsewhere in this codebase's eager-loading
+(offline scripts' `_load_candidates`) more closely than `joinedload` would.
+
+**Code:** `cohab/services/moderation_queue.py` (`list_reports`,
+`get_report`).
+
+### D-10.4 `GET /matches?limit=` validation, and the ranker's tie-break, promoted from code comments to logged decisions
+
+**Gap 1 (`/matches?limit=`):** `limit: int = 10` had no bounds — a negative
+value wasn't rejected and flowed into `ranker.rank(subject, pool)[:limit]`,
+which under Python slicing semantics silently drops candidates from the end
+rather than erroring, instead of the intended 422.
+
+**Decision:** `limit: int = Query(default=10, ge=1, le=5000)`
+(`api/matches.py`) — the upper bound can't be a tight cap like 100, because
+`recompute.py`'s `RECOMPUTE_LIMIT` and the test suite's `LARGE_LIMIT` both
+already rely on `limit=3000` as an established "effectively unlimited"
+convention for walking a pilot-scale pool in one pass; 5000 sits comfortably
+above that existing usage while still rejecting a pathological value. Not
+spec-sourced — PRD/spec don't set a limit or a default.
+
+**Gap 2 (ranker tie-break):** `MatchRanker.rank`'s sort key
+(`ranker.py`) — `-combined_score`, then `-min(score_ab, score_ba)`, then
+`user_id` — has no basis in the matching spec and had never been logged as
+a decision, unlike every other undocumented constant in this codebase.
+
+**Decision:** the tie-break is kept as written — it isn't wrong, just
+previously undocumented. Second key prefers the *less lopsided* pair (the
+higher of the two directional scores' minimum) over one that scores well
+for only one party, which is the same asymmetry-aware spirit as the
+harmonic-mean combination itself (CLAUDE.md: "not the arithmetic mean,
+which would hide a match that suits only one party" — extended here to
+break ties the same way, not just to compute the primary score).
+`user_id` last is purely for a stable, deterministic order when the first
+two keys are equal; it carries no matching-quality meaning of its own.
+
+**Code:** `cohab/api/matches.py`, `cohab/services/matching/ranker.py`,
+`tests/api/test_matches.py`
+(`test_get_matches_rejects_out_of_range_limit`).
+
+### D-10.5 Screen-by-screen mockup fidelity review — two content fixes, two documented scope gaps, everything else confirmed consistent
+
+**Method (user-directed — a visual comparison, not just a content/copy read).**
+The two root-level mockups (`Cohab Desktop.html`, `Cohab Prototype.html`) were
+rendered and driven with Playwright — `Cohab Desktop.html`'s 14-screen switcher
+clicked through screen by screen, `Cohab Prototype.html`'s 17 phone-frame
+tiles (`#s0`–`#s13` plus bonus `#sSaved`/`#sProfile`) scrolled to and
+screenshotted individually — rather than relying on the earlier session's
+text-only decode of the bundled artifact JS. The live app was screenshotted
+the same way: two fresh accounts registered and matched through the real
+`uvicorn`/`vite dev` stack (backend on `:8000`, frontend on `:5173`, `/api`
+proxied per `vite.config.ts`), reaching match list/detail, chat, contact
+share, report, block, and — as a second account flipped to
+`is_moderator` — the moderation queue, report review and analytics screens.
+
+One false alarm caught before it became a finding: a `fullPage` screenshot
+of match detail appeared to show the sticky "Open chat" action bar
+overlapping the middle of the attribute table. A viewport-only (non-stitched)
+screenshot showed it rendering correctly, pinned to the bottom as intended —
+Chromium's full-page screenshot stitching doesn't handle `position: fixed`
+elements correctly, and this was a screenshot artifact, not a bug. (Same
+category of caution D-7.7 already flagged: verify before filing, the shared
+tooling can lie.)
+
+**Confirmed consistent — re-checked, no new gap:**
+- Screens 1–8 (auth through match detail): D-5.1/D-5.4/D-5.5's documented
+  resolutions all still hold under a live screenshot, not just a code read —
+  including D-5.5's "scores, not raw answers" breakdown table, verified
+  rendering exactly as decided.
+- **Chat screen — resolved, not a gap.** `Cohab Desktop.html`'s chat screen
+  is a two-pane inbox (thread list + conversation), which the single-thread
+  built `ChatThread.tsx` doesn't match. But `Cohab Prototype.html`'s *mobile*
+  chat screen (`#s9`) is single-thread only, identical in structure to the
+  built screen (back arrow, name header, overflow menu, message bubbles,
+  composer) — checking only the desktop mockup would have wrongly flagged
+  this. CLAUDE.md is explicit that mobile-first is the priority ("Build at
+  the small breakpoint and widen — not the reverse"), so the built app
+  correctly follows the mobile mockup; the desktop two-pane inbox was never
+  built and shouldn't be, absent a decision to invest in a wider layout.
+- Match detail's "Report this profile"/"Block" — the mockups show these as
+  either two always-visible plain-text links (Desktop) or an overflow menu
+  reaching Report only (Prototype, with Block only offered as a chained
+  post-report step). The built `SafetyActions` component gives a single
+  "Report or block" entry point with both options immediately visible in one
+  small menu, reused identically on match detail and chat — arguably a
+  reasonable synthesis of both mockups rather than a literal copy of either,
+  and consistent with itself everywhere it appears.
+- Blocked-users screen: no dedicated screen exists in either mockup (only an
+  unlinked "Blocked people ›" placeholder in Prototype's bonus Profile tile)
+  — already fully explained by **D-7.8** (new scope, raised with the user
+  directly, built on request).
+- Analytics dashboard: zero evidence of this screen in either mockup —
+  already fully explained by **D-8.6**'s "deliberate v1/v2 scope tension"
+  entry.
+- Feedback screen's outcome taxonomy differs from the mockups' UX-facing
+  categories (a friction-category picker or a 1–5 scale) — already a
+  deliberate, documented design (**D-8.3**), built around PRD §12's
+  Kaplan-Meier survival needs rather than the mockups' categories.
+
+**Two known gaps, fixed this session (per the user's decisions, see top of
+this Phase 10 section):**
+1. Contact-share withdraw-before-mutual — built, verified rendering
+   ("Cancel" appears under "Waiting for them…", disappears once withdrawn).
+2. Report+block chaining — built, verified end-to-end (submitting a report
+   renders "Also block {name}" on the success screen, opens the existing
+   block-confirm dialog).
+
+**Two real gaps found, left undocumented no longer — logged here as
+deliberate deferrals, not built this session (out of a hardening pass's
+scope; each is a genuine feature addition, not a screen-polish fix):**
+1. **Match list has no filtering or sorting.** Both mockups' match-list
+   screen has a working-looking filters sidebar (monthly rent range,
+   locality checkboxes with per-locality counts, room type, move-in window,
+   seeker type) and a sort control (Compatibility / Rent / Distance). The
+   built `MatchList`/`MatchCard` screen has none of this — a plain ranked
+   card list with no client-side or server-side filtering at all. This is a
+   real, previously unflagged gap dating back to Phase 5 (not mentioned in
+   D-5.1/D-5.2/D-5.4/D-5.5) — missed because Phase 5's review focused on
+   content/data-shape gaps, not interactive chrome. Building it properly
+   needs either a larger default fetch to filter client-side or new backend
+   query parameters, plus real frontend filter state — a genuine feature,
+   not a fix. Left for a future phase.
+2. **Moderator queue is far simpler than the mockups' admin console.** Both
+   mockups show filter tabs (Open/Under review/Escalated/Dismissed), a
+   search box, an account-facts grid (verification status, prior report
+   count, match count, contact-shares count, messages sent/flagged), richer
+   evidence with per-message auto-flag badges, and a visible append-only
+   action log. The built `ModerationQueue`/`ReportReview` is a two-bucket
+   list and a plain claim/resolve form — everything the backend policy
+   itself needs (D-7.1–D-7.8) is present, just not the fuller admin UI.
+   Treated the same way D-8.6 already treats the analytics dashboard: a
+   deliberate, pilot-scale minimal build, not an oversight — a handful of
+   moderators reviewing a pilot's report volume don't yet need search or
+   filter tabs. Revisit if moderation volume grows.
+
+**One cosmetic gap, noted, not built (infra-scope, same reasoning as
+D-4.5/D-5.3's "no new infra the pilot doesn't need"):** the login mockup
+shows a "Forgot password?" link and a "Keep me logged in" checkbox; the
+built login screen has neither. A real password-reset flow needs email
+delivery, which doesn't exist (D-4.5: `ConsoleOTPSender` only) — building
+the link without the flow behind it would be worse than omitting it. "Keep
+me logged in" has no built behaviour to control either, since the session
+cookie already lasts the full `SESSION_TTL_DAYS` regardless.
+
+**Code:** `frontend/src/features/chat/ContactShare.tsx`,
+`frontend/src/features/safety/{ReportDialog,SafetyActions}.tsx`,
+`backend/cohab/services/contact_share.py`, `backend/cohab/api/chat.py` (the
+two fixes above); no other code changed by this entry — the rest is
+observation only.
+
+### D-10.6 `/code-review high` pass over the whole hardening diff — six real findings fixed, two accepted as-is
+
+**Requested by the user** before committing this hardening pass, same
+precedent as D-6.6/D-8.8/D-9.6. Nine findings came back; one was refuted on
+verification (a hypothesized `None` return from `BlockService.block()` —
+its premise doesn't hold under Postgres, and the sole caller discards the
+return value anyway), six were real and fixed, two are recorded here as
+reviewed-and-accepted rather than fixed.
+
+**Fixed:**
+
+1. **Three more check-then-insert races, same family as findings #1-3 this
+   diff already fixed, missed the first pass.** `MatchesService._upsert`
+   (`match_score`'s pair-unique constraint), `FeedbackService.submit`
+   (`feedback`'s `UNIQUE(score_id, submitted_by)`), and
+   `get_or_create_moderator` (`moderator.user_id`'s unique constraint) all
+   had the identical unguarded shape. `submit`/`get_or_create_moderator`
+   use the same full-`session.rollback()` pattern as findings #1-3 (each
+   runs standalone, nothing else to lose). `_upsert` needed a different
+   shape: `MatchesService.get_matches` calls it once per ranked candidate
+   inside **one transaction**, so a full rollback on a race would discard
+   every other candidate's already-upserted row from the same batch, not
+   just the racing one — a `session.begin_nested()` SAVEPOINT scopes the
+   rollback to just that row instead. Fixing `_upsert` surfaced its own bug
+   during implementation: the first attempt flushed the new row *before*
+   `weight_set_id`/`score_ab`/etc. were populated (those were set later in
+   the original code, right before the *existing* final flush), which
+   turned every single new-match insert into a `NOT NULL` violation, not
+   just races — caught immediately by the full test suite (26 failures),
+   fixed by populating the row's fields before either the SAVEPOINT-guarded
+   insert-flush or the plain existing-row-update-flush, via a shared
+   `_refresh_if_suggested` closure so both paths apply the identical logic.
+2. **`claim()`/`resolve()` re-lost the N+1 fix (D-10.3) via post-commit
+   attribute expiry.** Both call the now-eager-loaded `get_report()`, but
+   SQLAlchemy's default `expire_on_commit=True` expires every attribute on
+   every session object after `self.session.commit()` — including the
+   `reporter`/`reported_user` relationships just eager-loaded — so
+   `api/moderation.py`'s `_detail()` re-triggered a fresh lazy load per
+   relationship on next access, silently reintroducing the exact N+1 D-10.3
+   closed, just on the two POST actions instead of the GET list. Fixed by
+   returning a fresh `self.get_report(report_id)` after `commit()` instead
+   of the now-expired in-memory object.
+3. **`/auth/resend-otp` had no rate limit of its own.** Unauthenticated,
+   and — unlike `verify_otp` — nothing bounded how often it could be
+   called. Added `RESEND_OTP_COOLDOWN_SECONDS` (proposed, 30s,
+   `core/config.py`), checked against the current record's implied issue
+   time (`otp_expires_at - OTP_TTL_MINUTES`); a call inside the cooldown
+   raises `ResendTooSoon` → 429. This is a narrower fix than the review
+   finding's literal framing ("resets `otp_attempts`, turning the capped
+   guess budget into unbounded brute force") — each resend also issues a
+   **fresh** code, so an attacker's in-flight guesses against the old code
+   are worthless the moment a resend succeeds regardless of the attempt
+   counter; the real exposure the cooldown closes is unrate-limited
+   spamming of the OTP delivery mechanism itself.
+4. **`SignUpWizard`'s misleading error message on a non-409 resend
+   failure.** The register()-409 recovery path's inner `catch` reported
+   "This email is already registered" for *any* resend failure, including
+   an unrelated 429 (finding #3, above) or a transient network/500 — now
+   only a genuine second 409 gets that message; anything else surfaces its
+   own `ApiError.message`.
+5. **`report.py`'s median fix (finding #1) shipped without a test**,
+   against CLAUDE.md's "tests for anything in `services/matching/`" rule.
+   `report.py` itself has no other tests (a manually-run stdout script, per
+   its own docstring) — added a minimal, dependency-free regression test
+   (`tests/matching/test_report.py`) that mocks `MatchRanker` entirely and
+   asserts `_print_yield` prints `median=2.5`, not `median=2`, for a
+   four-subject sample — exercises the exact bug class without needing the
+   DB-backed candidate pool the script itself runs against.
+
+**Left as-is, judged acceptable at this scale — same precedent as
+D-6.6/D-7.3/D-8.6's own "left as-is" sections:**
+
+- **`/auth/resend-otp` is a partial account-enumeration oracle** (404
+  unknown email / 409 already verified / 200 unverified). Real, but
+  narrower than the review finding suggested: `register()` already leaks
+  account existence via its own 409 (pre-existing, not introduced by this
+  diff), and `resend-otp` is only ever called by the frontend *after*
+  `register()`'s 409 has already confirmed the account exists — so the
+  incremental new disclosure is specifically the verified/unverified
+  distinction for an email already known to be registered. Closing it
+  fully would mean `resend-otp` responding identically for "no such
+  account" and "sent," which breaks the very recovery flow D-10.1 built it
+  for (the frontend needs a real `user_id` back to reach the OTP screen).
+  The new rate limit (finding #3, above) also throttles casual probing.
+  Revisit if this moves past pilot scale with a real email backend.
+- **`SignUpWizard`'s register()-409 recovery chains two API calls and
+  branches the workflow on the second's result** — a genuine tension with
+  CLAUDE.md's "the frontend never orchestrates business logic... the
+  client issues intent-level requests, not step sequences." Not changed
+  here: this exact shape was put to the user directly as a design choice
+  (D-10.1's "email-based resend endpoint" question) and confirmed, not
+  arrived at silently — reworking it into a single server-orchestrated
+  intent-level call is a legitimate future improvement, but redoing an
+  explicitly-confirmed decision mid-review wasn't this pass's call to make
+  unilaterally.
+
+**Code:** `cohab/services/matches.py` (`MatchesService._upsert`),
+`cohab/services/feedback.py`, `cohab/services/moderation_queue.py`
+(`get_or_create_moderator`, `claim`, `resolve`), `cohab/services/auth.py`
+(`ResendTooSoon`), `cohab/api/auth.py`, `cohab/core/config.py`
+(`RESEND_OTP_COOLDOWN_SECONDS`), `tests/api/test_auth.py`,
+`tests/matching/test_report.py`;
+`frontend/src/features/auth/SignUpWizard.tsx`.
