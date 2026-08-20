@@ -25,7 +25,12 @@ from cohab.api.schemas import (
 )
 from cohab.models import User, WeightSet
 from cohab.services.match_access import PairBlocked
-from cohab.services.matches import MatchesService, MatchNotFound, NotAParty
+from cohab.services.matches import (
+    InvalidStateTransition,
+    MatchesService,
+    MatchNotFound,
+    NotAParty,
+)
 from cohab.services.matching.text import NeutralTextSimilarity
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -134,4 +139,46 @@ def express_interest(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
     except PairBlocked:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "this match is not available")
+    except InvalidStateTransition:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this match is settled and can't be reopened")
+    return ExpressInterestResponse(state=state)
+
+
+@router.post("/{match_id}/confirm-move-in", response_model=ExpressInterestResponse)
+def confirm_move_in(
+    match_id: uuid.UUID,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+    weight_set: WeightSet = Depends(get_active_weight_set),
+) -> ExpressInterestResponse:
+    try:
+        state = _service(db, weight_set).confirm_move_in(user, match_id)
+    except MatchNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
+    except NotAParty:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this match is not available")
+    except InvalidStateTransition:
+        raise HTTPException(status.HTTP_409_CONFLICT, "move-in can only be confirmed after contact is shared")
+    return ExpressInterestResponse(state=state)
+
+
+@router.post("/{match_id}/reject", response_model=ExpressInterestResponse)
+def reject(
+    match_id: uuid.UUID,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+    weight_set: WeightSet = Depends(get_active_weight_set),
+) -> ExpressInterestResponse:
+    try:
+        state = _service(db, weight_set).reject(user, match_id)
+    except MatchNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
+    except NotAParty:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this match is not available")
+    except InvalidStateTransition:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this match can no longer be rejected")
     return ExpressInterestResponse(state=state)

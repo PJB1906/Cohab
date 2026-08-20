@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -71,5 +71,9 @@ class MatchScore(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
     state: Mapped[str] = mapped_column(String, nullable=False, default="suggested")
     interested_by_a: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     interested_by_b: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Set once, by confirm_move_in (ContactShared -> Cohabiting, PRD §8.2).
+    # Anchors both the 30/90-day feedback cadence and the survival duration
+    # Phase 9's Kaplan-Meier estimator needs — never overwritten afterwards.
+    cohabiting_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     weight_set: Mapped["WeightSet"] = relationship(back_populates="match_scores")

@@ -255,3 +255,39 @@ export interface ResolveReportRequest {
   sanction?: ReportSanction | null
   note?: string | null
 }
+
+// --- feedback (Phase 8) -----------------------------------------------
+
+/** Mirrors cohab/models/feedback.py REJECTED_OUTCOMES/COHABITING_OUTCOMES.
+ * Which subset is actually valid depends on the match's state — the server
+ * is the source of truth for that, this union only rules out values never
+ * valid for either. */
+export type FeedbackOutcome = 'not_pursued' | 'incompatible' | 'other' | 'still_together' | 'moved_out'
+
+export interface FeedbackRequest {
+  outcome: FeedbackOutcome
+  cohabitation_duration_days?: number | null
+}
+
+export interface FeedbackOut {
+  id: string
+  outcome: string
+  cohabitation_duration_days: number | null
+  submitted_at: string
+}
+
+export interface PendingFeedbackOut {
+  match_id: string
+  other_user_id: string
+  other_user_name: string
+  state: string
+}
+
+// --- analytics (Phase 8) -----------------------------------------------
+
+export interface AnalyticsSummaryOut {
+  members_by_verification_status: Record<string, number>
+  members_by_account_status: Record<string, number>
+  matches_by_state: Record<string, number>
+  reports_by_status: Record<string, number>
+}

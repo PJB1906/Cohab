@@ -30,6 +30,7 @@ class Reason:
     PET_CONFLICT = "pet_conflict"
     SMOKING_DEALBREAKER = "smoking_dealbreaker"
     BLOCKED = "blocked"
+    ALREADY_DECIDED = "already_decided"
 
 
 class Exclusion(NamedTuple):
@@ -51,6 +52,7 @@ def passes_hard_constraints(
     a: Candidate,
     b: Candidate,
     blocked_pairs: frozenset[frozenset[uuid.UUID]] | set | None = None,
+    settled_pairs: frozenset[frozenset[uuid.UUID]] | set | None = None,
 ) -> tuple[bool, str | None]:
     """Return (passes, reason). `a` is the subject, `b` the candidate.
 
@@ -106,6 +108,15 @@ def passes_hard_constraints(
     if blocked_pairs and frozenset({a.user_id, b.user_id}) in blocked_pairs:
         return False, Reason.BLOCKED
 
+    # Already rejected or cohabiting (Phase 8) — not a spec §2 hard
+    # constraint, but the same shape of pair-level exclusion as blocking:
+    # a settled pair must not resurface as a fresh suggestion.
+    # RejectConfirmDialog.tsx's own copy promises "neither of you can pick
+    # this back up from here" — found in code review that nothing enforced
+    # it; Stage 1 never knew a match_score row existed at all.
+    if settled_pairs and frozenset({a.user_id, b.user_id}) in settled_pairs:
+        return False, Reason.ALREADY_DECIDED
+
     return True, None
 
 
@@ -113,9 +124,12 @@ class EligibilityFilter:
     """Runs Stage 1 across a candidate pool."""
 
     def __init__(
-        self, blocked_pairs: frozenset[frozenset[uuid.UUID]] | set | None = None
+        self,
+        blocked_pairs: frozenset[frozenset[uuid.UUID]] | set | None = None,
+        settled_pairs: frozenset[frozenset[uuid.UUID]] | set | None = None,
     ) -> None:
         self.blocked_pairs = blocked_pairs
+        self.settled_pairs = settled_pairs
 
     def filter(
         self, subject: Candidate, pool: Iterable[Candidate]
@@ -125,7 +139,9 @@ class EligibilityFilter:
         for candidate in pool:
             if candidate.user_id == subject.user_id:
                 continue  # never match a user with themselves
-            ok, reason = passes_hard_constraints(subject, candidate, self.blocked_pairs)
+            ok, reason = passes_hard_constraints(
+                subject, candidate, self.blocked_pairs, self.settled_pairs
+            )
             if ok:
                 eligible.append(candidate)
             else:

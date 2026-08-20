@@ -18,6 +18,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
+from cohab.models.feedback import COHABITING_OUTCOMES, REJECTED_OUTCOMES
 from cohab.models.preference import GENDER_PREFERENCES, PET_TOLERANCES, QUESTIONNAIRE_KEYS
 from cohab.models.safety import REPORT_REASONS, REPORT_SANCTIONS
 from cohab.models.user import GENDERS, SEEKER_TYPES
@@ -28,6 +29,10 @@ GenderPreference = Literal[GENDER_PREFERENCES]  # type: ignore[valid-type]
 PetTolerance = Literal[PET_TOLERANCES]  # type: ignore[valid-type]
 ReportReason = Literal[REPORT_REASONS]  # type: ignore[valid-type]
 ReportSanction = Literal[REPORT_SANCTIONS]  # type: ignore[valid-type]
+# Permissive union — FeedbackService.submit enforces which subset is valid
+# for the match's actual state (rejected vs cohabiting); Pydantic only rules
+# out values that are never valid for either.
+FeedbackOutcome = Literal[REJECTED_OUTCOMES + COHABITING_OUTCOMES]  # type: ignore[valid-type]
 
 
 # --- auth --------------------------------------------------------------
@@ -206,6 +211,29 @@ class ExpressInterestResponse(BaseModel):
     state: str
 
 
+# --- feedback ---------------------------------------------------------
+
+class FeedbackRequest(BaseModel):
+    outcome: FeedbackOutcome
+    # Only meaningful (and only read) for a "moved_out" outcome — the one
+    # case the server can't derive the figure itself (FeedbackService.submit).
+    cohabitation_duration_days: int | None = Field(default=None, ge=0)
+
+
+class FeedbackOut(BaseModel):
+    id: uuid.UUID
+    outcome: str
+    cohabitation_duration_days: int | None
+    submitted_at: datetime
+
+
+class PendingFeedbackOut(BaseModel):
+    match_id: uuid.UUID
+    other_user_id: uuid.UUID
+    other_user_name: str
+    state: str
+
+
 # --- chat -----------------------------------------------------------------
 
 class SendMessageRequest(BaseModel):
@@ -309,3 +337,12 @@ class ResolveReportRequest(BaseModel):
     finding: Literal["substantiated", "dismissed"]
     sanction: ReportSanction | None = None
     note: str | None = Field(default=None, max_length=2000)
+
+
+# --- analytics ----------------------------------------------------------
+
+class AnalyticsSummaryOut(BaseModel):
+    members_by_verification_status: dict[str, int]
+    members_by_account_status: dict[str, int]
+    matches_by_state: dict[str, int]
+    reports_by_status: dict[str, int]

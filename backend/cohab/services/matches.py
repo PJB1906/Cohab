@@ -9,16 +9,18 @@ also gets **persisted** to `match_score`: an upsert per eligible pair, so
 - a user's recorded interest survives a later rescore (the upsert refreshes
   score/breakdown but never touches `state`/`interested_by_*`).
 
-At one active `weight_set` this can't yet violate CLAUDE.md's immutable-
-explanation guarantee — that only becomes a live question once Phase 8
-publishes a second version, at which point always-refresh-on-read would need
-revisiting (noted in docs/DECISIONS.md, not solved here).
+`_upsert` only refreshes score/breakdown/weight_set_id while a row is still
+"suggested" — once viewed (or moved further), CLAUDE.md's weight_set
+immutability guarantee requires it stay exactly what the user was shown, even
+after a later `weight_set` version is published (docs/DECISIONS.md D-4.6,
+resolved in Phase 8).
 """
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -44,6 +46,10 @@ class MatchNotFound(MatchesError):
 
 class NotAParty(MatchesError):
     """The requesting user is neither side of this match_score row."""
+
+
+class InvalidStateTransition(MatchesError):
+    """The match isn't in a state this transition can be applied from."""
 
 
 @dataclass(frozen=True)
@@ -84,6 +90,22 @@ def _load_candidate(session: Session, user_id: uuid.UUID) -> Candidate | None:
     if user is None or user.preference_profile is None:
         return None
     return Candidate.from_orm(user, user.preference_profile, user.listing)
+
+
+def _settled_pairs_for(session: Session, user_id: uuid.UUID) -> frozenset[frozenset[uuid.UUID]]:
+    """Pairs already `rejected` or `cohabiting` — feeds
+    `EligibilityFilter.settled_pairs` (Stage 1) so a settled match never
+    resurfaces as a fresh suggestion. Found in code review: nothing enforced
+    `RejectConfirmDialog.tsx`'s own promise that a rejected match can't be
+    "picked back up" — Stage 1 had no notion of `match_score` at all before
+    this. Scoped to `user_id`, same reasoning as `blocked_pairs_for`."""
+    rows = session.scalars(
+        select(MatchScore).where(
+            (MatchScore.user_id_a == user_id) | (MatchScore.user_id_b == user_id),
+            MatchScore.state.in_(("rejected", "cohabiting")),
+        )
+    ).all()
+    return frozenset(frozenset({row.user_id_a, row.user_id_b}) for row in rows)
 
 
 def _load_pool(session: Session, exclude_user_id: uuid.UUID) -> list[Candidate]:
@@ -129,28 +151,44 @@ class MatchesService:
             row = MatchScore(user_id_a=a_id, user_id_b=b_id, state="suggested")
             self.session.add(row)
 
-        row.weight_set_id = canonical.weight_set_id
-        row.score_ab = canonical.score_ab
-        row.score_ba = canonical.score_ba
-        row.combined_score = canonical.combined_score
-        row.breakdown = canonical.breakdown
+        # Once a row has been viewed (or moved further), its score/breakdown
+        # is a record of what the user was actually shown — CLAUDE.md's
+        # weight_set immutability guarantee requires that stay reproducible,
+        # not silently rewritten by a later rescore under a newly-published
+        # weight_set (docs/DECISIONS.md D-4.6, resolved in Phase 8). Only a
+        # still-"suggested" row, which nobody has looked at yet, is safe to
+        # freely refresh.
+        if row.state == "suggested":
+            row.weight_set_id = canonical.weight_set_id
+            row.score_ab = canonical.score_ab
+            row.score_ba = canonical.score_ba
+            row.combined_score = canonical.combined_score
+            row.breakdown = canonical.breakdown
         # state / interested_by_a / interested_by_b intentionally untouched —
         # a rescore must not erase a user's recorded interest.
         self.session.flush()
         return row
 
-    def express_interest(self, subject_user: User, match_id: uuid.UUID) -> str:
-        """PRD §8.2: Viewed -> Interested on the caller's own flag; Interested
-        -> Mutual once both `interested_by_*` flags are set. The only two
-        transitions anything in this phase can actually produce — there's no
-        reject/expire endpoint yet, so this doesn't try to model the rest of
-        the state machine."""
+    def _load_pair_row(self, subject_user: User, match_id: uuid.UUID) -> MatchScore:
         row = self.session.get(MatchScore, match_id)
         if row is None:
             raise MatchNotFound(match_id)
         if subject_user.id not in (row.user_id_a, row.user_id_b):
             raise NotAParty(match_id)
         ensure_pair_active(self.session, row)
+        return row
+
+    def express_interest(self, subject_user: User, match_id: uuid.UUID) -> str:
+        """PRD §8.2: Viewed -> Interested on the caller's own flag; Interested
+        -> Mutual once both `interested_by_*` flags are set."""
+        row = self._load_pair_row(subject_user, match_id)
+        # Phase 8 added terminal states this predates (found in code
+        # review): without this guard, expressing interest on an already-
+        # rejected or already-cohabiting match silently set
+        # interested_by_a/b with no visible effect on `state`, rather than
+        # being rejected as the invalid call it is.
+        if row.state in ("rejected", "cohabiting", "expired"):
+            raise InvalidStateTransition(row.state)
 
         if subject_user.id == row.user_id_a:
             row.interested_by_a = True
@@ -173,6 +211,36 @@ class MatchesService:
         self.session.commit()
         return row.state
 
+    def confirm_move_in(self, subject_user: User, match_id: uuid.UUID) -> str:
+        """PRD §8.2: ContactShared -> Cohabiting ("move-in confirmed").
+        `cohabiting_since` anchors both the feedback cadence and the
+        cohabitation-duration figure Phase 9's survival analysis needs, so
+        it's set once here and never touched again."""
+        row = self._load_pair_row(subject_user, match_id)
+        if row.state != "contact_shared":
+            raise InvalidStateTransition(row.state)
+
+        row.state = "cohabiting"
+        row.cohabiting_since = datetime.now(timezone.utc)
+        self.session.commit()
+        return row.state
+
+    def reject(self, subject_user: User, match_id: uuid.UUID) -> str:
+        """PRD §8.2's "Viewed -> Rejected: dismisses" and "Chatting ->
+        Rejected: either withdraws" are both "one party unilaterally ends
+        it" — modelled as one transition, valid from any non-terminal state
+        short of Cohabiting. A repeat call against an already-terminal state
+        is a no-op guard (InvalidStateTransition), same monotonic-transition
+        precedent as express_interest's guard against regressing past
+        Mutual."""
+        row = self._load_pair_row(subject_user, match_id)
+        if row.state not in ("viewed", "interested", "mutual", "chatting", "contact_shared"):
+            raise InvalidStateTransition(row.state)
+
+        row.state = "rejected"
+        self.session.commit()
+        return row.state
+
     def get_matches(self, subject_user: User, limit: int = 10) -> list[MatchListEntry]:
         subject = _load_candidate(self.session, subject_user.id)
         if subject is None:
@@ -185,6 +253,7 @@ class MatchesService:
         # Closes docs/DECISIONS.md D-2.6: Stage 1's `blocked_pairs` param has
         # been correct and unit-tested since Phase 2 but had no live caller.
         self.ranker.filter.blocked_pairs = blocked_pairs_for(self.session, subject_user.id)
+        self.ranker.filter.settled_pairs = _settled_pairs_for(self.session, subject_user.id)
 
         ranked = self.ranker.rank(subject, pool)[:limit]
         entries = [
@@ -200,12 +269,7 @@ class MatchesService:
         return entries
 
     def get_explanation(self, subject_user: User, match_id: uuid.UUID) -> MatchExplanationResult:
-        row = self.session.get(MatchScore, match_id)
-        if row is None:
-            raise MatchNotFound(match_id)
-        if subject_user.id not in (row.user_id_a, row.user_id_b):
-            raise NotAParty(match_id)
-        ensure_pair_active(self.session, row)
+        row = self._load_pair_row(subject_user, match_id)
 
         other_id = row.user_id_b if subject_user.id == row.user_id_a else row.user_id_a
         other = _load_candidate(self.session, other_id)

@@ -144,3 +144,15 @@ def test_blocked_pair_excluded() -> None:
     blocked = {frozenset({a.user_id, b.user_id})}
     _eligible, excluded = EligibilityFilter(blocked_pairs=blocked).filter(a, [b])
     assert excluded[0].reason == Reason.BLOCKED
+
+
+def test_settled_pair_excluded() -> None:
+    """Phase 8 (found in code review): a pair whose match_score is already
+    "rejected" or "cohabiting" must not resurface as a fresh suggestion —
+    RejectConfirmDialog.tsx promises "neither of you can pick this back up
+    from here," which Stage 1 didn't enforce until this."""
+    a = make_candidate(1)
+    b = make_candidate(2)
+    settled = {frozenset({a.user_id, b.user_id})}
+    _eligible, excluded = EligibilityFilter(settled_pairs=settled).filter(a, [b])
+    assert excluded[0].reason == Reason.ALREADY_DECIDED

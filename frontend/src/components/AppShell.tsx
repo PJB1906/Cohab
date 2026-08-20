@@ -38,6 +38,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Moderation
               </NavLink>
             )}
+            {user?.is_moderator && (
+              <NavLink to="/analytics" className={navLinkClass}>
+                Analytics
+              </NavLink>
+            )}
           </nav>
           <div className="flex-1" />
           {user && <Avatar name={user.full_name} src={user.avatar_url} size={30} />}

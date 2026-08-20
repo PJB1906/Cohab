@@ -7,8 +7,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
+from cohab.api.analytics import router as analytics_router
 from cohab.api.auth import router as auth_router
 from cohab.api.chat import router as chat_router
+from cohab.api.feedback import router as feedback_router
 from cohab.api.listing import router as listing_router
 from cohab.api.matches import router as matches_router
 from cohab.api.moderation import router as moderation_router
@@ -60,6 +62,8 @@ app.include_router(matches_router)
 app.include_router(uploads_router)
 app.include_router(reports_router)
 app.include_router(moderation_router)
+app.include_router(feedback_router)
+app.include_router(analytics_router)
 
 # Phase 5 photo uploads — local disk, served back at /media (docs/DECISIONS.md).
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)

@@ -11,6 +11,7 @@ import { ChatThread } from '@/features/chat/ChatThread'
 import { ContactShare } from '@/features/chat/ContactShare'
 import { ModerationQueue } from '@/features/moderation/ModerationQueue'
 import { ReportReview } from '@/features/moderation/ReportReview'
+import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
 import { BlockedUsers } from '@/features/safety/BlockedUsers'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useSession } from '@/hooks/useSession'
@@ -60,6 +61,8 @@ export default function App() {
 
       <Route path="/moderation" element={<Moderation><ModerationQueue /></Moderation>} />
       <Route path="/moderation/reports/:reportId" element={<Moderation><ReportReview /></Moderation>} />
+
+      <Route path="/analytics" element={<Moderation><AnalyticsDashboard /></Moderation>} />
 
       <Route path="/blocked" element={<ProtectedRoute><BlockedUsers /></ProtectedRoute>} />
 

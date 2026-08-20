@@ -1,16 +1,29 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { matchesApi } from '@/api/matches'
+import { feedbackApi } from '@/api/feedback'
 import { AppShell } from '@/components/AppShell'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { AttributeRow } from '@/components/AttributeRow'
 import { SafetyActions } from '@/features/safety/SafetyActions'
+import { FeedbackDialog } from './FeedbackDialog'
+import { RejectConfirmDialog } from './RejectConfirmDialog'
 import { scorePercent, scoreBand, BAND_COLOR } from '@/lib/score'
+import type { PendingFeedbackOut } from '@/api/types'
 
 export function MatchDetail() {
   const { matchId } = useParams<{ matchId: string }>()
   const queryClient = useQueryClient()
+  // Captured once, on click, rather than read live from `pendingHere` on
+  // every render — the dialog's own onSuccess strips this match from the
+  // ['feedback', 'pending'] cache, which would otherwise make `pendingHere`
+  // go undefined and unmount the dialog before its "Thanks" success screen
+  // ever painted (found live: the dialog vanished the instant Submit was
+  // clicked, no success state visible).
+  const [feedbackTarget, setFeedbackTarget] = useState<PendingFeedbackOut | null>(null)
+  const [showReject, setShowReject] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['match', matchId],
@@ -18,12 +31,26 @@ export function MatchDetail() {
     enabled: Boolean(matchId),
   })
 
+  const { data: pending } = useQuery({
+    queryKey: ['feedback', 'pending'],
+    queryFn: () => feedbackApi.pending(),
+  })
+  const pendingHere = pending?.find((p) => p.match_id === matchId)
+
   const interestMutation = useMutation({
     mutationFn: () => matchesApi.expressInterest(matchId!),
     onSuccess: (res) => {
       queryClient.setQueryData(['match', matchId], (prev: typeof data) =>
         prev ? { ...prev, state: res.state, you_expressed_interest: true } : prev,
       )
+    },
+  })
+
+  const confirmMoveInMutation = useMutation({
+    mutationFn: () => matchesApi.confirmMoveIn(matchId!),
+    onSuccess: (res) => {
+      queryClient.setQueryData(['match', matchId], (prev: typeof data) => (prev ? { ...prev, state: res.state } : prev))
+      queryClient.invalidateQueries({ queryKey: ['feedback', 'pending'] })
     },
   })
 
@@ -49,6 +76,8 @@ export function MatchDetail() {
   const from = scorePercent(data.score_from_candidate)
   const alreadyInterested = data.you_expressed_interest
   const canChat = ['mutual', 'chatting', 'contact_shared', 'cohabiting'].includes(data.state)
+  const canConfirmMoveIn = data.state === 'contact_shared'
+  const canReject = ['viewed', 'interested', 'mutual', 'chatting', 'contact_shared'].includes(data.state)
 
   return (
     <AppShell>
@@ -56,6 +85,15 @@ export function MatchDetail() {
         <Link to="/matches" className="text-[13px] font-medium text-cohab-primary">
           ← All matches
         </Link>
+
+        {pendingHere && (
+          <div className="mt-4 bg-cohab-tint border border-cohab-primary rounded-2xl p-4 flex items-center justify-between gap-3">
+            <p className="text-[13.5px] text-cohab-ink">How did it go with {data.candidate_name}?</p>
+            <Button onClick={() => setFeedbackTarget(pendingHere)} className="flex-none">
+              Give feedback
+            </Button>
+          </div>
+        )}
 
         <div className="bg-white border border-cohab-border rounded-2xl p-6 mt-4">
           <div className="flex items-start gap-4">
@@ -148,9 +186,20 @@ export function MatchDetail() {
 
       <div className="fixed bottom-0 inset-x-0 bg-white border-t border-cohab-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex flex-col items-center gap-1.5">
+          {canConfirmMoveIn && (
+            <Button
+              onClick={() => confirmMoveInMutation.mutate()}
+              disabled={confirmMoveInMutation.isPending}
+              className="w-full"
+            >
+              Confirm move-in
+            </Button>
+          )}
           {canChat ? (
             <Link to={`/matches/${matchId}/chat`} className="w-full">
-              <Button className="w-full">Open chat</Button>
+              <Button variant={canConfirmMoveIn ? 'secondary' : 'primary'} className="w-full">
+                Open chat
+              </Button>
             </Link>
           ) : (
             <Button
@@ -162,12 +211,36 @@ export function MatchDetail() {
             </Button>
           )}
           <p className="text-[11.5px] text-cohab-subtle text-center">
-            {canChat
-              ? "It's a mutual match — you can both see this conversation."
-              : "They'll see that you're interested. It becomes mutual only if they are too."}
+            {canConfirmMoveIn
+              ? "Once you've both moved in, confirm here — we'll check in on how it's going."
+              : canChat
+                ? "It's a mutual match — you can both see this conversation."
+                : "They'll see that you're interested. It becomes mutual only if they are too."}
           </p>
+          {canReject && (
+            <Button variant="danger" size="sm" onClick={() => setShowReject(true)}>
+              Not going ahead with this match
+            </Button>
+          )}
         </div>
       </div>
+
+      {feedbackTarget && (
+        <FeedbackDialog
+          matchId={feedbackTarget.match_id}
+          otherUserName={data.candidate_name}
+          state={feedbackTarget.state as 'cohabiting' | 'rejected'}
+          onClose={() => setFeedbackTarget(null)}
+        />
+      )}
+      {showReject && (
+        <RejectConfirmDialog
+          matchId={matchId!}
+          candidateId={data.candidate_id}
+          candidateName={data.candidate_name}
+          onClose={() => setShowReject(false)}
+        />
+      )}
     </AppShell>
   )
 }

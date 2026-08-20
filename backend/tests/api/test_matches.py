@@ -11,6 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cohab.models import Institution, MatchScore, WeightSet
+from cohab.services.matching.weight_sets import publish
+from tests.api.conftest import DEFAULT_WEIGHTS
 
 PASSWORD = "correct horse battery staple"
 
@@ -472,3 +474,214 @@ def test_you_expressed_interest_is_per_viewer_not_shared_state(
     client.post(f"/matches/{match_id}/interest")
     resp = client.get(f"/matches/{match_id}/explanation")
     assert resp.json()["you_expressed_interest"] is True
+
+
+# --- Phase 8: weight_set immutability (D-4.6), lifecycle endpoints --------
+
+
+def test_publishing_a_new_weight_set_leaves_an_already_viewed_match_untouched(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    """docs/DECISIONS.md D-4.6: `_upsert` used to overwrite weight_set_id/
+    score/breakdown on every GET /matches call regardless of state. Harmless
+    with one weight_set in existence; this is the first phase to publish a
+    second one, so this proves a viewed row is frozen while a still-
+    "suggested" row (Bala rescoring Asha's own pool from his side, below)
+    picks up the new version. Deliberately exercises only the live
+    `GET /matches` path, not the `recompute` job — `recompute` walks every
+    verified/active user in this suite's shared, ~1,500-row dev-seeded pool
+    (tests/api/conftest.py's own documented precedent), and doing that once
+    per test run is a multi-minute, DB-round-trip-heavy batch job by design
+    (PRD §7.1: "expensive, run off-peak") — appropriate for the manual
+    verification pass, not for a suite meant to run on every green-test
+    commit. `recompute` drives this exact `_upsert` code path with no
+    additional logic of its own (D-8.5), so this test already covers it."""
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    resp_before = client.get(f"/matches/{match_id}/explanation")
+    assert resp_before.status_code == 200, resp_before.text
+    before = resp_before.json()
+
+    row = db_session.get(MatchScore, match_id)
+    db_session.refresh(row)
+    assert row.state == "viewed"
+    original_weight_set_id = row.weight_set_id
+
+    new_set = publish(db_session, DEFAULT_WEIGHTS, source="expert")
+    assert new_set.id != original_weight_set_id
+    db_session.commit()
+
+    resp_after = client.get(f"/matches/{match_id}/explanation")
+    assert resp_after.status_code == 200, resp_after.text
+    assert resp_after.json()["combined_score"] == before["combined_score"]
+    assert resp_after.json()["breakdown"] == before["breakdown"]
+
+    db_session.refresh(row)
+    assert row.weight_set_id == original_weight_set_id  # frozen, not rewritten
+
+    # A still-"suggested" pair, by contrast, does pick up the new version —
+    # proving the guard is state-gated rather than accidentally freezing
+    # everything. Reset this same row to "suggested" (simulating a pair
+    # nobody has opened yet) rather than hunting an arbitrary unrelated row
+    # in the shared dev pool, whose state this test has no control over.
+    row.state = "suggested"
+    db_session.commit()
+    client.get(f"/matches?limit={LARGE_LIMIT}")
+    db_session.refresh(row)
+    assert row.weight_set_id == new_set.id
+
+
+def test_confirm_move_in_requires_contact_shared_state(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    resp = client.post(f"/matches/{match_id}/confirm-move-in")
+    assert resp.status_code == 409, resp.text  # still "suggested"
+
+
+def test_confirm_move_in_transitions_to_cohabiting_and_sets_timestamp(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "contact_shared"  # simulate reaching the precondition state
+    db_session.commit()
+
+    resp = client.post(f"/matches/{match_id}/confirm-move-in")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["state"] == "cohabiting"
+
+    db_session.refresh(row)
+    assert row.state == "cohabiting"
+    assert row.cohabiting_since is not None
+
+
+def test_reject_valid_from_viewed_transitions_to_rejected(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    client.get(f"/matches/{match_id}/explanation")  # suggested -> viewed
+
+    resp = client.post(f"/matches/{match_id}/reject")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["state"] == "rejected"
+
+    row = db_session.get(MatchScore, match_id)
+    db_session.refresh(row)
+    assert row.state == "rejected"
+
+
+def test_reject_valid_from_chatting_covers_withdraw(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "chatting"
+    db_session.commit()
+
+    resp = client.post(f"/matches/{match_id}/reject")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["state"] == "rejected"
+
+
+def test_reject_rejects_an_already_cohabiting_match(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "cohabiting"
+    db_session.commit()
+
+    resp = client.post(f"/matches/{match_id}/reject")
+    assert resp.status_code == 409, resp.text
+
+    db_session.refresh(row)
+    assert row.state == "cohabiting"  # unchanged
+
+
+def test_express_interest_409_on_a_rejected_match(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    """Found in code review: without this guard, expressing interest on an
+    already-rejected match silently set interested_by_a/b with no visible
+    effect on `state` — a 409 makes the call's rejection explicit instead."""
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "rejected"
+    db_session.commit()
+
+    resp = client.post(f"/matches/{match_id}/interest")
+    assert resp.status_code == 409, resp.text
+
+    db_session.refresh(row)
+    assert row.interested_by_a is False  # not silently set
+
+
+def test_express_interest_409_on_a_cohabiting_match(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "cohabiting"
+    db_session.commit()
+
+    resp = client.post(f"/matches/{match_id}/interest")
+    assert resp.status_code == 409, resp.text
+
+
+def test_rejected_candidate_excluded_from_a_fresh_matches_call(
+    client: TestClient, institution: Institution, asha_and_bala: tuple[str, str]
+) -> None:
+    """Found in code review: Stage 1 had no notion of match_score state, so
+    a rejected candidate reappeared in GET /matches on the very next call —
+    directly contradicting RejectConfirmDialog.tsx's own copy ("neither of
+    you can pick this back up from here")."""
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)  # eligible before rejecting
+
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+    client.get(f"/matches/{match_id}/explanation")  # suggested -> viewed; reject() requires a non-"suggested" state
+    resp = client.post(f"/matches/{match_id}/reject")
+    assert resp.status_code == 200, resp.text
+
+    resp = client.get(f"/matches?limit={LARGE_LIMIT}")
+    ids = {item["candidate_id"] for item in resp.json()}
+    assert bala_id not in ids
+
+
+def test_cohabiting_candidate_excluded_from_a_fresh_matches_call(
+    client: TestClient, institution: Institution, db_session: Session, asha_and_bala: tuple[str, str]
+) -> None:
+    asha_id, bala_id = asha_and_bala
+    _login(client, f"asha@{institution.email_domain}")
+    match_id = _find(client.get(f"/matches?limit={LARGE_LIMIT}").json(), bala_id)["match_id"]
+
+    row = db_session.get(MatchScore, match_id)
+    row.state = "cohabiting"
+    db_session.commit()
+
+    resp = client.get(f"/matches?limit={LARGE_LIMIT}")
+    ids = {item["candidate_id"] for item in resp.json()}
+    assert bala_id not in ids

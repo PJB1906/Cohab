@@ -1171,3 +1171,310 @@ again in a fresh `/matches` query — all with no console errors.
 `frontend/src/features/safety/BlockedUsers.tsx`,
 `frontend/src/components/AppShell.tsx`, `frontend/src/App.tsx`,
 `tests/api/test_reports.py`.
+
+---
+
+## Phase 8 — Feedback loop and analytics
+
+### D-8.1 `_upsert` immutability fix — closes D-4.6, a prerequisite for publishing a second `weight_set` at all
+
+**Spec:** CLAUDE.md's matching-design invariant: "Every `match_score` row
+stores the `weight_set_id` it was computed under. Weight sets are immutable
+once published... Without this, historical explanations are not
+reproducible." D-4.6 (Phase 4) flagged that `MatchesService._upsert`
+unconditionally overwrote `weight_set_id`/`score_ab`/`score_ba`
+/`combined_score`/`breakdown` on *every* `GET /matches` call regardless of
+the row's `state`, and deferred the fix to "whenever Phase 8 publishes a
+second `weight_set` version" — harmless with exactly one version in
+existence, which was true through Phase 7.
+
+**Decision:** `_upsert` now only refreshes those five fields while
+`row.state == "suggested"`. Once a row has been viewed (or moved further),
+it is frozen — a later rescore under a newly-published `weight_set` no
+longer touches it. This had to land *before* `weight_sets.publish` (D-8.4)
+could be considered safe to actually call against a live pool: without it,
+publishing a second version would retroactively change every not-yet-
+`suggested` match's explanation on its next `GET /matches`, which is exactly
+what the immutability guarantee forbids.
+
+**Verified by** `tests/api/test_matches.py
+::test_publishing_a_new_weight_set_leaves_an_already_viewed_match_untouched`
+— views a match (state → `viewed`), publishes a second `weight_set`, calls
+`GET /matches` again and asserts the viewed row's `weight_set_id`
+/`breakdown`/`combined_score` are byte-for-byte unchanged, then resets the
+same row to `"suggested"` and confirms a further call *does* pick up the new
+version — proving the guard is state-gated, not a blanket freeze.
+Deliberately exercises only the live API path, not `recompute` itself:
+`recompute` walks every verified/active user in this suite's shared,
+~1,500-row dev-seeded pool (the `LARGE_LIMIT`/"tests share that pool" 
+precedent `tests/api/test_matches.py` already documents), and doing that
+once per test run turned out to cost the entire rest of the suite's runtime
+several times over (D-8.5's own "expensive, run off-peak" framing, taken
+literally) — appropriate for the manual verification pass, not a suite
+meant to run on every green-test commit. Since `recompute` drives this exact
+`_upsert` call with no logic of its own (D-8.5), the live-API test already
+covers the behaviour that matters.
+
+**Code:** `cohab/services/matches.py` (`MatchesService._upsert`).
+
+### D-8.2 Lifecycle endpoints: `confirm-move-in` and `reject`, closing the Phase 6/7 follow-up
+
+**Spec:** PRD §8.2's lifecycle diagram: `ContactShared -> Cohabiting: move-in
+confirmed`; `Viewed -> Rejected: dismisses`; `Chatting -> Rejected: either
+withdraws`. No code path reached either terminal state before this phase —
+flagged as an open follow-up since Phase 6/7 (`services/matches.py`'s own
+comment: "there's no reject/expire endpoint yet"). Outcome logging (this
+phase's headline deliverable) has nothing to attach to without them, so
+building both was confirmed with the user as in-scope for Phase 8 rather
+than a separate phase.
+
+**Decision:** `MatchesService.confirm_move_in` requires `state ==
+"contact_shared"` and sets `cohabiting_since` (new column, D-8.3) exactly
+once; `MatchesService.reject` covers *both* diagram edges with one
+transition (`{viewed, interested, mutual, chatting, contact_shared} ->
+rejected`) since both are "one party unilaterally ends it" — the diagram's
+two-edges-one-meaning distinction wasn't worth two endpoints. Both reuse a
+new `_load_pair_row` helper, factored out of the near-identical load/
+authorize preamble `express_interest` and `get_explanation` each had their
+own copy of (same class of consolidation as D-6.6 item 4's
+`match_access.py`, scoped here to `MatchesService` itself rather than a new
+shared module). `Interested -> Expired` (14-day no-response timeout) is
+**not** built — PRD's diagram doesn't tag that edge "outcome logged," so
+nothing in this phase depends on it; left as a follow-up, most naturally a
+future addition to the recompute job (D-8.5) rather than a user-facing
+endpoint.
+
+**Code:** `cohab/services/matches.py` (`InvalidStateTransition`,
+`_load_pair_row`, `confirm_move_in`, `reject`), `cohab/api/matches.py`,
+`tests/api/test_matches.py`;
+`frontend/src/features/matches/MatchDetail.tsx`,
+`frontend/src/features/matches/RejectConfirmDialog.tsx`.
+
+### D-8.3 Feedback cadence reconciled against the "reports once" invariant; outcome taxonomy proposed
+
+**Spec:** CLAUDE.md: `feedback`: `UNIQUE (score_id, submitted_by)` — "each
+participant reports once," a schema invariant in place unused since Phase 1.
+PRD §9 screen 12: "Outcome feedback — Triggered at 30 and 90 days after
+Cohabiting," which read literally implies two check-ins per participant.
+`models/feedback.py`'s own comment (since Phase 1) flagged that the outcome
+taxonomy itself "isn't specified anywhere in the docs."
+
+**Decision — cadence:** "triggered at 30 and 90 days" is read as a
+*reminder cadence* for one eventual report, not two mandatory submissions.
+`FeedbackService.pending_for` surfaces a `cohabiting` match once 30 days
+have elapsed since `cohabiting_since` and stops surfacing it the moment that
+user has submitted — a user who hasn't answered by day 30 is still "due" at
+day 90 (nothing distinguishes the two checkpoints), one who answered at day
+30 is never asked again. `FeedbackService.submit` itself imposes **no**
+elapsed-time requirement — only `state in ("cohabiting", "rejected")` — so a
+voluntary early report (e.g. moved out after two weeks) is never refused;
+PRD names no reason to block one, and an early failure is itself
+informative for Phase 9's survival analysis. No schema change, and no
+tension with the `UNIQUE` constraint, which was never actually the
+obstacle — the two readings only looked incompatible before the cadence/
+submission distinction was made explicit.
+
+**Decision — taxonomy** (proposed, not spec-sourced, per CLAUDE.md's rule
+against presenting an invented value as specified): framed around PRD's
+stated primary metric (90-day cohabitation survival, a right-censored
+duration problem, Kaplan-Meier per §12).
+- `rejected` match → `outcome ∈ {"not_pursued", "incompatible", "other"}`,
+  `cohabitation_duration_days` always `NULL`.
+- `cohabiting` match → `outcome ∈ {"still_together", "moved_out"}`.
+  `cohabitation_duration_days` is **computed server-side** from
+  `cohabiting_since` for `"still_together"` (never trusts a client-supplied
+  figure for the case the server can derive itself); accepted from the
+  client only for `"moved_out"`, since the move-out date isn't otherwise
+  observable. This gives Phase 9's Kaplan-Meier estimator exactly the
+  event/censoring pair it needs, straight off this table.
+
+Not enforced as a DB `CHECK` — same precedent as `Report.reason`
+(`REPORT_REASONS`, D-7.x): a proposed, not spec-fixed vocabulary, and here
+additionally state-dependent (which subset is valid depends on the match's
+`state`, which a flat table-level `CHECK` can't express), so validation
+lives in `FeedbackService.submit` instead.
+
+**New column:** `MatchScore.cohabiting_since` (nullable `datetime`,
+migration `dccee11a7103`) — anchors both the cadence check above and the
+survival duration; set once by `confirm_move_in` (D-8.2), never overwritten.
+
+**Code:** `cohab/models/feedback.py` (`REJECTED_OUTCOMES`,
+`COHABITING_OUTCOMES`), `cohab/models/matching.py` (`cohabiting_since`),
+`cohab/services/feedback.py`, `cohab/api/feedback.py`,
+`tests/api/test_feedback.py`;
+`frontend/src/features/matches/FeedbackDialog.tsx`.
+
+### D-8.4 `weight_set` publish mechanism built; no fitted v3 published
+
+**Spec:** PRD §6.5's three-tier weight-refinement table places tier-2
+*fitted* weights (regularised logistic regression over real outcomes) at
+**v2/post-pilot**, needing "a few hundred labelled outcomes." This phase is
+the first to collect any outcome data at all (D-8.3), so there is nothing
+yet to fit against.
+
+**Decision:** built only the versioning machinery —
+`weight_sets.publish(session, weights, source)` validates the vector sums to
+~1 and `source` is a known `WEIGHT_SET_SOURCES` value, deactivates whatever
+is currently active (`UPDATE ... WHERE is_active` — plural on purpose, so a
+prior inconsistency can't leave two rows simultaneously active), and inserts
+a new immutable, active row. No function anywhere ever updates an existing
+row's `weights` — immutability is structural, not a convention callers have
+to remember. No statistical fitting logic is built this phase; tier 2 stays
+a documented future step, gated on real outcome volume existing.
+
+**Code:** `cohab/services/matching/weight_sets.py`, `tests/api/test_weight_sets.py`.
+
+### D-8.5 The periodic recompute job is a thin driver over `MatchesService.get_matches`, not a parallel reimplementation
+
+**Spec:** build plan §4 Phase 8 ("the periodic recompute job"); PRD §7.1's
+Stage B invalidation table names the specific event this handles: "a new
+weight set is published → rescore everything — expensive, run off-peak."
+
+**Decision:** rather than reimplementing Stage 1 + Stage 2 + upsert from
+scratch, `recompute.py` loads every verified/active user and calls the
+*same* `MatchesService.get_matches(user, limit=3000)` the live API uses —
+so it inherits D-8.1's immutability guard for free (a `suggested` row
+refreshes, a viewed-or-later row doesn't) with no duplicated logic to drift
+out of sync. It fits its own `TfidfSimilarity` over the whole pool
+(`Candidate.lifestyle_notes`), the same offline-fitting precedent
+`report.py`/`tuning.py` already established (D-4.4 item 3's carve-out: the
+live API never encodes text in the request path, but an explicitly offline
+batch job is exactly the allowed exception). Run manually
+(`python -m cohab.services.matching.recompute`) — no scheduler dependency
+introduced, consistent with CLAUDE.md's Redis/infra-deferral stance and the
+project's existing "run it yourself" precedent for `report.py`/`tuning.py`.
+This does **not** move the system to Stage B — PRD §7.1's own migration
+trigger (p95 latency or pool size) hasn't been measured as reached, so
+`GET /matches` still computes on read; the job only keeps `match_score`
+caught up between calls, and incidentally materialises it broadly enough
+for the analytics dashboard (D-8.6) to query directly.
+
+The core logic (`recompute(session)`) takes a caller-supplied session rather
+than owning its own, specifically so the D-8.1 regression test could drive
+it directly against the test suite's SAVEPOINT-backed `db_session` fixture
+instead of a real `SessionLocal()` — `main()` is the only caller that
+constructs one.
+
+**Code:** `cohab/services/matching/recompute.py`.
+
+### D-8.6 Institutional analytics dashboard built at minimal, pilot-appropriate scope — a deliberate v1/v2 scope tension, confirmed with the user
+
+**Spec:** PRD §4 lists "Institutional analytics dashboard" under **v2 —
+after the pilot**, and §9's v1 screen table (screens 1–13) has no dashboard
+screen at all. The build plan names it explicitly in Phase 8's own line
+item, and PRD §3.2's Dr Sathya persona frames *some* aggregated, anonymised
+visibility as "the reason institutions cooperate with the pilot," calling
+it "low priority for v1" rather than excluded from it — the two documents
+don't actually agree on this one.
+
+**Decision (confirmed with the user, Phase 8 planning):** build the minimal
+reading rather than either extreme. `GET /analytics/summary` returns plain
+aggregate counts already implied by tables that exist — members by
+`verification_status`/`account_status`, the match-state funnel
+(`GROUP BY state` over `match_score`), report volume by status — gated by
+the existing `require_moderator` dependency (D-7.1), introducing no new
+institution-admin actor. No per-user drill-down, no exports, no survival
+curve: full Kaplan-Meier analysis over `feedback` is Phase 9's evaluation
+chapter by name (PRD §12), not this screen. Recorded here explicitly because
+it is, admittedly, v2-labelled PRD scope built during the v1 pilot phase —
+a deliberate call, not an oversight, made because the build plan asked for
+it by name and the persona section itself doesn't rule it out.
+
+**Code:** `cohab/services/analytics.py`, `cohab/api/analytics.py`,
+`tests/api/test_analytics.py`;
+`frontend/src/features/analytics/AnalyticsDashboard.tsx`,
+`frontend/src/App.tsx`, `frontend/src/components/AppShell.tsx`.
+
+### D-8.7 Live-verification finding: the feedback dialog unmounted itself before showing its own success screen
+
+**Found while manually verifying this phase in a real two-account browser
+session** (CLAUDE.md's UI-testing rule; the same category of bug as
+D-5.6/D-6.5/D-7.7, invisible to API-level tests since the bug is entirely in
+client-side query-cache interaction — driven with Playwright against system
+Chrome rather than a person, same principle as D-7.7's Playwright pass:
+actually render the screens). `MatchDetail.tsx` rendered `FeedbackDialog`
+conditionally on `pendingHere` (`pending?.find((p) => p.match_id ===
+matchId)`, from the live `['feedback', 'pending']` query). The dialog's own
+`onSuccess` strips the just-submitted match from that same cache
+(`setQueryData` + `invalidateQueries`, the established pattern from
+D-7.7/ReportDialog) — which made `pendingHere` go `undefined` on the very
+next render, unmounting `FeedbackDialog` entirely before its own internal
+`mutation.isSuccess` branch (the "Thanks for letting us know" screen) ever
+painted. Submitting feedback silently closed the dialog with no
+confirmation shown, even though the submission itself had succeeded.
+
+**Decision:** `MatchDetail` now captures the specific `PendingFeedbackOut`
+into local state (`feedbackTarget`) at the moment "Give feedback" is
+clicked, and renders `FeedbackDialog` off that captured value rather than
+the live query result. The parent's cache invalidation still runs (so the
+banner and `MatchList`'s pending section correctly stop listing the match),
+but it no longer controls whether the dialog itself stays mounted — that's
+`onClose` alone, fired by the user dismissing the success screen.
+
+**Code:** `frontend/src/features/matches/MatchDetail.tsx`.
+
+### D-8.8 `/code-review medium` pass — three real findings, all fixed
+
+**Requested by the user** before committing Phase 8 ("check if there is any
+bugs, inconsistency, lack of feature or anything left"), same precedent as
+D-6.6. Four findings came back; three were real and fixed, one was already
+covered.
+
+1. **Rejected/cohabiting candidates reappeared in `GET /matches`.**
+   `EligibilityFilter`/`passes_hard_constraints` had no notion of
+   `match_score` at all — Stage 1 only ever checked profile-level hard
+   constraints (spec §2) plus `blocked_pairs` (D-2.6/D-7.4). A pair whose
+   `match_score.state` was `rejected` (via D-8.2's new endpoint) or
+   `cohabiting` still passed Stage 1 on the very next `GET /matches` call
+   and got re-suggested, directly contradicting `RejectConfirmDialog.tsx`'s
+   own copy ("neither of you can pick this back up from here"). Fixed by
+   adding `settled_pairs` to `EligibilityFilter`/`passes_hard_constraints`
+   (new `Reason.ALREADY_DECIDED`), populated per-request by
+   `MatchesService._settled_pairs_for` — same shape and same per-subject
+   scoping as `blocked_pairs`/`blocked_pairs_for`. Deliberately scoped to
+   just `rejected`/`cohabiting`, the two states Phase 8 made reachable;
+   whether `mutual`/`chatting`/`interested`/`contact_shared` pairs should
+   *also* stop appearing in the generic ranked list is a pre-existing
+   question from Phase 5 this finding doesn't extend to answering — no
+   endpoint or test anywhere already assumed those states drop out of the
+   list, so changing that now would be a wider, undiscussed behaviour
+   change, not a Phase 8 bug fix.
+2. **`express_interest` had no guard against the new terminal states.**
+   Calling it on an already-`rejected` or already-`cohabiting` match
+   silently set `interested_by_a`/`_b` with no visible effect on `state` —
+   confusing (the UI could end up saying "Interest sent" about a match that
+   was already over) rather than being rejected outright. Fixed with a
+   guard mirroring `confirm_move_in`/`reject`'s own state checks
+   (`InvalidStateTransition` → 409), covering `rejected`, `cohabiting`, and
+   `expired` (the last unreachable today, included for when it isn't).
+3. **`FeedbackService` re-implemented `match_access.load_match`.**
+   `services/match_access.py`'s own docstring explains why it exists:
+   `ChatService`/`ContactShareService` used to each keep their own
+   lookup+authorize copy, "a fix made in one copy wouldn't apply to the
+   other." `services/feedback.py` (new this phase) reintroduced exactly
+   that pattern with a third copy plus a fourth `MatchNotFound`/`NotAParty`
+   pair. Fixed by importing `match_access.load_match` directly;
+   `api/feedback.py` now catches `match_access.MatchNotFound`/`.NotAParty`
+   rather than a `services.feedback`-local pair. Deliberately does *not*
+   also call `ensure_pair_active` (the blocking check `matches.py`/`chat.py`
+   use) — feedback is a retrospective report on a match that's already
+   over, and a block placed *after* a bad cohabitation shouldn't prevent
+   reporting on it, unlike chat or contact-sharing, which are about
+   ongoing interaction.
+4. **`recompute.py` shipped with no test — not fully actionable at the
+   suite's normal cost, partly addressed.** CLAUDE.md requires tests for
+   everything in `services/matching/`. A full happy-path test is exactly
+   the cost D-8.1 already found and removed from the automated suite
+   (walking the whole shared dev pool). Added
+   `tests/api/test_recompute.py::test_recompute_raises_when_no_active_weight_set`
+   — cheap, real coverage for the one branch that doesn't require the
+   full-pool walk. The happy path remains covered only by the one-time
+   manual run recorded in D-8.1, not by an automated test; flagged here
+   rather than silently left short of CLAUDE.md's rule.
+
+**Code:** `cohab/services/matching/eligibility.py` (`Reason.ALREADY_DECIDED`,
+`EligibilityFilter.settled_pairs`), `cohab/services/matches.py`
+(`_settled_pairs_for`, `express_interest`'s new guard),
+`cohab/services/feedback.py`, `cohab/api/feedback.py`,
+`tests/matching/test_eligibility.py`, `tests/api/test_matches.py`,
+`tests/api/test_recompute.py`.
