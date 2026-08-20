@@ -1478,3 +1478,335 @@ covered.
 `cohab/services/feedback.py`, `cohab/api/feedback.py`,
 `tests/matching/test_eligibility.py`, `tests/api/test_matches.py`,
 `tests/api/test_recompute.py`.
+
+---
+
+## Phase 9 — Evaluation and polish
+
+Build plan §4 Phase 9 ("filter yield, score distribution, attribute
+ablation, precision@k... two charts and a table"); PRD §15 "Evaluation —
+v1" (ranking metrics, ablation, distributional analysis, Kaplan-Meier
+survival analysis); PRD §6.6 (what synthetic data can and cannot validate).
+New report script `cohab/services/matching/evaluation.py`
+(`python -m cohab.services.matching.evaluation`), three new tested modules
+(`ranking_metrics.py`, `recovery.py`, `survival.py`), and
+`docs/COHAB_EVALUATION.md` — the narrated writeup PRD §14's roadmap names
+("Evaluation, report, demo"). Follows `report.py`/`tuning.py`'s established
+shape: pure, tested primitives aggregated by an untested, manually-run
+stdout script.
+
+### D-9.1 Precision@k/NDCG@10 ground truth is a recovery experiment, not behavioural labels
+
+**Spec:** PRD §6.6 — synthetic-data performance figures (precision@k, NDCG,
+accuracy) "must never be reported as evidence that the matching works,"
+except as a **recovery experiment**: "plant a known compatibility function
+in the generator, confirm the matcher recovers it — this validates the
+implementation." PRD §6.5 separately names the alternative this rules out:
+real interaction outcomes (`match_score.state`, `feedback.outcome`) are "the
+label problem" — a *pursued* label records a click, not compatibility — and
+in any case there is almost no real interaction volume yet (Phases 6–8's
+own data is a handful of manually-created rows from live-verification
+passes).
+
+**Decision:** `recovery.py` constructs, for a real subject, synthetic
+candidates whose ground-truth ordering is known *by construction*: 17 of
+the 20 scored attributes (`PERTURBABLE_ATTRIBUTES`) can be swapped to the
+value the already spec-sourced matrices in `matrices.py` (§4 similarity, §5
+tolerance, §6 absolute, plus the ordinal attributes' ordered lists) record
+as *least compatible* with the subject's own answer — no new compatibility
+model invented, purely a lookup against numbers already in the codebase.
+`budget_proximity`, `interests` and `lifestyle_notes` are excluded:
+`budget_proximity` needs a numeric offset that must stay inside Stage 1's
+band-intersection test or the candidate is excluded rather than merely
+scored lower; `interests` (Jaccard) needs a controlled-overlap tag set;
+`lifestyle_notes` has no matrix at all (its similarity is TF-IDF/embeddings,
+already separately validated in D-3.3). `build_graded_pool` builds 5
+relevance grades (0/25/50/75/100% of the 17 attributes deviated) × 6
+candidates each = 30 per subject, sized so the top-2-grade "relevant" set
+(12 candidates) exceeds `k=10` — a perfect precision@10 is achievable, not
+capped by construction. `evaluation.py` runs the real, unmodified
+`CompatibilityMatcher`/`MatchRanker` pipeline over each subject's 30
+candidates and checks whether it recovered the construction order via
+`ranking_metrics.py`'s `precision_at_k`/`ndcg_at_k` (pure functions, no
+prior implementation existed anywhere in this codebase). Precision is
+reported at k=5 and k=10 — PRD §15 fixes NDCG@10 by name but leaves
+precision@k's k unspecified; 5 and 10 are proposed, matching
+`report.py`/`tuning.py`'s existing `TOP_K = 10` convention.
+
+**Rejected alternative:** extend `seed.py` with a hidden latent
+"compatibility trait" that generates correlated answers, using
+trait-distance as ground truth. Rejected as *more* speculative than the
+chosen approach, not less — it would require inventing a new synthetic
+personality-generation model, whereas reusing the already-spec-sourced
+matrices invents nothing new; it tests the implementation's wiring
+(eligibility → directional scoring → harmonic mean → sort), which is
+exactly PRD §6.6's legitimate target, without any new claim about what
+makes roommates compatible.
+
+**Measured** (20 subjects, weight_set v3): precision@5 = **1.000**,
+precision@10 = **0.990**, NDCG@10 = **0.998** — near-perfect recovery, the
+expected result of a correctly-implemented pipeline against a ground truth
+built from its own scoring primitives. Restated per PRD §6.6: this is a
+positive result about the implementation's wiring, **not** evidence that
+similar-on-these-attributes roommates cohabit more successfully in reality.
+Full narrative in `docs/COHAB_EVALUATION.md` §4.
+
+**Code:** `cohab/services/matching/recovery.py`, `ranking_metrics.py`,
+`evaluation.py` (`_print_recovery_experiment`), `tests/matching/
+test_recovery.py`, `tests/matching/test_ranking_metrics.py`.
+
+### D-9.2 Stage-1 self-conflict in `perturb_candidate` — found in four rounds, against the real seeded DB, not the unit tests
+
+**Spec:** COHAB_MATCHING_SPEC.md §2 (Stage 1 hard constraints);
+CLAUDE.md's "read the matching code properly" / run-it-yourself rule.
+
+**The bug, and why unit tests couldn't catch it.** The first version of
+`perturb_candidate` copied every Stage-1 field (`gender`,
+`gender_preference`, `seeker_type`, `has_pet`, `pet_tolerance`,
+`severe_allergy`, `kitchen_allergens`, `smoking_dealbreaker`,
+`verification_status`, `account_status`) unchanged from the subject, on the
+reasoning that identical Stage-1 fields trivially clear Stage 1. That
+reasoning is false: several of `eligibility.py`'s checks are *symmetric
+self-comparisons* — true of a subject against an identical copy of
+themselves — whenever the subject's own profile has one of a handful of
+real, valid shapes:
+
+- a subject whose `gender_preference` excludes their own `gender` (e.g.
+  seeking only the opposite gender) — `_gender_pref_satisfied(a.gender_pref,
+  b.gender)` fails when `b.gender == a.gender` but `a.gender_pref` isn't
+  `a.gender` or `"any"`;
+- a `has_place` subject — `BOTH_HAVE_PLACE` fires against any candidate
+  sharing that `seeker_type`, including itself;
+- a subject who owns a pet but can't tolerate a roommate's own
+  (`has_pet=True, pet_tolerance="cannot_live_with_pets"`) — a real, valid
+  combination, not a data error;
+- a subject with `smoking_dealbreaker=True` who already smokes indoors
+  themselves — also real and valid;
+- an unverified or suspended subject — `NOT_VERIFIED_OR_ACTIVE` checks only
+  the *candidate's* state, so a self-clone with the subject's own
+  not-yet-verified state fails it too.
+
+Running the experiment against the seeded dev DB (not the fixture-driven
+unit tests, whose defaults — `gender_preference="any"`,
+`seeker_type="needs_place"`, no pet, `smoking_dealbreaker=False`,
+`verification_status="verified"` — happen to avoid every one of these)
+surfaced this progressively: precision@5/@10/NDCG@10 first landed at
+exactly 0.300 (the fraction of sampled subjects that happened to clear
+Stage 1 by luck), traced field by field over several live runs to gender,
+then `seeker_type`, then pets/allergies/smoking. The
+`verification_status`/`account_status` gap was not caught by a live run at
+all — `evaluation.py` only ever samples already-verified/active subjects
+(`_is_valid_subject`), so it was latent rather than live — and was instead
+found by a `/code-review high` pass's removed-behaviour audit before this
+phase was committed.
+
+**Decision:** `perturb_candidate` now overrides all ten of these fields to
+values that can never trip any of `eligibility.py`'s mutual checks —
+`gender`/`gender_preference` resolved so the forward direction is satisfied
+by construction and the reverse by `gender_preference="any"`;
+`seeker_type="needs_place"` (never excluded by `BOTH_HAVE_PLACE` regardless
+of the subject's own type); `has_pet=False, pet_tolerance="comfortable"`;
+`severe_allergy=[], kitchen_allergens=[]`; `smoking_dealbreaker=False`, plus
+(for subjects who *do* have the dealbreaker set) dropping `"smoking"` from
+the perturbable attribute set and forcing the candidate's own
+`smoking_behaviour="none"`, since an unperturbed grade-4 candidate would
+otherwise inherit the subject's own real (possibly self-conflicting)
+behaviour; `verification_status="verified", account_status="active"`. None
+of these ten fields has a Stage-2 scoring role (`attributes.py`'s registry
+never reads any of them), so neutralising all of them costs nothing.
+`evaluation.py`'s `_select_recovery_subjects` additionally checks
+`passes_hard_constraints(subject, perturb_candidate(subject, 0.0, rng))`
+before including a subject, skipping (and counting, not erroring) any that
+still fail — this should never fire given the neutralisation above (and
+doesn't, on the current dev DB), but is kept as a safety net against a
+*future* `eligibility.py` check this list hasn't caught up with yet, so a
+gap like this degrades to a visible, counted skip rather than a silently
+biased 0 score.
+
+**Not solved, deliberately:** there is no structural mechanism tying this
+field list to `eligibility.py`'s actual checks — it's necessarily
+maintained by inspection, the same way it was built. A property-style test
+that could catch this automatically (e.g. iterating every `Reason` and
+asserting a corresponding safeguard) would need to run against real,
+diverse profile shapes to be meaningful, which conflicts with
+`services/matching/`'s deliberate DB-free, fast-unit-test architecture
+(CLAUDE.md) — the empirical, run-it-against-real-data discovery process
+this decision documents is a consequence of that architecture choice, not
+an oversight it's cheap to close. Recorded here so a *sixth* Stage-1 field
+added to `eligibility.py` in a future phase is a known risk to check against
+this list, not a surprise.
+
+**Code:** `cohab/services/matching/recovery.py`
+(`_gender_that_clears_stage_one`, `perturb_candidate`),
+`cohab/services/matching/evaluation.py` (`_select_recovery_subjects`),
+`tests/matching/test_recovery.py` (six regression tests, one per field
+group, each naming the exact `eligibility.py` check it closes).
+
+### D-9.3 Kaplan-Meier hand-rolled; per-pair feedback reconciliation policy; a `moved_out`-without-duration bug found by code review
+
+**Spec:** PRD §15 ("a right-censored survival problem... the Kaplan–Meier
+estimator is the correct treatment"); PRD line 53 (the primary outcome).
+
+**Decision — hand-rolled, not `lifelines`.** `survival.py`'s
+`kaplan_meier` is a ~30-line standard product-limit estimator, tested
+against a hand-computed fixture (worked in the test file's own comments).
+Matches this project's established minimal-dependency stance (D-4.5's OTP
+HMAC over a heavier scheme, D-6.2's `Fernet` over standing up key-management
+infra) rather than a new survival-analysis dependency for one estimator
+that's easy to verify and defend directly.
+
+**Decision — per-pair reconciliation.** The survival unit is the *pair*
+(`match_score`), not the individual — both parties may submit `feedback`
+for the same match (`UNIQUE(score_id, submitted_by)` allows two rows), so
+`_reconcile` collapses them to one observation: if *either* party reports
+`moved_out`, the pair is an **event**, duration = the smaller of the
+reported durations (the earlier-observed failure is correct); otherwise the
+pair is **censored**, duration = the larger of the known
+`still_together`/no-feedback-yet durations (the freshest observation).
+Proposed, not spec-sourced — PRD/spec are silent on dual-report
+reconciliation.
+
+**Bug found by `/code-review high`, fixed before committing:** the original
+`_reconcile` only counted a `moved_out` report as an event if it also
+carried a `cohabitation_duration_days`. But that field is optional even for
+`moved_out` at both the API schema (`schemas.py`) and
+`FeedbackService.submit()` — a client can omit it. A `moved_out` report with
+no duration fell through to the "nobody has submitted feedback yet" branch
+and was silently counted as **censored** — a real relationship failure
+misclassified as still-ongoing, understating events in the Kaplan-Meier
+curve. Fixed with `_duration_for_moved_out`: any `moved_out` report is now
+an event regardless of whether a duration was given, falling back to
+`(feedback.submitted_at - cohabiting_since).days` — an upper bound on the
+true move-out date, since the pair had already moved out by the time they
+reported it — when the client-supplied figure is absent. Found by review,
+not a live run: the dev DB has no `feedback` rows at all yet, so this
+couldn't have surfaced empirically either way. `_reconcile` (previously
+DB-loading glue only) is now directly unit-tested against six hand-built
+cases, including this one.
+
+**Code:** `cohab/services/matching/survival.py` (`kaplan_meier`,
+`_reconcile`, `_duration_for_moved_out`, `load_cohabitation_observations`),
+`tests/matching/test_survival.py`.
+
+### D-9.4 No fabricated survival data
+
+**Spec:** CLAUDE.md ("do not present an invented value as specified"); PRD
+§6.6's circularity trap, applied here to the metric PRD line 53 itself
+flags as most sensitive to being reported honestly.
+
+**Decision:** the survival chart (`docs/evaluation/survival_curve.png`) is
+built **only** from whatever real `match_score`/`feedback` rows exist,
+however few — on this dev DB, zero. `evaluation.py` reports the real N
+plainly and cites PRD line 53's own acknowledgment that this metric "will
+not be measurable inside the project timeline; the instrumentation is built
+anyway" rather than padding the sample with synthetic "illustrative"
+outcomes. This is deliberately the conservative default: inventing outcome
+data for this one chart is the single place this phase could slide into
+exactly the misrepresentation CLAUDE.md and PRD §6.6 both warn against.
+
+**Code:** `cohab/services/matching/evaluation.py` (`_print_survival`,
+`_save_survival_chart`).
+
+### D-9.5 Ablation extended to all ~20 attributes, with two new statistics
+
+**Spec:** matching-spec §11 item 6 named four attributes
+(`sharing_norm`, `home_orientation`, `sociability`,
+`cost_split_preference`) for *Phase 3's* tuning checklist specifically
+("four to look at"); PRD §15 describes this phase's own scope more broadly
+("ablation studies to measure each attribute's marginal contribution," no
+restriction to four).
+
+**Decision:** `evaluation.py`'s ablation section (`_print_ablation`) runs
+`tuning.py`'s existing mechanism (zero one attribute's weight, re-rank,
+compare) over the full `ATTRIBUTES` registry, and adds two statistics
+beyond D-3.2's top-10-overlap/#1-changed: mean `|Δcombined_score|` and a
+hand-rolled Spearman rank correlation (Pearson over ranks, reusing
+`tuning.py`'s own `_pearson` — no new dependency).
+
+**Measured, revisiting D-3.2 with a cleaner statistic:** the four spec §11
+item 6 attributes' Spearman correlations (0.992–0.997) are among the
+*least* disruptive of all 20 when zeroed — confirming D-3.2's Phase 3
+non-change decision more cleanly than a 15-subject, overlap-only sample
+could. Two findings surfaced that weren't visible before: `cleanliness_level`
+(highest weight, 0.11) has the lowest Spearman (0.903) and top-10 overlap
+(6.9/10) of any attribute, the expected shape for the highest-weighted term
+in a weighted sum; `sleep_schedule` (weight 0.09, mid-table) changes the
+**#1**-ranked candidate in 10/15 subjects, the highest rate of any
+attribute despite unremarkable overall Spearman/overlap — flagged in
+`docs/COHAB_EVALUATION.md` §3 for the report, not acted on here (a matching-
+design question, not an evaluation-phase one).
+
+**Code:** `cohab/services/matching/evaluation.py` (`_print_ablation`,
+`_spearman`, `_rank_transform`).
+
+### D-9.6 `tuning.py` left untouched; `evaluation.py` duplication accepted; a `/code-review high` pass, fixed vs. left as-is
+
+**Spec:** build plan §4 Phase 9; CLAUDE.md ("one phase per session"). User
+requested a check for "bugs, inconsistency or ambiguity" before committing,
+same precedent as D-6.6/D-8.8.
+
+**Decision — duplication.** `tuning.py` is Phase 3's dated checkpoint,
+already cited with specific numbers in D-3.2 — changing its behaviour would
+retroactively muddy that historical record. `evaluation.py` is a new,
+independent script; it duplicates `tuning.py`'s `_load_candidates`,
+`_is_valid_subject`, `_pearson`, the yield/score-distribution/ablation
+printing structure, and spec-§11 threshold constants, rather than factoring
+out a shared module. This is the same duplication `tuning.py` already
+carries against `report.py` — an established pattern in this codebase, not
+a new one introduced here.
+
+**`/code-review high` findings, fixed:**
+
+1. Missing type hints on `_load_candidates(session)`/`_print_survival
+   (session)` — added `Session` (CLAUDE.md: "type hints on all service
+   functions").
+2. `_print_yield`/`_print_recovery_experiment` called `statistics.median`/
+   `.mean` on a list that could be empty (no verified/active subjects, or
+   every recovery-experiment subject skipped) — `StatisticsError` would
+   crash the whole report past that point. Both now guard and print a
+   plain "nothing to report" line instead.
+3. `_print_score_distribution`'s p25/p75 fallback for samples under 4
+   points reused `min`/`max` under the "p25"/"p75" label, misrepresenting
+   them as quartiles; also contained a dead ternary branch
+   (`quantiles[-1] if len(quantiles) > 1 else quantiles[0]` — always true
+   given how `quantiles` is built). Rewritten to print "too few points for
+   p25/p75" instead of a mislabelled figure.
+4. D-9.2's `verification_status`/`account_status` gap and D-9.3's
+   `moved_out`-without-duration gap (both above).
+
+**`/code-review high` findings, left as-is (judged non-issues at this
+scale, matching the precedent set by D-6.6/D-7.3/D-8.6's own "left as-is"
+sections):**
+
+- Several efficiency findings (Stage-1 eligibility re-filtered once per
+  ablated attribute instead of cached; `MatchRanker.rank()`'s unused
+  `Explanation` objects built and discarded inside the ablation loop;
+  `_print_yield`/`_collect_scores` re-filtering the same subject slice
+  twice; an N+1 `Feedback` query in `load_cohabitation_observations`; a
+  loop-invariant recomputed per candidate in `build_graded_pool`). All are
+  real, all match a pattern `tuning.py`/`report.py` already carry
+  unaddressed at pilot data volumes, and this script is manually run
+  offline, never on a request path. Fixing them here without also fixing
+  the identical pattern in the older scripts would be inconsistent;
+  revisit only if a future phase's data volume makes a multi-minute
+  offline report genuinely painful.
+- `recovery.py`'s three near-identical single-field perturbation-factory
+  closures (`_similarity_perturbation`/`_ordinal_perturbation`/
+  `_absolute_perturbation`) could be parameterised into one. Left as
+  written — each is one line, already covered by dedicated tests, and the
+  suggested generalisation trades a small amount of duplication for an
+  extra layer of indirection with no behaviour change.
+- `_print_ablation`'s `baseline_top10` is fully derivable from
+  `baseline_scores` (same order, same source list) but stored separately.
+  Low risk, not touched.
+
+**Code:** all of `cohab/services/matching/{evaluation,recovery,survival,
+ranking_metrics}.py` and their test files.
+
+**Also:** `backend/requirements.txt` gains `matplotlib==3.10.7` (new
+dependency — the two saved charts have no lighter-weight standard-library
+alternative); `docs/evaluation/score_distribution.png` and
+`docs/evaluation/survival_curve.png` are generated artifacts, regenerated by
+each `evaluation.py` run, not hand-authored; `docs/COHAB_EVALUATION.md` is
+the narrated "report" PRD §14's roadmap names, cross-referencing this
+section rather than repeating it.

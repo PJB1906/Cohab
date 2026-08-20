@@ -13,3 +13,4 @@ cryptography==50.0.0
 pyjwt==2.10.1
 email-validator==2.2.0
 python-multipart==0.0.20
+matplotlib==3.10.7
