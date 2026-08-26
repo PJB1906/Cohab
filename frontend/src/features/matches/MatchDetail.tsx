@@ -403,7 +403,7 @@ export function MatchDetail() {
                 Not for me
               </Button>
             )}
-            {canChat ? (
+            {canChat && !canConfirmMoveIn ? (
               <Link to={`/matches/${matchId}/chat`} className="flex-1">
                 <Button className="rounded-full w-full">{primaryLabel}</Button>
               </Link>

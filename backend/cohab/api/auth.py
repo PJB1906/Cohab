@@ -26,6 +26,7 @@ from cohab.services.auth import (
     AccountNotActive,
     AlreadyVerified,
     AuthService,
+    BlankFullName,
     EmailAlreadyRegistered,
     InvalidCredentials,
     InvalidOTP,
@@ -140,10 +141,13 @@ def update_me(
     PATCH rather than PUT: the body carries only the fields being changed,
     and omitting one must leave it untouched rather than blanking it.
     """
-    return update_account(
-        db,
-        user,
-        full_name=body.full_name,
-        course=body.course,
-        phone_number=body.phone_number,
-    )
+    try:
+        return update_account(
+            db,
+            user,
+            full_name=body.full_name,
+            course=body.course,
+            phone_number=body.phone_number,
+        )
+    except BlankFullName:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "full name cannot be blank")

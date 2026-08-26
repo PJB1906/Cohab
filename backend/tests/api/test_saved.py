@@ -13,9 +13,10 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from cohab.models import Institution, WeightSet
+from cohab.models import Institution, PreferenceProfile, SavedMatch, WeightSet
 
 PASSWORD = "correct horse battery staple"
 
@@ -131,6 +132,21 @@ def test_unsave_never_saved_is_a_no_op(client: TestClient, pair: tuple[str, str,
 def test_save_nonexistent_match_is_404(client: TestClient, pair: tuple[str, str, str]) -> None:
     resp = client.post(f"/saved/{uuid.uuid4()}")
     assert resp.status_code == 404
+
+
+def test_save_does_not_orphan_a_row_when_the_other_party_is_unreachable(
+    client: TestClient, pair: tuple[str, str, str], db_session: Session
+) -> None:
+    """docs/DECISIONS.md D-13.18: `save()` used to commit the `SavedMatch`
+    row before confirming both candidates were still loadable, so a 404 here
+    (Bala's profile gone) could still leave a bookmark behind."""
+    _, bala_id, match_id = pair
+    db_session.execute(delete(PreferenceProfile).where(PreferenceProfile.user_id == uuid.UUID(bala_id)))
+    db_session.commit()
+
+    resp = client.post(f"/saved/{match_id}")
+    assert resp.status_code == 404, resp.text
+    assert db_session.scalar(select(func.count()).select_from(SavedMatch)) == 0
 
 
 def test_save_match_not_a_party_to_is_403(

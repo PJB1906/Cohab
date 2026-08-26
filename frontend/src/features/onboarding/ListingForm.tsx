@@ -43,10 +43,12 @@ export function ListingForm() {
     setPhotos((prev) => prev.map((p, i) => (i === index ? url : p)))
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
+  const [draftSaved, setDraftSaved] = useState(false)
+
+  async function save(advance: boolean) {
     setBusy(true)
     setError(null)
+    setDraftSaved(false)
     try {
       await listingApi.put({
         locality,
@@ -58,12 +60,29 @@ export function ListingForm() {
         photos: photos.filter((p): p is string => Boolean(p)),
         current_housemates: Number(housemates) || 0,
       })
-      navigate('/onboarding/questionnaire')
+      if (advance) navigate('/onboarding/questionnaire')
+      else setDraftSaved(true)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong')
     } finally {
       setBusy(false)
     }
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
+    save(true)
+  }
+
+  // "Save as draft" is a plain button, not a second submit — the listing
+  // schema still requires every field to be valid (there's no partial-save
+  // shape on the backend), but unlike "Save and continue" it persists the
+  // listing without forcing the wizard forward, so a member can leave and
+  // pick up onboarding later. Used to be `type="submit"` on the same form,
+  // which ran the identical validated save-and-advance — the two buttons
+  // were indistinguishable in effect.
+  async function saveDraft() {
+    await save(false)
   }
 
   const roomTypeChips = (
@@ -339,9 +358,10 @@ export function ListingForm() {
           <Button type="submit" disabled={busy}>
             {busy ? 'Saving…' : 'Save and continue'}
           </Button>
-          <Button type="submit" variant="secondary" disabled={busy}>
-            Save as draft
+          <Button type="button" variant="secondary" disabled={busy} onClick={saveDraft}>
+            {busy ? 'Saving…' : 'Save as draft'}
           </Button>
+          {draftSaved && <span className="text-sm text-cohab-primary">Saved</span>}
         </div>
       </div>
     </form>

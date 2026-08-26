@@ -3109,3 +3109,88 @@ disappears into a dark browser tab strip and leaves the strokes floating.
 Verified in-browser across all four OS/stored-choice combinations at first
 paint, and across toggle changes with the OS forced to dark — the case that
 was broken. Both files serve 200; the mark stays legible at 16px.
+
+### D-13.18 Post-commit audit ("any bugs, inconsistency or ambiguity") — six findings fixed
+
+**Requested by the user**, same pattern as D-6.6/D-7.8: a full-repo pass
+(logic, code, UI) after the f3b3211 commit, rather than a diff-scoped review.
+Five of the six were already named, undiagnosed, in that commit's own
+message ("known issues... tracked as follow-up"); this pass root-caused each
+one to an exact line and fixed all of them, plus one new finding.
+
+1. **`SavedService.save` committed an orphaned bookmark before confirming
+   the match was still reachable.** `_entry()` — called *after* `commit()`
+   — is what actually loads both candidates and can raise `MatchNotFound`
+   (e.g. a party's profile deleted after the match was scored). A caller
+   saw a 404 while a `SavedMatch` row had already landed in the DB, silently
+   skipped forever by `list_saved`'s own defensive `except MatchNotFound:
+   continue`. Fixed by loading both candidates and raising before the
+   insert, not after. **Code:** `cohab/services/saved.py`.
+2. **Mobile `MatchDetail`'s sticky footer mis-routed `contact_shared`.**
+   The desktop side panel renders "Confirm move-in" and "Open chat" as two
+   buttons; the mobile footer collapsed them into one, gated on `canChat`
+   alone. Since `contact_shared` makes both `canChat` and `canConfirmMoveIn`
+   true, the button's *label* correctly read "Confirm move-in" (`primaryLabel`
+   already prioritises it) but the button was still wrapped in a `<Link
+   to=".../chat">`, so tapping it navigated to chat instead of calling
+   `confirmMoveInMutation`. Fixed by gating the `<Link>` wrapper on `canChat
+   && !canConfirmMoveIn`; `firePrimaryAction` already handled the
+   move-in-mutation branch correctly, so no other logic needed to change.
+   Chat is still one tap away via the persistent bottom-nav "Chats" tab.
+   **Code:** `frontend/src/features/matches/MatchDetail.tsx`.
+3. **`ListingForm`'s "Save as draft" was `type="submit"` on the same form
+   as "Save and continue"** — identical validated save, identical
+   navigate-to-questionnaire. There is no partial-save shape on the backend
+   (`ListingUpsertRequest` requires every field), so "draft" can't mean
+   "save incomplete data" without a schema change this pass didn't make.
+   It can mean "save what's valid, but don't force the wizard forward" —
+   which is what the button now does: a plain `type="button"` handler that
+   calls the same `PUT /listing` but skips `navigate()`, showing an inline
+   "Saved" confirmation instead. **Code:**
+   `frontend/src/features/onboarding/ListingForm.tsx`.
+4. **`demo_seed.py` crashed on a sparse seed pool.** `_seed_open_report`
+   used `subject`/`reporter` (both `scalar(...).limit(1)`, no guarantee of
+   a row) unconditionally — `AttributeError` on `None.id` the first time
+   the demo seed ran against a pool with fewer than three active users.
+   Fixed with an explicit `None` check on both, printing and returning
+   rather than crashing — consistent with the script's own "additive,
+   safe to re-run" framing. **Code:** `cohab/demo_seed.py`.
+5. **Moderation queue's "Escalated" tab never emptied.** Escalation is
+   monotonic by design (D-7.2: a case keeps `escalated=True` after
+   resolution), but `matchesFilter`'s `'Escalated'` branch only checked
+   `r.escalated`, not status — a `dismissed`/`action_taken` case stayed in
+   the Escalated tab forever, indistinguishable from one still needing
+   review. Fixed by excluding `CLOSED_STATUSES` from that branch (and from
+   the tab's badge count, which had the identical gap). **Code:**
+   `frontend/src/features/moderation/ModerationQueue.tsx`.
+6. **New finding, not in the commit message: blanking "Full name" in
+   Account settings failed silently and desynced the edit form.**
+   `update_account` special-cased an empty/whitespace `full_name` by just
+   skipping the assignment (`full_name` is `NOT NULL`, unlike
+   `course`/`phone_number`, which do normalise an empty string to `NULL`)
+   — no error, no signal to the caller, contradicting the function's own
+   docstring, which claimed the empty-string-clears rule applied uniformly.
+   `AccountPanel.tsx` compounded it: `onSuccess` never resynced the local
+   `fullName`/`course`/`phone` state from the server's returned object, so
+   a rejected edit left the input showing the rejected (blank) text
+   indefinitely, with the "Edit" button not resetting it either. Fixed with
+   a new `BlankFullName` exception (400, "full name cannot be blank"),
+   a client-side disable on an empty name, and resyncing all three fields
+   from the mutation's response on success. **Code:**
+   `cohab/services/auth.py` (`BlankFullName`, `update_account`),
+   `cohab/api/auth.py` (`update_me`),
+   `frontend/src/features/profile/AccountPanel.tsx`.
+
+**One item raised during this pass and then withdrawn, on rereading the
+spec:** `Candidate.from_orm` collapsing a `has_place` user's budget band to a
+single point (`listing.rent_per_person`) was first flagged here as an
+undocumented judgment call. It isn't one — `COHAB_MATCHING_SPEC.md` says
+this explicitly, twice: §2's Stage-1 band-intersection rule ("For a
+`has_place` member, the listing's rent replaces the band as a point value")
+and §7's `budget_proximity` definition ("For a `has_place` member, the
+listing rent is the point value"), which is exactly the `budget_midpoint`
+computation `candidate.py` implements. No decision was made outside the spec
+here, so there is nothing to log — correcting the record rather than
+leaving a wrong claim standing. **Code:**
+`cohab/services/matching/candidate.py` (`from_orm`, `budget_midpoint`) —
+unchanged, and correct as written.

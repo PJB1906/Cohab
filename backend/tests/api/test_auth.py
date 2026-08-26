@@ -340,16 +340,20 @@ def test_patch_me_empty_string_clears_phone_number(
     assert resp.json()["phone_number"] is None
 
 
-def test_patch_me_ignores_a_blank_full_name(
+def test_patch_me_rejects_a_blank_full_name(
     client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Unlike phone number, a name has no meaningful empty state — a member
-    with no name breaks every card and chat header that renders one."""
+    with no name breaks every card and chat header that renders one. Used to
+    silently ignore the edit (200, name unchanged); now rejected outright so
+    the caller gets an actual error instead of a no-op that looks like
+    success (docs/DECISIONS.md D-13.18)."""
     _register_and_verify(client, institution, caplog)
 
     resp = client.patch("/auth/me", json={"full_name": "   "})
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["full_name"] == "Priya Menon"
+    assert resp.status_code == 400, resp.text
+
+    assert client.get("/auth/me").json()["full_name"] == "Priya Menon"
 
 
 def test_patch_me_cannot_change_identity_or_eligibility_fields(

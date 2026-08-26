@@ -23,7 +23,10 @@ const CLOSED_STATUSES = new Set(['substantiated', 'dismissed', 'action_taken'])
 function matchesFilter(r: ReportSummaryOut, filter: FilterLabel): boolean {
   if (filter === 'Open') return r.status === 'open'
   if (filter === 'Under review') return r.status === 'under_review'
-  if (filter === 'Escalated') return r.escalated
+  // Escalation is monotonic (docs/DECISIONS.md D-7.2) — a case keeps
+  // `escalated=true` even once resolved, so this tab has to exclude closed
+  // statuses itself or a dismissed/actioned case never leaves it.
+  if (filter === 'Escalated') return r.escalated && !CLOSED_STATUSES.has(r.status)
   return CLOSED_STATUSES.has(r.status)
 }
 
@@ -62,7 +65,7 @@ export function ModerationQueue() {
 
   const openCount = data?.filter((r) => r.status === 'open').length ?? 0
   const underReviewCount = data?.filter((r) => r.status === 'under_review').length ?? 0
-  const escalatedCount = data?.filter((r) => r.escalated).length ?? 0
+  const escalatedCount = data?.filter((r) => r.escalated && !CLOSED_STATUSES.has(r.status)).length ?? 0
 
   const rows = useMemo(() => {
     if (!data) return []

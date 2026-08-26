@@ -224,9 +224,15 @@ def _seed_open_report(session: Session, user: User) -> None:
     subject = session.scalar(
         select(User).where(User.id != user.id, User.account_status == "active").limit(1)
     )
+    if subject is None:
+        print("  no other active user to report — skipped (seed pool too sparse)")
+        return
     reporter = session.scalar(
         select(User).where(User.id.notin_([user.id, subject.id])).limit(1)
     )
+    if reporter is None:
+        print("  no third user to act as reporter — skipped (seed pool too sparse)")
+        return
     session.add(
         Report(
             reporter_id=reporter.id,

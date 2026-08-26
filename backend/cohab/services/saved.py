@@ -95,8 +95,18 @@ class SavedService:
     def save(self, user: User, match_id: uuid.UUID) -> SavedMatchEntry:
         """Idempotent: saving an already-saved match returns the existing
         row rather than raising or duplicating. `MatchNotFound`/`NotAParty`
-        propagate from `load_match` for an invalid or non-party match."""
+        propagate from `load_match` for an invalid or non-party match.
+
+        Checks both candidates are still loadable *before* writing anything —
+        `_entry` needs both to rebuild the explanation, and used to be the
+        first place that could raise `MatchNotFound` (e.g. a party's profile
+        deleted after the match was scored), by which point the row had
+        already been committed: an orphaned bookmark and a 404 response for
+        what looked, from the DB's point of view, like a successful save."""
         match_row = load_match(self.session, user, match_id)
+        other_id = match_row.user_id_b if user.id == match_row.user_id_a else match_row.user_id_a
+        if _load_candidate(self.session, user.id) is None or _load_candidate(self.session, other_id) is None:
+            raise MatchNotFound(match_id)
 
         existing = self._existing(user, match_id)
         if existing is None:

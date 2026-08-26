@@ -38,6 +38,13 @@ export function AccountPanel({ user }: { user: UserOut }) {
       // Write straight into the session cache so the header avatar and name
       // update without a refetch round-trip.
       queryClient.setQueryData(SESSION_QUERY_KEY, updated)
+      // Resync the form from the server's own values — without this, a
+      // rejected edit (e.g. a blank name, which the backend leaves
+      // unchanged) left the input showing the rejected text forever, with
+      // no sign it hadn't actually saved.
+      setFullName(updated.full_name)
+      setCourse(updated.course ?? '')
+      setPhone(updated.phone_number ?? '')
       setEditing(false)
     },
   })
@@ -138,7 +145,7 @@ export function AccountPanel({ user }: { user: UserOut }) {
             )}
 
             <div className="flex items-center gap-2.5">
-              <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+              <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || !fullName.trim()}>
                 {save.isPending ? 'Saving…' : 'Save changes'}
               </Button>
               <Button size="sm" variant="secondary" onClick={cancel} disabled={save.isPending}>

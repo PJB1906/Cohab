@@ -230,6 +230,13 @@ class AuthService:
         return user
 
 
+class BlankFullName(Exception):
+    """`full_name` is `NOT NULL` (models/user.py) — unlike `course`/
+    `phone_number`, an empty string can't normalise to `NULL` here. Raised
+    rather than silently ignoring the edit, which used to leave the account
+    unchanged with no error and no feedback to the caller."""
+
+
 def update_account(
     session: Session,
     user: User,
@@ -244,15 +251,17 @@ def update_account(
     needs no `OTPSender` — constructing the service just to rename someone
     would drag an email dependency into a path that never sends mail.
 
-    `None` means "not supplied, leave alone". Clearing a value is expressed
-    as an empty string, which normalises to `NULL`, so a member can remove a
-    phone number they no longer want on file — a real requirement given
-    contact sharing reads this column.
+    `None` means "not supplied, leave alone". For `course`/`phone_number`,
+    clearing a value is expressed as an empty string, which normalises to
+    `NULL`, so a member can remove a phone number they no longer want on
+    file. `full_name` can't follow that rule (`NOT NULL`) — an empty/
+    whitespace value raises `BlankFullName` instead.
     """
     if full_name is not None:
         cleaned = full_name.strip()
-        if cleaned:
-            user.full_name = cleaned
+        if not cleaned:
+            raise BlankFullName()
+        user.full_name = cleaned
     if course is not None:
         user.course = course.strip() or None
     if phone_number is not None:
