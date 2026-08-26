@@ -175,6 +175,14 @@ Keep these accurate as the repo takes shape:
 - Migrations: `alembic upgrade head` / `alembic revision --autogenerate -m "..."`
 - Frontend dev: `npm run dev` (in `frontend/`)
 - Database: `docker compose up -d db`
+- **Run in production:** `npm run build` (in `frontend/`), then start the
+  backend without `--reload` (`uvicorn cohab.main:app`) from `backend/`.
+  `cohab/main.py`'s `serve_frontend` middleware serves the built bundle and
+  strips the frontend's `/api` prefix onto the same bare routes the tests
+  call directly — one process, one origin, no separate frontend server. Set
+  `COOKIE_SECURE=True` (or unset it — that's the default) and a real
+  `SECRET_KEY` before doing this anywhere but localhost (docs/DECISIONS.md
+  D-13.19).
 
 ## Conventions
 

@@ -3194,3 +3194,92 @@ here, so there is nothing to log — correcting the record rather than
 leaving a wrong claim standing. **Code:**
 `cohab/services/matching/candidate.py` (`from_orm`, `budget_midpoint`) —
 unchanged, and correct as written.
+
+### D-13.19 Deploy-readiness pass: the prod half of "FastAPI serves the static bundle" never existed
+
+**Requested by the user** ("do whatever has to be done for deployment
+ready"), after a status check found `cohab/main.py` had no code path for
+CLAUDE.md's own documented architecture — `run.cmd` only ever launches dev
+mode (`npm run dev` + `uvicorn --reload`, Vite's proxy on top), so the prod
+path had apparently never been run, let alone exercised.
+
+**Two problems, not one, and the second is the one that actually bites.**
+`npm run build` itself works (563 kB bundle, one non-blocking chunk-size
+warning) — the gap is that nothing serves the output, and simply adding a
+`StaticFiles` mount would not have been enough:
+
+1. `frontend/src/api/client.ts` calls every endpoint at `/api/...`, but
+   every router here is registered at its bare path (`/auth/...`,
+   `/matches/...`) — matching what ~330 tests call directly against
+   `TestClient(app)`, and what `vite.config.ts`'s dev proxy already forwards
+   to after its own `rewrite: p => p.replace(/^\/api/, '')`. With no proxy
+   once this app is the only server, `/api/auth/register` needs the
+   identical strip to reach the same bare-path handler — done server-side
+   now, onto the exact same route table, so zero tests needed to change.
+2. **The one that would have silently broken the app.** Several frontend
+   *pages* share a literal path with a real API route on this app: `GET
+   /matches` is both the match-list page and the match-list data endpoint;
+   same for `/profile`, `/saved`. A naive "try the router, serve
+   `index.html` on a 404" fallback does not help here, because these paths
+   are *not* 404 — the real route matches and returns real API output (a
+   401 without a cookie, JSON with one). A browser hard-refresh on
+   `/matches` would have rendered raw JSON or a 401 page instead of the
+   app. Confirmed live: before the fix, `curl -H "Accept: text/html"
+   localhost:8000/matches` returned `{"detail":"not authenticated"}`.
+
+**Decision:** one `@app.middleware("http")` (`serve_frontend`,
+`cohab/main.py`) does both, keyed on two signals that don't require
+touching a single route or test:
+
+- A leading `/api/` is stripped from `request.scope["path"]` before
+  `call_next` — mutating the scope in place is enough for Starlette's
+  router to see the rewritten path, a standard technique for this exact
+  case.
+- A **real browser navigation** is told apart from every other caller
+  (`fetch()`, `TestClient`, an asset `<script>`/`<link>` tag) by its
+  `Accept` header — only a navigation request asks for `text/html`. When it
+  does, this serves `index.html` directly and never calls the router at
+  all, sidestepping the path collision entirely rather than trying to
+  detect it after the fact. Everything else goes through the router first
+  as before; only a genuine 404 (an actual missing route, e.g. a built
+  asset like `/assets/index-*.js`, which has no registered route) falls
+  back to serving a matching file under the built `dist/` — checked with a
+  `.relative_to()` guard against path traversal.
+- No-ops entirely — falls straight through to `call_next` — whenever
+  `FRONTEND_DIST` (new `FRONTEND_DIST_DIR` config, default
+  `../frontend/dist`, same relative-to-cwd convention as `UPLOAD_DIR`)
+  doesn't exist, so a backend-only dev session with no `npm run build` run
+  is unaffected.
+
+Verified live end-to-end against the merged origin (`http://localhost:8000`
+directly, no Vite dev server): login, `/matches` render, and a **hard
+navigation reload on `/matches`** all correctly serve/re-render the app
+(network tab showed `/api/auth/me`, `/api/matches`, `/api/feedback/pending`,
+`/api/saved` each returning 200, zero console errors) — the exact scenario
+item 2 above would have broken. `tests/test_frontend_serving.py` (new,
+6 cases) locks in both behaviours with a throwaway `FRONTEND_DIST` via
+monkeypatch, so the suite doesn't depend on whether a build happens to
+exist on disk; the full suite (329 pre-existing + these 6) passes unchanged.
+
+**Also closed, not code:** `backend/.env`'s `SECRET_KEY` was still the
+literal `.env.example` placeholder (`dev-only-change-me`) — a value visible
+to anyone who reads the checked-in example file, and this key signs every
+session cookie. Replaced with a random `secrets.token_urlsafe(48)` value.
+`.env` is gitignored and has never been committed (`git log --all` on it is
+empty), so this was a local-file fix, not a leak response.
+
+**Left for the user, not touched:** `COOKIE_SECURE` stays `False` in this
+`.env` — it's correctly local-dev-only (the code's own default, unset, is
+`True`; this file's override is what makes plain http work here) and
+flipping it now would break the very same local session just used to
+verify this fix. Must be `True` (or simply unset) wherever this is actually
+deployed over https. The `SMTP_PASSWORD` in this `.env` is still the exact
+value its own comment says was already exposed via screenshot and needs
+rotating at Google's app-passwords page — the user said a new one had been
+set, but the file's value is unchanged from before that message, flagged
+back to them rather than assumed fixed.
+
+**Code:** `cohab/main.py` (`serve_frontend`, `_dist_file`, `FRONTEND_DIST`),
+`cohab/core/config.py` (`FRONTEND_DIST_DIR`),
+`tests/test_frontend_serving.py` (new), `backend/.env` (`SECRET_KEY`,
+local only, not committed).

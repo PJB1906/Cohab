@@ -57,6 +57,14 @@ RESEND_OTP_COOLDOWN_SECONDS = 30
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
 MAX_UPLOAD_MB = 5  # proposed — not specified in any document
 
+# CLAUDE.md: "vite build, and FastAPI serves the static bundle" in prod.
+# Relative to the backend process's cwd, same convention as UPLOAD_DIR —
+# run.cmd (and any deploy script) starts uvicorn from backend/, so the
+# default resolves to the frontend's build output one level up. Override if
+# a deploy copies the built bundle elsewhere. Missing/absent is fine: main.py
+# only serves it when the directory actually exists.
+FRONTEND_DIST_DIR = os.environ.get("FRONTEND_DIST_DIR", "../frontend/dist")
+
 # Phase 6 chat rate limits (PRD §9.1 item 3: "the mechanical precondition for
 # both spam and harassment is the ability to send unlimited messages to many
 # people quickly"). Proposed values, not sourced from any document.
