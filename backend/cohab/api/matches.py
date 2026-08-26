@@ -65,6 +65,12 @@ def get_matches(
             budget_min=e.candidate.budget_min,
             budget_max=e.candidate.budget_max,
             avatar_url=e.candidate.avatar_url,
+            state=e.state,
+            course=e.candidate.course,
+            move_in_date=e.candidate.move_in_date,
+            listing_room_type=e.candidate.listing_room_type,
+            listing_available_from=e.candidate.listing_available_from,
+            listing_locality=e.candidate.listing_locality,
         )
         for e in entries
     ]
@@ -121,10 +127,12 @@ def get_explanation(
                 available_from=r.listing.available_from,
                 amenities=list(r.listing.amenities or []),
                 photos=list(r.listing.photos or []),
+                current_housemates=r.listing.current_housemates,
             )
             if r.listing is not None
             else None
         ),
+        weight_set_version=weight_set.version,
     )
 
 

@@ -47,7 +47,7 @@ export function PhotoUpload({
         disabled={busy}
         className={cn(
           aspect,
-          'w-full rounded-xl border border-dashed border-cohab-border bg-cohab-bg overflow-hidden',
+          'cohab-press w-full rounded-xl border border-dashed border-cohab-border bg-cohab-bg overflow-hidden',
           'flex items-center justify-center text-center cursor-pointer disabled:opacity-60',
         )}
       >

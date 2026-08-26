@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { matchesApi } from '@/api/matches'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
 import type { MatchListItem } from '@/api/types'
 
 /** PRD §8.2's "Viewed -> Rejected: dismisses" / "Chatting -> Rejected: either
@@ -35,27 +36,34 @@ export function RejectConfirmDialog({
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
-        <h2 className="text-base font-semibold mb-2">Not going ahead with {candidateName}?</h2>
-        <p className="text-[13.5px] text-cohab-muted mb-5">
-          This ends the match for both of you. Any conversation stays visible, but neither of you
-          can pick this back up from here.
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Not going ahead with ${candidateName}?`}
+      className="cohab-desktop:max-w-[440px]"
+    >
+      <p className="text-[14px] cohab-desktop:text-[13.5px] leading-[1.55] text-cohab-muted mb-6">
+        This ends the match for both of you. Any conversation stays visible, but neither of you
+        can pick this back up from here.
+      </p>
+      {mutation.isError && (
+        <p className="text-[13px] text-cohab-accent mb-3">
+          {mutation.error instanceof ApiError ? mutation.error.message : 'Could not update this match.'}
         </p>
-        {mutation.isError && (
-          <p className="text-[13px] text-cohab-accent mb-3">
-            {mutation.error instanceof ApiError ? mutation.error.message : 'Could not update this match.'}
-          </p>
-        )}
-        <div className="flex flex-col gap-2">
-          <Button variant="secondary" onClick={onClose} className="w-full">
-            Keep the match
-          </Button>
-          <Button variant="danger" onClick={() => mutation.mutate()} disabled={mutation.isPending} className="w-full">
-            Not going ahead
-          </Button>
-        </div>
+      )}
+      <div className="flex flex-col gap-2.5">
+        <Button variant="secondary" onClick={onClose} className="w-full">
+          Keep the match
+        </Button>
+        <Button
+          variant="danger"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="w-full"
+        >
+          Not going ahead
+        </Button>
       </div>
-    </div>
+    </Dialog>
   )
 }

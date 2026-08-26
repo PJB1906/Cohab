@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils'
 
 const VARIANTS = {
   agreement: 'border border-cohab-border bg-cohab-tint text-cohab-primary',
-  divergence: 'border border-cohab-accent bg-white text-cohab-accent',
+  divergence: 'border border-cohab-accent bg-cohab-card text-cohab-accent',
   verified: 'border border-cohab-border bg-cohab-tint text-cohab-primary',
-  neutral: 'border border-cohab-border bg-white text-cohab-ink',
+  neutral: 'border border-cohab-border bg-cohab-card text-cohab-ink',
 }
 
 export function Badge({

@@ -1,33 +1,231 @@
 @import 'tailwindcss';
 
-/* Design tokens decoded from the two root-level mockups (docs/DECISIONS.md
-   D-5.1) — both agree on every value here. */
-@theme {
-  --font-sans:
-    'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, Menlo, monospace;
+/* Modal phosphor-terminal palette (docs/DECISIONS.md D-13.2).
+   ---------------------------------------------------------------------------
+   This REPLACES the warm off-white / deep-teal tokens that D-5.1 decoded from
+   the two root-level mockups. Recorded as a deliberate deviation: the mockups
+   remain the authority on *layout* and copy, but no longer on colour.
 
-  --color-cohab-primary: #0f5f52;
+   The `--color-cohab-*` names are kept exactly as they were on purpose — every
+   one of the ~40 already-built screens references them through `cohab-*`
+   utility classes, so remapping the values here re-themes the whole app
+   without touching those files. Each token below names the Modal role it now
+   carries, so the indirection stays legible rather than becoming a lie. */
+@theme {
+  /* Modal splits type between a geometric display face and Inter for all UI
+     chrome. Goga is proprietary; Inter Tight is the substitute the style
+     reference itself names. Both are loaded in index.html. */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fira Mono', ui-monospace, Menlo, monospace;
+
+  /* Unchanged — this is a layout boundary, not a colour decision. Below it:
+     Cohab Prototype.html (mobile). At/above it: Cohab Desktop.html. */
+  --breakpoint-cohab-desktop: 1220px;
+
+  /* --- Modal source palette, under its own names ------------------------ */
+  --color-void-black: #000000;
+  --color-ground-iron: #181818;
+  --color-carbon-veil: #212525;
+  --color-circuit-border: #485346;
+  --color-phosphor-blue-black: #1f2a33;
+  --color-lime-pulse: #7fee64;
+  --color-phosphor-white: #ddffdc;
+  --color-sage-60: #8cab87;
+  --color-sage-40: #677d64;
+  --color-moss-70: #9cbf93;
+  --color-moss-80: #aed2a4;
+  --color-fern-link: #859984;
+  --color-deep-fern: #697368;
+  --color-pine-15: #3e4a3c;
+
+  /* --- The app's semantic tokens, remapped onto the above --------------- */
+
+  /* Primary was deep teal. Lime Pulse is rationed by Modal's own rule (one
+     fill per viewport), so `cohab-primary` is used as a *stroke and text*
+     colour here; the filled-CTA treatment lives in `.cohab-cta` below. */
+  --color-cohab-primary: #7fee64;
+  --color-cohab-primary-dark: #6bd453;
+
+  /* Modal forbids non-green chromatic accents, so the old terracotta cannot
+     survive as-is. Destructive/divergence signals instead drop to the dimmest
+     readable sage and lean on borders and copy, not hue, to read as "warning".
+     The one exception is genuine danger (block/report/suspend), which keeps a
+     desaturated brick so a destructive action is never indistinguishable from
+     a neutral one — an accessibility floor that outranks palette purity. */
+  --color-cohab-accent: #c96a4d;
+  --color-cohab-accent-tint: #241a17;
+
+  --color-cohab-bg: #000000;          /* Surface 0 — Void */
+  --color-cohab-card: #181818;        /* Surface 1 — Ground */
+  --color-cohab-border: #485346;      /* Circuit Border hairline */
+  --color-cohab-border-soft: #1f2a33; /* Phosphor Blue-Black separator */
+  --color-cohab-ink: #ddffdc;         /* Phosphor White — headings/icons */
+  --color-cohab-muted: #8cab87;       /* Sage 60 — default body copy */
+  --color-cohab-subtle: #677d64;      /* Sage 40 — helper text */
+  --color-cohab-placeholder: #697368; /* Deep Fern — placeholders */
+  --color-cohab-tint: #212525;        /* Surface 2 — Carbon, selected rows */
+  --color-cohab-row-tint: #181818;
+
+  /* The mobile prototype's own muted pair collapses onto the same sage scale
+     — Modal has no separate mobile palette, and keeping two would reintroduce
+     the split this remap exists to remove. */
+  --color-cohab-muted-mobile: #8cab87;
+  --color-cohab-subtle-mobile: #677d64;
+
+  /* The moderator shell was the one dark screen in the old design. It is no
+     longer special — it now sits one surface step above the page, which is
+     how Modal separates an elevated region. */
+  --color-cohab-dark-bg: #0a0a0a;
+  --color-cohab-dark-border: #485346;
+  --color-cohab-dark-border-soft: #1f2a33;
+  --color-cohab-dark-text: #ddffdc;
+  --color-cohab-dark-text-muted: #9cbf93;
+  --color-cohab-dark-text-subtle: #697368;
+
+  /* Chat bubbles: outgoing carries the lime as a low-alpha wash rather than a
+     solid fill, so a long thread does not violate the one-lime-fill rule. */
+  --color-cohab-bubble-mint: #1c2a1a;
+  --color-cohab-thread-bg: #0a0a0a;
+
+  /* Tokens for values that were previously written as literal hex in
+     component files (D-13.12). They were indistinguishable from the theme
+     until a light mode existed, at which point every one of them became a
+     dark-only colour stranded on a light page. Named by role, not by shade,
+     so the light overrides below can differ freely.
+
+     Note: `text-[#0a0a0a]` is deliberately NOT tokenised — it is the dark
+     text that sits on a bright lime or brick *fill*, and that fill stays
+     bright in both themes, so the literal is correct in both. */
+  /* Text that sits ON a filled primary/accent button. In the dark theme the
+     fill is bright lime, so this is near-black; in the light theme the fill
+     is the mockup's deep green, so it flips to white. It must be a token —
+     the literal `text-[#0a0a0a]` it replaces was correct only while every
+     fill was bright (D-13.14). */
+  --color-cohab-on-fill: #0a0a0a;
+
+  /* Avatar initials tile. Its own pair rather than reusing tint/primary,
+     because the two themes want opposite treatments: a dark ground with a
+     phosphor foreground here, a solid deep-green ground with white
+     initials in light (D-13.15). */
+  --color-cohab-avatar-bg: #1b2620;
+  --color-cohab-avatar-ink: #aed2a4;
+
+  --color-cohab-score: #9cbf93;       /* numeric readouts, secondary rails */
+  --color-cohab-warn: #c96a4d;        /* divergence copy, PII warnings */
+  --color-cohab-warn-border: #3a2a24;
+  --color-cohab-track: #1f2a33;       /* progress/bar troughs */
+  --color-cohab-bar-mid: #8cab87;     /* mid-band bar fill */
+}
+
+/* ---------------------------------------------------------------------------
+   Light theme (docs/DECISIONS.md D-13.12).
+
+   Tailwind v4 compiles `@theme` values into the stylesheet, so a runtime
+   switch cannot rewrite them. What it *can* do is redefine the same custom
+   properties at a lower-specificity-but-later selector: `:root[data-theme]`
+   wins the cascade over `:root` from `@theme`, and every `cohab-*` utility
+   reads its value through `var()` at use time. So overriding the ~25 tokens
+   below re-themes all ~40 screens without touching a single component — the
+   same indirection that made the Modal remap cheap (D-13.2).
+
+   The values are lifted from `Cohab Desktop.html` itself — the green-on-beige
+   the mockup was always drawn in, and the palette D-5.1 originally decoded
+   before the Modal remap (D-13.2) replaced it. Extracted from the mockup by
+   frequency, not eyeballed: `#eceae5` page ground, `#f5f4f0`/white cards,
+   `#0f5f52` deep green as the primary, `#a8442a` brick for divergence, and
+   the `#14201f`/`#3f4d4a`/`#63706d`/`#7d8a86` text ramp.
+
+   So the app now carries both identities honestly: the phosphor terminal in
+   the dark theme, the mockup's daylight palette in the light one — rather
+   than a lightened phosphor that matches neither document.
+
+   Rules kept from the dark theme:
+     - One accent. Here it is the deep green, which unlike lime is legible as
+       text on beige (#0f5f52 on #eceae5 is ~7:1), so filled CTAs and text
+       links can share a single colour.
+     - Surfaces still step: page → card → tint.
+     - The destructive brick stays chromatic and distinct from the accent,
+       for the same accessibility floor recorded at D-13.2.
+
+   `color-scheme` is set so form controls, scrollbars and the browser's own
+   focus rings follow the theme rather than staying dark on a light page. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-cohab-primary: #0f5f52;      /* Mockup deep green */
   --color-cohab-primary-dark: #0a473d;
-  --color-cohab-accent: #a8442a;
-  --color-cohab-bg: #eceae5;
-  --color-cohab-card: #ffffff;
+
+  --color-cohab-accent: #a8442a;       /* Mockup brick */
+  --color-cohab-accent-tint: #f7ece8;
+
+  --color-cohab-bg: #eceae5;           /* Surface 0 — the mockup's beige */
+  --color-cohab-card: #f5f4f0;         /* Surface 1 — warm off-white */
   --color-cohab-border: #cfd3cf;
   --color-cohab-border-soft: #e3e1dc;
-  --color-cohab-ink: #14201f;
-  --color-cohab-muted: #63706d;
-  --color-cohab-subtle: #7d8a86;
-  --color-cohab-placeholder: #9aa5a1;
-  --color-cohab-tint: #eef4f2;
-  --color-cohab-accent-tint: #faf1ed;
+  --color-cohab-ink: #14201f;          /* Headings — near-black, green cast */
+  --color-cohab-muted: #3f4d4a;
+  --color-cohab-subtle: #63706d;
+  --color-cohab-placeholder: #7d8a86;
+  --color-cohab-tint: #eef4f2;         /* Surface 2 — the mint selected row */
+  --color-cohab-row-tint: #e3e1dc;
+
+  --color-cohab-muted-mobile: #3f4d4a;
+  --color-cohab-subtle-mobile: #63706d;
+
+  /* The moderator shell sits one step *above* the page here too — which in
+     daylight means slightly darker than the card, not lighter. */
+  --color-cohab-dark-bg: #e3e1dc;
+  --color-cohab-dark-border: #cfd3cf;
+  --color-cohab-dark-border-soft: #e3e1dc;
+  --color-cohab-dark-text: #14201f;
+  --color-cohab-dark-text-muted: #3f4d4a;
+  --color-cohab-dark-text-subtle: #63706d;
+
+  --color-cohab-bubble-mint: #eef4f2;  /* Outgoing bubble — the mint wash */
+  --color-cohab-thread-bg: #e3e1dc;
+
+  /* The light fills are dark green and brick, so on-fill text is white. */
+  --color-cohab-on-fill: #ffffff;
+
+  /* The mockup's avatar circles are solid deep green with white initials. */
+  --color-cohab-avatar-bg: #0f5f52;
+  --color-cohab-avatar-ink: #ffffff;
+
+  --color-cohab-score: #3f4d4a;
+  --color-cohab-warn: #a8442a;
+  --color-cohab-warn-border: #e6cec6;
+  --color-cohab-track: #cfd3cf;
+  --color-cohab-bar-mid: #63706d;
+}
+
+/* The dark theme is the `@theme` default, so it needs no token overrides —
+   only the hint that lets native controls, scrollbars and browser focus
+   rings render dark. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   background: var(--color-cohab-bg);
-  color: var(--color-cohab-ink);
+  color: var(--color-cohab-muted);
   font-family: var(--font-sans);
+  font-feature-settings: 'cv11';
+  letter-spacing: -0.022em;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Modal mandates the display face for H1–H4 and card titles, with tight
+   negative tracking that is signature rather than optional. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--color-cohab-ink);
+  letter-spacing: -0.012em;
 }
 
 input,
@@ -40,4 +238,162 @@ button {
 input::placeholder,
 textarea::placeholder {
   color: var(--color-cohab-placeholder);
+}
+
+/* User feedback: the desktop UI (mockup-literal px values throughout,
+   mostly not Tailwind's rem-based scale) read too small at common desktop
+   resolutions, 1920x1080 specifically. `zoom` (not `transform: scale`)
+   uniformly enlarges every already-built screen's fonts/spacing/icons
+   without reflow bugs or fixed-position drift, and without having to hand-
+   edit every literal px value across ~40 already-built files. Mobile is
+   untouched — it's sized for real device viewports already. */
+@media (min-width: 1220px) {
+  body {
+    zoom: 1.1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion layer (docs/DECISIONS.md D-12). Everything below is additive: no
+   rule here changes a colour, a size or a position at rest. Timings and
+   easings mirror the tokens in `src/lib/motion.ts` — change both together.
+   --------------------------------------------------------------------------- */
+
+/* Pre-hide reveal targets in CSS rather than in JS, so there is no visible
+   flash of settled content before GSAP's first frame. Scoped to the
+   `data-motion` flag that `lib/motion.ts` sets on evaluation: if the bundle
+   never loads, or the visitor has asked for reduced motion, this rule simply
+   does not apply and everything renders visible.
+
+   The `[data-reveal-item]` half is additionally scoped to a
+   `[data-reveal-root]` ancestor — the element `RevealGroup` renders. Only
+   that component ever reveals these items, so an item placed outside one
+   (easy to do: the card component carries the marker, the container is what
+   opts in) must not be pre-hidden, or it would stay invisible forever with
+   nothing to un-hide it. Scoped this way it simply renders without motion. */
+html[data-motion='on'] [data-reveal],
+html[data-motion='on'] [data-reveal-root] [data-reveal-item] {
+  opacity: 0;
+}
+
+/* Anchor jumps and the odd programmatic scroll; GSAP drives its own tweens
+   and is unaffected by this. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* A visible, on-brand focus ring. The mockups never drew one — but every
+   interactive surface in this app is reachable by keyboard, and a premium
+   feel that only exists for mouse users is not one. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-cohab-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Card lift. Applied to the hover target, which is the <a>/<button> wrapper,
+   so the whole card moves as one object rather than its border reacting
+   alone. 2px and a hairline shadow — the mockups' shadow language is almost
+   nothing, and this stays inside it. */
+.cohab-lift {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+/* On a void canvas a drop shadow is invisible, so the lift reads through a
+   brightening hairline instead — Modal's own depth mechanism. */
+.cohab-lift:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-cohab-primary);
+}
+.cohab-lift:active {
+  transform: translateY(0);
+  transition-duration: 0.1s;
+}
+
+/* Press feedback on the primary actions. Scale rather than colour, because
+   the button variants already use colour to mean something else (primary /
+   danger / destructive). */
+/* Longhand, not the `transition` shorthand: these elements already carry
+   Tailwind's `transition-colors`, and a shorthand here would reset
+   `transition-property` to `transform` alone and silently kill the colour
+   transitions the variants depend on. */
+.cohab-press {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: 0.18s;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cohab-press:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+/* Nav underline that grows from the centre instead of appearing at full
+   width. The resting and active states are unchanged — this only animates
+   the transition between them. */
+.cohab-underline {
+  position: relative;
+}
+.cohab-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-cohab-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cohab-underline:hover::after,
+.cohab-underline.is-active::after {
+  transform: scaleX(1);
+}
+
+/* Placeholder shimmer for loading states, in the page's own tint rather
+   than the usual grey. */
+@keyframes cohab-shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+.cohab-skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-cohab-row-tint) 0%,
+    var(--color-cohab-tint) 50%,
+    var(--color-cohab-row-tint) 100%
+  );
+  background-size: 180% 100%;
+  animation: cohab-shimmer 1.4s linear infinite;
+  border-radius: 10px;
+}
+
+/* `prefers-reduced-motion` is honoured in JS (tweens are skipped outright,
+   not shortened); this is the CSS half of the same contract, and the
+   backstop for anything added later that forgets to check. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [data-reveal],
+  [data-reveal-item] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .cohab-lift,
+  .cohab-press,
+  .cohab-underline::after {
+    transition: none;
+  }
+  .cohab-lift:hover {
+    transform: none;
+  }
+  .cohab-skeleton {
+    animation: none;
+  }
 }

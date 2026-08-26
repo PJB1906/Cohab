@@ -1,37 +1,83 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useSession } from '@/hooks/useSession'
-import { Avatar } from '@/components/ui/avatar'
+import { Logo } from '@/components/Logo'
+import { BottomNav } from '@/components/BottomNav'
+import { BackButton } from '@/components/BackButton'
+import { AccountMenu } from '@/components/AccountMenu'
+import { PageTransition } from '@/components/motion/PageTransition'
+import { ScrollProgress } from '@/components/motion/ScrollProgress'
+import { AmbientField } from '@/components/CompatibilityField'
 import { cn } from '@/lib/utils'
 
+/** The active underline is drawn by `.cohab-underline::after` (index.css) so
+ * it can grow from the centre on hover as well as on becoming active — a
+ * `border-b-2` can only appear at full width. The transparent border is kept
+ * purely to reserve the same 2px of space it always did, so nothing shifts. */
 function navLinkClass({ isActive }: { isActive: boolean }) {
   return cn(
-    'text-sm pb-1 border-b-2',
-    isActive ? 'font-semibold text-cohab-ink border-cohab-primary' : 'text-cohab-muted border-transparent',
+    'cohab-underline text-sm pb-1 border-b-2 border-transparent transition-colors',
+    isActive ? 'is-active font-semibold text-cohab-ink' : 'text-cohab-muted hover:text-cohab-ink',
   )
 }
 
-/** Sticky top nav for the signed-in app. No "Chat" link in the global nav —
- * chat is per-match, reached from match detail once a match is mutual or
- * later (PRD has no chat-inbox screen). */
+function bottomNavTab(pathname: string): 'matches' | 'saved' | 'chats' | 'profile' {
+  if (pathname.startsWith('/saved')) return 'saved'
+  if (pathname.startsWith('/chats') || pathname.includes('/chat')) return 'chats'
+  if (pathname.startsWith('/profile')) return 'profile'
+  return 'matches'
+}
+
+/** Desktop: sticky top nav (Matches/Chat/Profile, per Cohab Desktop.html's
+ * header). Mobile (<cohab-desktop breakpoint): floating bottom pill nav
+ * (Matches/Saved/Chats/Profile, per Cohab Prototype.html) instead — the top
+ * bar collapses to just the logo. "Blocked" moved into the Profile hub on
+ * both breakpoints rather than living as a standalone nav link, since
+ * neither mockup's header shows it directly. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: user } = useSession()
+  const { pathname } = useLocation()
+
+  // The conversation surfaces nested under a match: the thread itself and the
+  // contact-share step that follows it. Both belong to Chat in the nav even
+  // though their URLs sit under /matches/:id/.
+  const isChat = pathname.startsWith('/chats') || /^\/matches\/[^/]+\/(chat|contact-share)/.test(pathname)
+  // Match detail (/matches/:id) is still Matches, so `end` on that NavLink is
+  // paired with this explicit test rather than left to prefix matching.
+  const isMatches = pathname === '/matches' || (pathname.startsWith('/matches/') && !isChat)
 
   return (
-    <div className="min-h-screen bg-cohab-bg">
+    // No `bg-cohab-bg` here on purpose (D-13.11): an opaque background on the
+    // shell root would paint straight over the fixed canvas behind it. The
+    // page's black comes from `body` (index.css), which sits below both.
+    <div className="min-h-screen pb-20 cohab-desktop:pb-0">
+      <AmbientField />
       <header className="sticky top-0 z-40 bg-cohab-bg/95 backdrop-blur border-b border-cohab-border">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-6">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold tracking-tight text-cohab-primary">Cohab</span>
-            <span className="font-mono text-[9px] uppercase tracking-wider text-cohab-subtle border border-cohab-border rounded px-1.5 py-0.5">
-              Pilot
-            </span>
-          </div>
-          <nav className="flex items-center gap-5">
-            <NavLink to="/matches" className={navLinkClass}>
+        <ScrollProgress />
+        <div className="max-w-5xl cohab-desktop:max-w-[1800px] mx-auto px-4 cohab-desktop:px-6 h-14 cohab-desktop:h-[60px] flex items-center gap-3 cohab-desktop:gap-4">
+          <BackButton pathname={pathname} />
+          {/* The wordmark is the app's "home" affordance on both breakpoints —
+              it goes to /matches, which is what "/" redirects to (App.tsx). */}
+          <Link
+            to="/matches"
+            aria-label="Cohab — go to your matches"
+            className="flex items-center gap-6 cohab-desktop:gap-[34px] transition-opacity hover:opacity-70 cohab-press"
+          >
+            <Logo />
+          </Link>
+          <nav className="hidden cohab-desktop:flex items-center gap-[26px]">
+            {/* Active state is computed above rather than left to NavLink's
+                prefix matching: the chat and contact-share routes live under
+                /matches/:id/…, so by default an open chat thread underlined
+                Matches while Chat stayed inactive (reported by the user).
+                This mirrors what `bottomNavTab` already did on mobile. */}
+            <NavLink to="/matches" className={() => navLinkClass({ isActive: isMatches })}>
               Matches
             </NavLink>
-            <NavLink to="/blocked" className={navLinkClass}>
-              Blocked
+            <NavLink to="/chats" className={({ isActive }) => navLinkClass({ isActive: isActive || isChat })}>
+              Chat
+            </NavLink>
+            <NavLink to="/profile" className={navLinkClass}>
+              Profile
             </NavLink>
             {user?.is_moderator && (
               <NavLink to="/moderation" className={navLinkClass}>
@@ -45,10 +91,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </nav>
           <div className="flex-1" />
-          {user && <Avatar name={user.full_name} src={user.avatar_url} size={30} />}
+          {user && <AccountMenu user={user} />}
         </div>
       </header>
-      <main>{children}</main>
+      <main>
+        <PageTransition>{children}</PageTransition>
+      </main>
+      <BottomNav active={bottomNavTab(pathname)} />
     </div>
   )
 }

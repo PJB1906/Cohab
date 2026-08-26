@@ -228,3 +228,35 @@ class AuthService:
         if user.account_status != "active":
             raise AccountNotActive(user.account_status)
         return user
+
+
+def update_account(
+    session: Session,
+    user: User,
+    *,
+    full_name: str | None = None,
+    course: str | None = None,
+    phone_number: str | None = None,
+) -> User:
+    """Apply an account-details edit (docs/DECISIONS.md D-13.9).
+
+    A module-level function rather than an `AuthService` method because it
+    needs no `OTPSender` — constructing the service just to rename someone
+    would drag an email dependency into a path that never sends mail.
+
+    `None` means "not supplied, leave alone". Clearing a value is expressed
+    as an empty string, which normalises to `NULL`, so a member can remove a
+    phone number they no longer want on file — a real requirement given
+    contact sharing reads this column.
+    """
+    if full_name is not None:
+        cleaned = full_name.strip()
+        if cleaned:
+            user.full_name = cleaned
+    if course is not None:
+        user.course = course.strip() or None
+    if phone_number is not None:
+        user.phone_number = phone_number.strip() or None
+    session.commit()
+    session.refresh(user)
+    return user

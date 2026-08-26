@@ -165,6 +165,11 @@ docs/
 
 Keep these accurate as the repo takes shape:
 
+- **Run everything (one step):** `run.cmd` at the repo root — double-click
+  in Explorer, or run `.\run.cmd` from a terminal. Starts the DB (starting
+  Docker Desktop first if needed), applies migrations, then launches the
+  backend and frontend each in their own window and opens the app in a
+  browser. Individual commands below are for when you need just one piece.
 - Run API: `uvicorn cohab.main:app --reload`
 - Run tests: `pytest`
 - Migrations: `alembic upgrade head` / `alembic revision --autogenerate -m "..."`

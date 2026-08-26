@@ -279,3 +279,97 @@ def test_me_returns_current_user(client: TestClient, institution: Institution) -
     assert resp.status_code == 200, resp.text
     assert resp.json()["id"] == body["user_id"]
     assert resp.json()["email"] == _email(institution)
+
+
+# --- PATCH /auth/me (docs/DECISIONS.md D-13.9) -----------------------------
+
+def _register_and_verify(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> dict:
+    """Register + verify in one step, leaving the client logged in."""
+    with caplog.at_level(logging.INFO, logger="cohab.otp"):
+        body = _register(client, institution)
+        code = _extract_otp(caplog)
+    caplog.clear()
+    resp = client.post("/auth/verify", json={"user_id": body["user_id"], "code": code})
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+def test_patch_me_sets_phone_number_that_registration_omitted(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The gap this endpoint exists to close: before it, `phone_number` was
+    write-once at registration, so anyone who skipped it could never add one
+    — and contact sharing reads that column."""
+    before = _register_and_verify(client, institution, caplog)
+    assert before["phone_number"] is None
+
+    resp = client.patch("/auth/me", json={"phone_number": "9876543210"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["phone_number"] == "9876543210"
+
+    assert client.get("/auth/me").json()["phone_number"] == "9876543210"
+
+
+def test_patch_me_omitted_fields_are_left_untouched(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    """PATCH semantics: a body carrying one field must not blank the rest."""
+    _register_and_verify(client, institution, caplog)
+    client.patch("/auth/me", json={"phone_number": "9876543210", "course": "MSc Data Science"})
+
+    resp = client.patch("/auth/me", json={"full_name": "Priya M."})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["full_name"] == "Priya M."
+    assert body["phone_number"] == "9876543210"
+    assert body["course"] == "MSc Data Science"
+
+
+def test_patch_me_empty_string_clears_phone_number(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Removing a number already on file is a real requirement, so ""
+    normalises to NULL rather than storing an empty string."""
+    _register_and_verify(client, institution, caplog)
+    client.patch("/auth/me", json={"phone_number": "9876543210"})
+
+    resp = client.patch("/auth/me", json={"phone_number": ""})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["phone_number"] is None
+
+
+def test_patch_me_ignores_a_blank_full_name(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Unlike phone number, a name has no meaningful empty state — a member
+    with no name breaks every card and chat header that renders one."""
+    _register_and_verify(client, institution, caplog)
+
+    resp = client.patch("/auth/me", json={"full_name": "   "})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["full_name"] == "Priya Menon"
+
+
+def test_patch_me_cannot_change_identity_or_eligibility_fields(
+    client: TestClient, institution: Institution, caplog: pytest.LogCaptureFixture
+) -> None:
+    """`email` anchors verification and `gender`/`seeker_type` feed Stage 1,
+    so none of them are in `AccountUpdateRequest`. Pydantic ignores unknown
+    keys, so the request succeeds while leaving all three unchanged."""
+    before = _register_and_verify(client, institution, caplog)
+
+    resp = client.patch(
+        "/auth/me",
+        json={"email": "someone.else@evil.test", "gender": "male", "seeker_type": "has_place"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["email"] == before["email"]
+    assert body["gender"] == before["gender"]
+    assert body["seeker_type"] == before["seeker_type"]
+
+
+def test_patch_me_requires_authentication(client: TestClient) -> None:
+    assert client.patch("/auth/me", json={"phone_number": "9876543210"}).status_code == 401

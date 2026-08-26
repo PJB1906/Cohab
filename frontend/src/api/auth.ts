@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  AccountUpdateRequest,
   LoginRequest,
   RegisterRequest,
   RegisterResponse,
@@ -15,4 +16,5 @@ export const authApi = {
   login: (body: LoginRequest) => api.post<UserOut>('/auth/login', body),
   logout: () => api.post<void>('/auth/logout'),
   me: () => api.get<UserOut>('/auth/me'),
+  updateMe: (body: AccountUpdateRequest) => api.patch<UserOut>('/auth/me', body),
 }

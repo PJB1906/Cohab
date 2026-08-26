@@ -59,6 +59,12 @@ class MatchListEntry:
     candidate: Candidate
     combined_score: float
     explanation: Explanation
+    # Zero-extra-query enrichment (same reasoning as MatchListItem's other
+    # extra fields, api/schemas.py) — `_upsert` already loads/creates this
+    # row per candidate; threading `.state` through lets the chat-list
+    # screen (features/chat/ChatList.tsx) filter to chatting/contact_shared
+    # matches without a second endpoint or an N+1 explanation fetch.
+    state: str
 
 
 @dataclass(frozen=True)
@@ -276,15 +282,18 @@ class MatchesService:
         self.ranker.filter.settled_pairs = _settled_pairs_for(self.session, subject_user.id)
 
         ranked = self.ranker.rank(subject, pool)[:limit]
-        entries = [
-            MatchListEntry(
-                match_id=self._upsert(subject.user_id, m.candidate.user_id, m.result).id,
-                candidate=m.candidate,
-                combined_score=m.result.combined_score,
-                explanation=m.explanation,
+        entries = []
+        for m in ranked:
+            row = self._upsert(subject.user_id, m.candidate.user_id, m.result)
+            entries.append(
+                MatchListEntry(
+                    match_id=row.id,
+                    candidate=m.candidate,
+                    combined_score=m.result.combined_score,
+                    explanation=m.explanation,
+                    state=row.state,
+                )
             )
-            for m in ranked
-        ]
         self.session.commit()
         return entries
 

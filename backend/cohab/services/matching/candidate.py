@@ -70,6 +70,21 @@ class Candidate:
     course: str | None = None
     avatar_url: str | None = None
 
+    # Listing facts, carried for the same cosmetic-only reason as `course`
+    # above: `from_orm` already has the `Listing` in hand, so surfacing these
+    # costs no extra query, and the match-list screen's "Room type" and
+    # "Move-in window" filters (mockup screen 8) cannot be built without them.
+    # Never read by Stage 1 or Stage 2 — the effective budget band already
+    # collapses to `rent_per_person` above, which is the only listing value
+    # scoring uses.
+    listing_room_type: str | None = None
+    listing_available_from: date | None = None
+    listing_current_housemates: int | None = None
+    # Carried for the match list's "Locality" filter, which groups candidates
+    # far more usefully than `city` when a pilot runs in a single city — the
+    # mockup's own sidebar filters on locality, not city.
+    listing_locality: str | None = None
+
     @property
     def budget_midpoint(self) -> float:
         """spec §7: midpoint of the effective band."""
@@ -123,4 +138,10 @@ class Candidate:
             text_vector_kind=profile.text_vector_kind,
             course=user.course,
             avatar_url=user.avatar_url,
+            listing_room_type=listing.room_type if listing is not None else None,
+            listing_available_from=listing.available_from if listing is not None else None,
+            listing_locality=listing.locality if listing is not None else None,
+            listing_current_housemates=(
+                listing.current_housemates if listing is not None else None
+            ),
         )

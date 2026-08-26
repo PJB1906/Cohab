@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_current_user, get_db
 from cohab.api.schemas import (
+    AccountUpdateRequest,
     LoginRequest,
     RegisterRequest,
     RegisterResponse,
@@ -33,8 +34,9 @@ from cohab.services.auth import (
     TooManyOTPAttempts,
     UnknownEmailDomain,
     UserNotFound,
+    update_account,
 )
-from cohab.services.otp import ConsoleOTPSender
+from cohab.services.otp import OTPDeliveryFailed, get_otp_sender
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -53,7 +55,7 @@ def _set_session_cookie(response: Response, user: User) -> None:
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(body: RegisterRequest, db: Session = Depends(get_db)) -> RegisterResponse:
-    service = AuthService(db, ConsoleOTPSender())
+    service = AuthService(db, get_otp_sender())
     try:
         user = service.register(
             email=body.email,
@@ -68,12 +70,14 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)) -> RegisterRe
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "email domain is not a registered institution")
     except EmailAlreadyRegistered:
         raise HTTPException(status.HTTP_409_CONFLICT, "this email is already registered")
+    except OTPDeliveryFailed:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "couldn't send the verification email — try again shortly")
     return RegisterResponse(user_id=user.id)
 
 
 @router.post("/resend-otp", response_model=RegisterResponse)
 def resend_otp(body: ResendOTPRequest, db: Session = Depends(get_db)) -> RegisterResponse:
-    service = AuthService(db, ConsoleOTPSender())
+    service = AuthService(db, get_otp_sender())
     try:
         user = service.resend_otp(email=body.email)
     except UserNotFound:
@@ -82,12 +86,14 @@ def resend_otp(body: ResendOTPRequest, db: Session = Depends(get_db)) -> Registe
         raise HTTPException(status.HTTP_409_CONFLICT, "this account is already verified — log in instead")
     except ResendTooSoon as exc:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, f"wait a moment before requesting another code ({exc})")
+    except OTPDeliveryFailed:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "couldn't send the verification email — try again shortly")
     return RegisterResponse(user_id=user.id)
 
 
 @router.post("/verify", response_model=UserOut)
 def verify(body: VerifyOTPRequest, response: Response, db: Session = Depends(get_db)) -> User:
-    service = AuthService(db, ConsoleOTPSender())
+    service = AuthService(db, get_otp_sender())
     try:
         user = service.verify_otp(user_id=body.user_id, code=body.code)
     except TooManyOTPAttempts:
@@ -102,7 +108,7 @@ def verify(body: VerifyOTPRequest, response: Response, db: Session = Depends(get
 
 @router.post("/login", response_model=UserOut)
 def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> User:
-    service = AuthService(db, ConsoleOTPSender())
+    service = AuthService(db, get_otp_sender())
     try:
         user = service.login(email=body.email, password=body.password)
     except InvalidCredentials:
@@ -121,3 +127,23 @@ def logout(response: Response, _user: User = Depends(get_current_user)) -> None:
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)) -> User:
     return user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    body: AccountUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Edit your own account details (docs/DECISIONS.md D-13.9).
+
+    PATCH rather than PUT: the body carries only the fields being changed,
+    and omitting one must leave it untouched rather than blanking it.
+    """
+    return update_account(
+        db,
+        user,
+        full_name=body.full_name,
+        course=body.course,
+        phone_number=body.phone_number,
+    )

@@ -2177,3 +2177,935 @@ D-6.6/D-7.3/D-8.6's own "left as-is" sections:**
 (`RESEND_OTP_COOLDOWN_SECONDS`), `tests/api/test_auth.py`,
 `tests/matching/test_report.py`;
 `frontend/src/features/auth/SignUpWizard.tsx`.
+
+---
+
+## Phase 11 — Dual-mockup visual-parity pass (desktop + mobile), and Saved matches
+
+**Requested by the user**, outside the 9-phase build plan and Phase 10's
+hardening scope: rebuild the whole frontend to pixel-match two bundled
+Claude-artifact mockups exactly — `Cohab Desktop.html` (13 screens, ≥1220px,
+already loosely referenced in Phase 5, D-5.1) and `Cohab Prototype.html` (the
+same 13 screens as a 360px mobile flow, not previously used at all). Both
+were decompressed from their `__bundler/template` payload to literal
+HTML/CSS and read screen-by-screen rather than approximated as Phase 5 did.
+
+### D-11.1 Breakpoint: a custom `cohab-desktop: 1220px` token, not a stock Tailwind size
+
+**Spec:** neither mockup states a breakpoint as such, but the desktop
+mockup's own page wrapper is hard-coded `min-width:1220px`, and the mobile
+mockup's phone frames are a fixed 360px canvas mock with no responsive logic
+of its own (device-bezel/status-bar/home-indicator chrome around the real
+content, itself excluded from the build).
+
+**Decision:** added `--breakpoint-cohab-desktop: 1220px` to
+`frontend/src/index.css`'s `@theme`, giving a `cohab-desktop:` Tailwind
+variant, rather than reaching for `lg`/`xl` (1024/1280px) which correspond
+to nothing in either mockup. Mobile is the unprefixed default throughout
+(CLAUDE.md's mobile-first rule); `cohab-desktop:` classes bring in the
+desktop layout. Screens close enough to reconcile with responsive classes on
+one JSX tree use that; screens whose desktop/mobile structure is genuinely
+different (questionnaire rail vs. stepped cards, match list sidebar vs.
+scrolling chip row, match detail side panel vs. stacked column, chat
+two-pane vs. single-thread, the nav shell itself) use two JSX branches
+gated by `cohab-desktop:hidden`/`hidden cohab-desktop:block` rather than a
+JS viewport check, avoiding layout flash and duplicated data-fetching.
+
+**Code:** `frontend/src/index.css`.
+
+### D-11.2 Score-band colours were already correct — the "extrapolation" comment was wrong, not the code
+
+**Spec:** the mobile mockup's own overview panel states the band legend
+verbatim ("Strong 80+ · Good 65-79 · Fair below 65"), and a 79%-scored match
+card's progress-bar fill is literally `#7d9c92` — exactly `lib/score.ts`'s
+existing `BAND_COLOR.Good`.
+
+**Finding:** `lib/score.ts` already had the correct three-tier
+Strong/Good/Fair thresholds and colours, but its own comment claimed the
+colours beyond Strong were "a UI extrapolation, not sourced from either
+mockup." That comment was stale/wrong — checked before acting on the
+original plan's proposal to collapse it to a two-tier system, which would
+have replaced correct code with a regression.
+
+**Decision:** left the three-tier band logic unchanged; corrected only the
+comment to cite the actual mockup source (mobile overview panel's legend +
+the 79% card's bar fill).
+
+**Code:** `frontend/src/lib/score.ts`.
+
+### D-11.3 Saved matches — new scope beyond the PRD, confirmed with the user
+
+**Spec:** not in `COHAB_PRD.md` or `COHAB_MATCHING_SPEC.md`. The mobile
+mockup's bottom nav has a "Saved" tab (bookmark a match to compare later)
+with no backend support anywhere in the app.
+
+**Decision (confirmed with the user):** built as real new scope — a
+`SavedMatch` model (`user_id`, `match_score_id`, `UNIQUE(user_id,
+match_score_id)`), `SavedService` (`save`/`unsave`/`list_saved`, reusing
+`match_access.load_match` for lookup+authorize and `matches.py`'s existing
+explanation-building logic to avoid re-scoring), `POST/DELETE
+/saved/{match_id}` + `GET /saved`, and a `SaveToggle` bookmark button on
+`MatchCard`/`MatchDetail`. The save-toggle affordance itself has no mockup
+source — the mockups only show the resulting Saved *list*, not the action
+that populates it — a necessary small addition to make the feature
+reachable. `unsave` deliberately doesn't call `load_match`/verify party
+status (deletion scoped to `(user.id, match_id)` is a safe no-op either
+way, keeping it a true idempotent delete rather than surfacing a spurious
+403/404). `list_saved`/the save action deliberately do **not** flip
+`match_score.state` from `suggested`→`viewed` — saving isn't viewing.
+"Compare these two side by side" (mobile mockup) has no real screen behind
+it in the mockup itself (a dead stub) — rendered visually present but
+inert, not wired to fake navigation.
+
+**Code:** `backend/cohab/models/saved.py`, `backend/migrations/versions/
+2bb5bde5a3e4_saved_matches.py`, `backend/cohab/services/saved.py`,
+`backend/cohab/api/saved.py`, `backend/tests/api/test_saved.py`;
+`frontend/src/api/saved.ts`, `frontend/src/features/matches/SaveToggle.tsx`,
+`frontend/src/features/matches/SavedList.tsx`.
+
+### D-11.4 Chat list — a screen the app never had, needed by both mockups for different reasons
+
+**Spec:** the desktop mockup's screen 9 always shows a thread list beside
+the active conversation; the mobile mockup's bottom-nav "Chats" tab needs a
+landing list before drilling into one thread. Neither the PRD nor the
+pre-Phase-11 app had any such list — `ChatThread.tsx` only ever rendered a
+single thread keyed by `matchId`.
+
+**Decision:** built `ChatList.tsx` sourced entirely from the existing `GET
+/matches` data (no new backend endpoint) filtered to `state` ∈
+`{chatting, contact_shared}`. This required one small, additive backend
+change: `MatchListItem` didn't actually carry `state` (only
+`MatchExplanationResponse` did) — added `state: str` to
+`MatchListEntry`/`MatchListItem`, populated from the `MatchScore` row
+`MatchesService.get_get_matches()` already loads (zero extra queries), and
+threaded the same field through `SavedMatchEntry`/`SavedMatchOut` since it
+shares the same response shape. A genuine deviation from "no backend change
+needed" — logged per CLAUDE.md rather than left implicit. Desktop and
+mobile both navigate a row tap to the existing `/matches/:matchId/chat`
+route rather than building nested `/chats/:matchId` routing or reaching
+into `ChatThread`'s internals. No last-message snippet/timestamp/unread
+indicator is shown — no such field exists on `MatchListItem` and none was
+fabricated; each row shows city/budget instead. The mobile chat-list's
+visual language (44px avatar, single summary line) has no dedicated mockup
+frame (the prototype's own `s9` jumps straight to its one demo thread) —
+adapted from the mobile mockup's own "Saved" screen row convention as the
+closest analogous "condensed list row on mobile" pattern.
+
+**Code:** `frontend/src/features/chat/ChatList.tsx`;
+`backend/cohab/services/matches.py` (`MatchListEntry.state`),
+`backend/cohab/api/schemas.py` (`MatchListItem.state`),
+`backend/cohab/api/matches.py`, `backend/cohab/services/saved.py`
+(`SavedMatchEntry.state`).
+
+### D-11.5 Profile hub — built, real data where it exists, visibly-disabled where it doesn't
+
+**Spec:** not in the PRD. The mobile mockup's fourth bottom-nav tab and the
+desktop mockup's top-nav "Profile" link (which pointed nowhere in the live
+app) both imply a settings hub screen that never existed.
+
+**Decision (confirmed with the user):** built `ProfilePage.tsx` at a new
+`/profile` route. Rows with a real backing feature link there ("Blocked
+people" → existing `/blocked`; "Required/optional questions answered"
+counts computed from real `ProfileOut.questionnaire` keys against
+`REQUIRED_QUESTIONNAIRE_KEYS`, not fabricated — this data gap turned out to
+be closeable, not a true gap). Rows with no backing feature ("Consent and
+data", "Pause my profile") render visibly per the mockup's row language but
+genuinely inert — muted, non-interactive, a "Coming soon" tag, no route, no
+fake action. The desktop layout has no mockup source at all (none of the
+13 desktop screens is a Profile screen) — built using the same card/`Eyebrow`
+language as the desktop mockup's other single-column screens (Contact
+Share/Report's `680–760px` max-width convention), a judgment call, not
+extraction. `seeker_type` has no edit route anywhere in the app (set once
+at registration) — rather than invent one, the hub only shows a "My
+listing" row (real `/onboarding/listing`) for `has_place` users and omits a
+seeker-type row entirely for `needs_place` users.
+
+**Code:** `frontend/src/features/profile/ProfilePage.tsx`.
+
+### D-11.6 Moderator queue and analytics stay desktop-only, as the mockup itself intends
+
+**Spec:** the mobile mockup renders screen 13 once, at 1280px, with its own
+overview text stating the exception explicitly: "moderators work at a desk
+with evidence side by side, not on a phone." Confirmed with the user rather
+than assumed.
+
+**Decision:** no mobile/responsive layout for `/moderation`,
+`/moderation/reports/:reportId`, `/analytics` — a dark-shell desktop-only
+treatment (`cohab-dark-*` tokens: `#14201f` bar, `#4a5654`/`#3c4745`
+borders, `#eceae5`/`#b6c0bd`/`#8d9996` text), with only a `min-width` +
+horizontal-scroll guard so the table doesn't visually break if resized
+narrow — not true mobile responsiveness, deliberately. `ModerationQueue.tsx`
+and `ReportReview.tsx` build the dark bar inline rather than through the
+shared `AppShell` (confirmed neither route was ever wrapped in `AppShell`
+to begin with — the light header was only ever pulled in by those two
+components importing it themselves, so dropping it created no
+double-header). The mockup shows list+detail as one two-pane screen with
+client-side selection; the app keeps them as the two separate routes it
+already had (`/moderation` and `/moderation/reports/:reportId`) rather than
+merging into one — each restyled faithfully to its half of the mockup. A
+true single-route merge is a follow-up, not done in this pass, since it's a
+routing-structure change, not a visual one.
+
+**Code:** `frontend/src/features/moderation/ModerationQueue.tsx`,
+`frontend/src/features/moderation/ReportReview.tsx`.
+
+### D-11.7 Shared primitives consolidated, several judgment calls on merged patterns
+
+**Decision:** built/fixed shared primitives once rather than per-screen:
+`ui/dialog.tsx` (replacing six previously hand-copied modal wrappers —
+desktop renders a centered panel, mobile a bottom-sheet/full-screen sheet
+per the mobile mockup's outcome-feedback `✕`-dismiss pattern),
+`OptionRadio.tsx`, `FactsGrid.tsx`, `Tab.tsx`, `Eyebrow.tsx`, `Logo.tsx`
+(deduplicating wordmark+badge markup previously copy-pasted in `AppShell`/
+`AuthPage`), `BottomNav.tsx`, `MobileStepHeader.tsx`, `ui/select.tsx`.
+
+Two components each unify mockup treatments that never co-occur on a single
+screen, rather than being screen-specific: `OptionRadio` merges desktop's
+12px-radius rectangular row (15px ring dot) and mobile's 30px-radius pill
+(18px ring dot) into one component sized via `cohab-desktop:` variants.
+`MobileStepHeader` merges the mobile mockup's screen-2 header (step label +
+minutes-left, no back arrow) and its screens 3/5/6 header (back arrow + step
+label, no minutes-left) into one component with both fields optional.
+
+The PII-warning banner (chat composer) is an **inline card**, not a
+`Dialog`, on both breakpoints — both mockups show it `sc-if`-gated inline
+above the composer, not as a modal overlay; the earlier hand-rolled
+`fixed inset-0` PII modal was replaced accordingly rather than migrated onto
+`Dialog` as originally planned for the other five modals.
+
+The outcome-feedback screen's mobile 1–5 rating scale and desktop's 7-option
+"biggest friction" chip set are **not the same question** (ordinal
+"how well overall" vs. categorical "what went wrong") and neither has a
+backing field on `FeedbackRequest` (which only has `outcome` and
+`cohabitation_duration_days`) — rather than silently discard whichever one
+doesn't map, both were omitted; only the real `outcome` chip question (both
+mockups' "Are you still living together?") is implemented, using the
+existing `COHABITING_OPTIONS`/`REJECTED_OPTIONS` unchanged. Report reasons
+similarly stayed on the existing 8-value `ReportReason` enum from
+`copy.ts` — the mockups' two-line reason descriptions are template
+placeholders with no literal copy in either extract, so `OptionRadio` shows
+single-line labels only rather than inventing sub-copy.
+
+**Code:** `frontend/src/components/ui/dialog.tsx`,
+`frontend/src/components/{OptionRadio,FactsGrid,Tab,Eyebrow,Logo,BottomNav,
+MobileStepHeader}.tsx`, `frontend/src/components/ui/select.tsx`;
+`frontend/src/features/chat/ChatThread.tsx` (inline PII banner);
+`frontend/src/features/matches/FeedbackDialog.tsx`,
+`frontend/src/features/safety/ReportDialog.tsx`.
+
+### D-11.8 Known residual gaps from this pass, not fixed here
+
+- No live browser/visual verification was performed in the session that
+  built this — the Chrome browser-automation tool was unavailable in that
+  environment. Verification was `tsc --noEmit` + `npm run build` (clean)
+  plus the full backend suite (313/313 passing) after every change, and a
+  curl-level smoke test confirming new routes mount and require auth
+  (401, not 404). A real cross-browser, both-breakpoints visual walkthrough
+  against the two mockups is still owed before calling this pixel-perfect
+  in fact rather than in code.
+- No unread-message-count data source exists yet, so `BottomNav`'s Chat tab
+  badge never renders a number — would need either a new lightweight
+  endpoint or client-side computation from existing `is_read` flags across
+  threads.
+- `ChatList.tsx` (desktop) has no live inline thread preview in its right
+  pane (a static placeholder) — a real two-pane desktop experience needs
+  `ChatThread.tsx` split into a route wrapper plus a presentational
+  component taking `matchId` as a prop; not done here to avoid touching a
+  file another part of this same pass was independently rebuilding.
+- Moderator queue/report-review's list+detail split stays two routes
+  instead of the mockup's single two-pane screen (D-11.6).
+- A few desktop screens have no mockup source at all (Saved, Profile,
+  Analytics) and used the existing token/card language by extension rather
+  than literal extraction — flagged individually above, not silently
+  presented as mockup-sourced.
+
+### D-11.9 Real OTP email delivery via Resend, closing the placeholder D-4.5 flagged
+
+**Spec/prior state:** D-4.5 built `ConsoleOTPSender` as the only
+`OTPSender` (services/otp.py) — logs the code instead of emailing it — with
+its own docstring flagging "a real email sender is a documented future
+swap-in." Through Phase 10 this was never closed: sign-up only worked for
+whoever could see the backend process's own console output, which is fine
+for a single developer testing locally but not for anyone else, including a
+real pilot user.
+
+**Decision (confirmed with the user):** added `ResendOTPSender`
+(services/otp.py), calling the Resend transactional-email API directly via
+`httpx` (already a dependency) rather than adding an SDK — a single POST,
+no reason for extra surface. `get_otp_sender()` (new) picks between it and
+`ConsoleOTPSender` based on whether `RESEND_API_KEY` (core/config.py) is
+set, so every existing call site (`cohab/api/auth.py`'s four
+`AuthService(db, ConsoleOTPSender())` constructions) only needed swapping
+to `get_otp_sender()` — no branching logic duplicated at each site. Chosen
+over SMTP because the user already held a Resend account and explicitly
+did not want the mail sent from their own personal address;
+`OTP_SENDER_EMAIL` defaults to Resend's own shared sandbox address
+(`onboarding@resend.dev`), not a personal one.
+
+**Known limitation, not solved here:** Resend's sandbox sender only
+delivers to the email address the Resend account itself was signed up
+with, until a real sending domain is verified in the Resend dashboard.
+`ResendOTPSender` has no way to detect this — a recipient other than the
+account owner will surface as a Resend API error (`OTPDeliveryFailed`,
+502 at the API layer) until that verification is done. This is a real
+pilot blocker, not just a dev inconvenience: distinct student recipients
+genuinely cannot receive their code until a domain is verified. Flagged
+here rather than solved, since domain verification needs the user's own
+DNS access to a domain they control (plausibly a `christuniversity.in`
+subdomain, plausibly not — an institutional domain the user doesn't
+administer isn't guaranteed to be available for this).
+
+**Also acted on:** an API key was pasted into a shared screenshot during
+this conversation — recommended the user regenerate it in the Resend
+dashboard rather than reuse the exposed one. The key itself was never
+typed into any file or command by the assistant; `RESEND_API_KEY` ships
+as an empty placeholder in `.env.example`, meant to be filled into the
+gitignored local `.env` directly by the user.
+
+**Code:** `cohab/services/otp.py` (`ResendOTPSender`, `OTPDeliveryFailed`,
+`get_otp_sender`), `cohab/core/config.py` (`RESEND_API_KEY`,
+`OTP_SENDER_EMAIL`), `cohab/api/auth.py`, `.env.example`,
+`tests/test_otp.py`.
+
+## Phase 12 — motion layer
+
+### D-12.1 A shared motion token set, not per-screen animation
+
+**Spec:** Neither the PRD nor the matching spec says anything about motion;
+the two root-level mockups are static images. This is proposed, not
+specified.
+
+**Decision:** all timings, easings and travel distances live in one place
+(`frontend/src/lib/motion.ts`) and nothing animates with ad-hoc values.
+The tokens are deliberately conservative — 16px of travel, `power3.out`,
+0.28s/0.55s/0.9s, no overshoot or bounce — because the mockups' own visual
+language is editorial and almost shadowless (a warm off-white page, one
+deep-teal accent, 1px hairline borders). Motion that bounced or travelled
+40px would read as a different product than the one the mockups describe.
+The stagger is bounded (`boundedStagger`) so a long ranked list still
+finishes arriving in under half a second rather than scaling with its
+length.
+
+**Library:** GSAP 3.13 + ScrollTrigger, chosen over CSS-only or the
+IntersectionObserver-plus-classes approach because the scroll-driven
+progress rule and the batched list reveals both need scrub/batch behaviour
+that is genuinely awkward to hand-roll. Cost: ~+90 kB minified
+(~+35 kB gzipped) on a mobile-first pilot — the production bundle went from
+roughly 440 kB to 531 kB (163 kB gzipped). Flagged as a real trade-off,
+accepted because the motion was explicitly requested.
+
+**Code:** `frontend/src/lib/motion.ts`, `frontend/src/index.css` (motion
+layer section), `frontend/src/components/motion/*`,
+`frontend/src/hooks/useBarFill.ts`.
+
+### D-12.2 Everything is additive and opt-in — no existing screen was restructured
+
+The pass adds refs, `data-*` markers and wrapper components that render the
+same element with the same classes; it does not move markup between
+breakpoints or change any resting style. Concretely:
+
+- `Progress` gained an `animate` prop that defaults to **off**, so the
+  existing call sites that use a bar as a step indicator rather than a
+  score kept rendering statically without being audited one by one.
+- `Reveal` takes an `as` prop so a wrapper can *be* the grid/flex child
+  rather than adding a nesting level that would change the layout.
+- `AuthShell`'s marketing panel and the list stacks became the motion root
+  themselves (same className passed through) for the same reason.
+- `MatchDetail`'s mobile score bar was extracted into a local `ScoreBar`
+  only because `useBarFill` is a hook and `pct` is computed after that
+  component's loading/error early returns.
+
+### D-12.3 Reveal targets are pre-hidden in CSS, gated on a JS-set flag
+
+A scroll reveal has to start invisible, and doing that in JS means a frame
+of settled content before GSAP's first tick. Doing it in plain CSS means a
+blank page if the bundle ever fails to load. The rule is therefore scoped to
+`html[data-motion='on']`, an attribute `lib/motion.ts` sets when it
+evaluates — so a failed bundle, or a visitor with `prefers-reduced-motion`,
+gets a fully visible page with no motion rather than an empty shell.
+
+### D-12.4 Reduced motion skips animations outright rather than shortening them
+
+`prefersReducedMotion()` is checked in every motion component before any
+tween is built, and the CSS half of the same contract is a
+`@media (prefers-reduced-motion: reduce)` block that forces the final state.
+`CountUp` additionally renders its final value as its initial text content,
+so the real number is what a screenshot, a copy-paste and assistive tech
+all see — never a zero mid-count.
+
+### D-12.5 Where motion was deliberately *not* added
+
+- **The moderator queue table** (`ModerationQueue.tsx`) stays static. It is
+  a dense triage table; staggering rows delays the work the screen exists
+  for, and a wrapper element would break the bordered row flow.
+- **`ChatThread` messages** have no entrance animation. Chat is REST
+  polling for the pilot (CLAUDE.md, build plan Phase 6), so every poll
+  re-renders the list — an entrance would re-fire on already-read messages.
+  Worth revisiting when the WebSocket transport lands and arrivals become
+  genuinely event-shaped.
+- **`ChatList`'s desktop thread rail** is left alone; it is a compact
+  sidebar list where per-row motion reads as noise. Only the mobile stack
+  staggers.
+- **Rent and budget figures** never count up. Only numbers that *are* the
+  point of their block — a compatibility score, a moderator KPI — animate;
+  a rent range should be readable the instant it paints.
+
+### D-12.6 Two additions that go slightly beyond "motion"
+
+Both are small and both were absent from the mockups, which draw no
+interaction states at all:
+
+- **A focus-visible ring** on every interactive element, in
+  `--color-cohab-primary`. Every surface here is keyboard-reachable and a
+  polish pass that only exists for mouse users is not one.
+- **The `Cohab` wordmark is now an explicit labelled home link**
+  (`aria-label="Cohab — go to your matches"`). It already navigated to
+  `/matches` — which is where `/` redirects (`App.tsx`) — but it had no
+  accessible name and no hover affordance.
+
+### D-12.7 Verification, and what is still unverified
+
+`tsc --noEmit` clean, `npm run build` clean, `oxlint` clean apart from one
+pre-existing `OnboardingContext` fast-refresh warning that this pass did
+not touch, and the production preview server serves both the page and the
+hashed bundle (200). As in D-11.8, **no live browser walkthrough was
+performed** — the same visual verification debt still stands, and it is
+larger now: ScrollTrigger measures against layout, and this app applies
+`zoom: 1.1` to `body` above 1220px (index.css). Chrome accounts for zoom in
+`getBoundingClientRect`, so trigger positions should be correct, but that
+is reasoned rather than observed and is the first thing to check in a real
+desktop browser.
+
+### D-12.8 A pre-hide scoping bug this pass introduced and then fixed
+
+Worth recording because the failure mode is silent and the fix is
+structural, not a one-line patch.
+
+The card components carry the `data-reveal-item` marker, but the *container*
+is what opts into motion by being a `RevealGroup`. The first version of the
+CSS pre-hid every `[data-reveal-item]` on the page regardless. `SavedList`
+renders two independent stacks — `MatchCard` on desktop, a local
+`CondensedCard` on mobile — and only the desktop stack had been wrapped, so
+the mobile saved-matches list was pre-hidden with nothing left to un-hide
+it: a permanently blank screen, and one that neither `tsc` nor the build
+nor the linter can see.
+
+Fixed twice over: the mobile stack is now a `RevealGroup` too, and
+`RevealGroup` stamps `data-reveal-root` on its own element so the pre-hide
+rule can be scoped to `[data-reveal-root] [data-reveal-item]`. A marked item
+outside a group now renders normally without motion, instead of
+disappearing. The same class of mistake can no longer blank content.
+
+**Code:** `frontend/src/features/matches/SavedList.tsx`,
+`frontend/src/components/motion/RevealGroup.tsx`, `frontend/src/index.css`.
+
+### D-12.9 Mockup screen inventory, checked against the decoded mockup rather than assumed
+
+The desktop mockup is a bundled page (base64 + gzip in
+`Cohab Desktop.html`); its DOM template was decoded and its headings
+enumerated, then each was traced to a source file. All sixteen screens have
+a counterpart: landing/login, create account, six-digit code, seeker type,
+listing form, the twelve required questions, the optional depth questions,
+importance weights, match list with filters sidebar, match detail with
+attribute breakdown, chats, contact share, report, report acknowledgement,
+the 30-day check-in, and the moderator queue with its evidence/decision/
+action-log detail.
+
+One element inside a screen is deliberately absent rather than missing: the
+check-in's seven-option "What has been the biggest friction, if any?"
+question, already documented in `FeedbackDialog.tsx`'s own comment — the
+`FeedbackRequest` schema carries only `outcome` and
+`cohabitation_duration_days`, so rendering it would mean a control that
+silently discards its answer.
+
+Also noted: the mockup's match detail reads "Her listing"; the app uses
+"Their listing". A deviation, kept — the app has male, female and
+non-binary users and the heading is generated for every candidate.
+
+## Phase 13 — Modal restyle, demo path, and layout density
+
+### D-13.1 Four DB fields exposed that were stored but never returned
+
+`course` on the match-list card, plus `listing_room_type`,
+`listing_available_from` (both on `MatchListItem`) and `current_housemates`
+(on `MatchListingSummary`), plus `weight_set_version` on the explanation
+response. All were already columns; `Candidate.from_orm` already had the
+`Listing` in hand, so this costs no extra query. They unblock the mockup's
+"Room type" and "Move-in window" filters and its "under weight set v2" line.
+Flagged as cosmetic-only in `candidate.py` — never read by Stage 1 or Stage 2.
+
+### D-13.2 Modal phosphor palette replaces the mockup-decoded tokens
+
+**This overrides D-5.1.** The two root-level mockups remain authoritative on
+layout and copy but no longer on colour: the user supplied Modal's
+dark phosphor-terminal style reference and asked for it applied.
+
+The `--color-cohab-*` token *names* were kept deliberately. Roughly 40 built
+screens reference them through `cohab-*` utility classes, so remapping the
+values re-themes the whole app from one file. The sweep then fixed what
+tokens could not reach: 78 `bg-white`, 32 arbitrary hexes across 39 files,
+14 `text-white`-on-lime contrast failures (white on `#7fee64` is unreadable;
+Modal's own spec puts `#181818` there), and 6 shadows tuned for a light page.
+
+**Two deliberate departures from the Modal spec, both accessibility floors:**
+
+- Modal forbids non-green chromatic accents. One survives — a desaturated
+  brick `#c96a4d` — for destructive actions (block/report/suspend) and the
+  "Fair" score band. A destructive button indistinguishable from a neutral
+  one is a hazard, and score bands must differ by hue, not only bar length.
+- `cohab-primary` is used mainly as a *stroke and text* colour, not a fill.
+  Modal rations Lime Pulse to one fill per viewport; a match list of twenty
+  lime-filled cards would break the metaphor outright.
+
+Score-band *thresholds* stay mockup-sourced; `lib/score.ts`'s comment was
+corrected, since it claimed mockup provenance for colours that no longer
+have it.
+
+### D-13.3 Onboarding screens were a dead end when reached from Profile
+
+All four onboarding screens render without `AppShell`. That is right during
+first-run signup — a nav bar inviting you to abandon a half-finished profile
+is the wrong affordance — but those same screens are the *edit* surface
+linked from the Profile hub, and entered that way desktop had no header, no
+wordmark and no back button at all (mobile had a bare back arrow).
+
+`components/OnboardingHeader.tsx` renders only when `GET /profile` succeeds,
+which is exactly the edit case; a genuine first-run signup still sees the
+original uninterrupted flow. Its back button falls back to `/profile` when
+`window.history.length <= 1`, since `navigate(-1)` on a pasted URL would
+leave the app entirely.
+
+**Found by the user clicking through the running app.** No build, typecheck
+or lint can see it. Same class of gap as D-11.8 and D-12.7 flagged.
+
+### D-13.4 Operator screens widened to the app's own 1800px rhythm
+
+The moderator queue was a `max-w-[900px]` card inside an `1800px` container
+and analytics was `max-w-2xl` (672px) — roughly 900px of dead space at
+common desktop widths, reported by the user.
+
+Both now use the 1800px grid the match list already uses. The queue becomes
+two-pane (`1fr | 420px`) with `TriageRail`: unclaimed count, escalated
+count, cases past the SLA target, oldest open case, and a reason breakdown.
+**Every figure is derived from the `GET /moderation/reports` payload the
+table already renders** — no new endpoint, no second query, nothing shown
+that the API does not return. Analytics tiles gained a share-of-total bar,
+computed from the same dict, because a bare "42 mutual" means nothing
+without a denominator.
+
+`SLA_HOURS = 24` in `TriageRail.tsx` is **proposed, not specified** — PRD
+§8.3 requires a moderator review step but fixes no turnaround time. The
+number comes from the mockup's own "SLA 24h" label and is marked in the code
+as a placeholder to confirm before a real pilot.
+
+The moderation wordmark in both `ModerationQueue` and `ReportReview` was a
+`<span>` — dead text. Now a `Link` to `/matches`.
+
+**Moderator gating was verified, not assumed:** nav links behind
+`user?.is_moderator`, routes behind `ModeratorGate`, and every backend route
+behind `require_moderator`. Confirmed live — a logged-in non-moderator gets
+403 on `/moderation/reports` and `/analytics/summary`, and 200 on `/matches`
+as a control. The user saw those tabs because the demo account genuinely
+holds the flag.
+
+### D-13.5 One decorative graphic, confined to the landing panel
+
+`components/CompatibilityField.tsx` — a canvas field where two populations
+drift and a line is struck between a pair only inside a distance threshold,
+brighter the closer they sit; two "has a place" nodes never link at all.
+That is the two-stage matcher as an image: a hard constraint first, a graded
+score second.
+
+Confined to the marketing panel on purpose. Modal renders 3D objects on its
+marketing site and keeps operator surfaces plain, and the same split holds
+here — a moderator queue decorated with figures reads as padding over a thin
+feature. Deterministic (fixed PRNG seed) so screenshots are reproducible for
+the report, and it paints one static frame under `prefers-reduced-motion`.
+
+### D-13.6 Demo path: the screens existed, they were unreachable
+
+The bulk seed produces ~1550 users and ~43k scored pairs, but no account that
+can walk every screen. Three separate causes, none of them "missing pages":
+the user's own account had never completed onboarding (hence `/profile` and
+`/listing` 404s); Report and Feedback are modals with no route; and six
+screens are state-gated, with `cohabiting` having **zero** rows — making the
+30-day check-in unreachable by anyone.
+
+`cohab/demo_seed.py` is additive and re-runnable: it creates one demo user
+and **promotes that user's own existing `match_score` rows** into each gated
+state rather than fabricating scores, so every number on screen is one the
+matcher actually produced. It never edits another member's profile and never
+touches the ~43k rows Phase 9's evaluation is computed from.
+
+**Side effect worth recording:** making the new accounts matchable required
+running `recompute`, which published **`weight_set` v3** (1387 subjects,
+88222 rows touched). Historical rows keep their own `weight_set_id`, so the
+CLAUDE.md reproducibility invariant holds — but any evaluation re-run now
+scores under v3, and the Phase 9 chapter's numbers were produced under v2.
+
+### D-13.7 Test suite was hitting the live Resend API — 322 passing again
+
+`pytest` was at 35 failed / 85 errors, and **not from any change in this
+phase**. `get_otp_sender()` selects a sender from environment variables, so
+once `RESEND_API_KEY` was set in a local `.env` (the normal state after
+D-11.9), every `/auth/register` in the suite posted to the live Resend API,
+got 403, surfaced as 502, and failed as `KeyError: 'user_id'`.
+
+The suite also *structurally* depends on `ConsoleOTPSender`: every fixture
+recovers the code by reading the `cohab.otp` log record, and that is the only
+implementation which writes one. An autouse fixture in `tests/api/conftest.py`
+now pins it, patched at the `cohab.api.auth` reference because the route
+handlers call `get_otp_sender()` directly at request time rather than taking
+it as a FastAPI dependency — `app.dependency_overrides` cannot reach it.
+Full suite: **322 passed, 0 failed.**
+
+### D-13.8 Profile hub: two columns, and a rail built from data already fetched
+
+The profile screen was a 720px column centred in an 1800px viewport, so most
+of the screen was empty — reported by the user, not caught by any check. The
+fix is a two-column grid whose right rail renders ten `preference_profile`
+fields (`city`, `budget_*`, `move_in_date`, `gender_preference`, both allergy
+lists, `has_pet`, `pet_tolerance`, `smoking_dealbreaker`) that the page's
+existing `profile` query already fetched and then discarded.
+
+Split into "Hard constraints" and "How you live" deliberately: the two behave
+differently in the matcher — Stage 1 excludes outright, Stage 2 scores — and
+that distinction is the single thing users most often misread. The copy on
+each panel says so.
+
+### D-13.9 Profile editing: `PATCH /auth/me`, scoped to three fields
+
+`AccountUpdateRequest` accepts `full_name`, `course` and `phone_number` only.
+Email, gender and `seeker_type` are excluded on purpose: email anchors the
+institutional verification, and gender and seeker type are Stage 1 inputs, so
+letting them be edited freely from a profile form would silently invalidate
+every previously computed `match_score` involving that user. Changing those
+belongs behind a re-verification flow that does not exist yet.
+
+`None` means "leave alone" and empty string clears `phone_number`, so a
+partial patch cannot blank a field the client did not mention.
+
+### D-13.10 Seeded imagery: generated avatars, not downloaded faces
+
+The obvious approach — pulling portraits from a placeholder API — fails two
+tests, and the first is a factual finding worth recording: the free services
+that filter by nationality localise **names, not faces**.
+`randomuser.me?nat=in` and `?nat=us` were verified to draw from the same
+portrait pool (`women/92.jpg` appears under both), so "Indian avatars" from
+that source would be a label on generic Western photographs. Second, and more
+seriously, attaching photographs of real people to ~1550 fabricated student
+profiles is not something that should ship anywhere near a pilot.
+
+So the Indian identity comes from the part of the data that genuinely is
+Indian — the names `seed.py` already generates — and the imagery is honestly
+synthetic: initials rendered locally with Pillow, gender tinting the palette
+rather than deciding a face. Written as **PNG, not SVG**, because
+`services/uploads.py` deliberately excludes SVG from `ALLOWED_CONTENT_TYPES`
+(D-10.2 — a same-origin SVG can carry script) and seeded files land in the
+same `/media` mount as genuine member uploads; emitting a format the upload
+path itself rejects would quietly punch a hole in that boundary.
+
+Listing photos remain Picsum (Unsplash-licensed) — rooms, not people.
+
+Auditing this also surfaced a genuine data gap: **five `has_place` users had
+no listing at all**, so they would have appeared in matches as someone with a
+place and nothing to show. Listings were created and photographed for all
+five; final state is 721/721 `has_place` users with a photographed listing
+and 0 users without an avatar.
+
+### D-13.11 Ambient field on every screen, and the bugs that exposed
+
+The compatibility field (D-13.5) was confined to the login panel. At the
+user's request it now sits behind every screen via `AmbientField`, a single
+`position: fixed` canvas — fixed rather than absolute so one canvas covers
+the viewport on every route, instead of one per page stretching to that
+page's scroll height (on the analytics screen that would be an enormous
+canvas and a node count to match). Behind live data it runs far sparser
+(`density` 46,000 vs the hero's 14,000) and dimmer, because the failure mode
+on an operator screen is a queue that looks decorated rather than legible.
+
+Three real bugs surfaced only by driving the running app in a browser; none
+were visible to `tsc`, the build, or the linter:
+
+1. **Opaque roots hid the canvas.** `AppShell` and both moderation screens
+   painted their own background, which covered a `-z-10` canvas completely.
+   The page black now comes from `body`, which sits below both.
+2. **`MatchCard` stretched square avatars.** The 186x150 landscape photo tile
+   from mockup screen 7 was scaling a 256px square initials PNG to fill it,
+   rendering the letters as huge cropped type. Generated avatars (detected by
+   the `/media/avatar-` prefix via `isGeneratedAvatar`) now fall back to the
+   circular treatment; a genuine uploaded photo still fills the tile.
+3. **Back-button gaps.** `RequiredQuestionnaire` had no mobile back control at
+   all — the other three onboarding screens each draw their own, and
+   `OnboardingHeader` was `hidden cohab-desktop:block` — so editing the
+   questionnaire from Profile on a phone was a dead end. Both moderation
+   screens also lacked one. `hasOwnMobileBack` keeps the three screens that
+   already have an arrow from stacking a second.
+
+`/matches` deliberately keeps no back button: it is home, and "back" there
+exits the app.
+
+**Duplicate React keys — a labelling bug, not a keying bug.** The console
+warned about duplicate keys in `ProfileSummaryRail`. The first hypothesis
+(colliding agreement sentences in `MatchCard`) was **wrong and was reverted**:
+testing the renderers showed zero overlap between every pair of label sets.
+The real cause is that `titleFor` returned the question *group* title, and
+several distinct questions share a theme — "Guests" covers frequency and
+overnight guests, "Money" covers when you pay and how rent splits, and "Life
+stage" is shared by four questions. The rail therefore listed "Life stage"
+four times against four unrelated values. `titleFor` now falls back to the
+theme only when it belongs to a single question, and to the question's own
+title otherwise; rows are keyed on the questionnaire key.
+
+### D-13.12 Light theme: token overrides, not a second stylesheet
+
+Tailwind v4 compiles `@theme` values into the stylesheet, so a runtime switch
+cannot rewrite them — but it can redefine the same custom properties at a
+later selector. `:root[data-theme='light']` overrides ~25 tokens and every
+`cohab-*` utility picks them up through `var()` at use time, so all ~40
+screens re-theme without a component change. This is the same indirection
+that made the Modal remap cheap (D-13.2) paying off a second time.
+
+A translation into daylight, not an inversion. Rules kept: lime stays the
+only accent but drops to `#2f7d1e` for text (`#7fee64` on white is ~1.4:1,
+illegible), while filled CTAs keep a bright fill with dark text on it;
+surfaces still step page to card to tint; and the destructive brick stays
+chromatic and distinct from the accent, the accessibility floor from D-13.2.
+
+Three states, not two — `light`, `dark`, `system` — because "system" is a real
+preference that keeps tracking the OS. A binary toggle would silently freeze
+the user on whichever theme their OS happened to use the first time they
+touched the control. The choice is applied by a small inline script in
+`index.html` **before first paint**, since deferring to React paints the
+default theme first and then swaps.
+
+Two things could not read the tokens and needed explicit handling: the canvas
+paints raw pixels (it picks a palette per theme and repaints via a
+`MutationObserver` on `data-theme`), and ~29 hardcoded hex utilities scattered
+through components were dark-only colours that would have been stranded on a
+light ground — those are now tokens (`cohab-score`, `cohab-warn`,
+`cohab-track`, `cohab-bar-mid`). `text-[#0a0a0a]` was deliberately left as a
+literal: it is the dark text sitting on a bright lime or brick *fill*, and
+that fill stays bright in both themes.
+
+### D-13.13 Nav active state is computed, not left to prefix matching
+
+Chat and contact-share live under `/matches/:id/...`, so `NavLink`'s default
+prefix matching underlined "Matches" while a chat thread was open and left
+"Chat" inactive — reported by the user. `AppShell` now computes `isChat` and
+`isMatches` from the pathname, mirroring what `bottomNavTab` already did on
+mobile. Match detail (`/matches/:id`) correctly stays under Matches.
+
+### D-13.14 Light theme is the mockup's green-on-beige, not a lightened phosphor
+
+D-13.12 shipped a light theme derived from the Modal palette — lime darkened
+until it was legible on near-white. The user asked instead for the
+green-on-beige of `Cohab Desktop.html`, which is also the palette D-5.1
+originally decoded before the Modal remap (D-13.2) replaced it.
+
+Values were extracted from the mockup by frequency rather than eyeballed from
+a screenshot: `#eceae5` page ground, `#f5f4f0` cards, `#0f5f52` deep green
+primary, `#a8442a` brick, `#eef4f2` selected-row mint, and the
+`#14201f`/`#3f4d4a`/`#63706d`/`#7d8a86` text ramp. The app now carries both
+identities honestly — the phosphor terminal in dark, the mockup's daylight
+palette in light — rather than one lightened palette matching neither
+document.
+
+**This invalidated an assumption recorded in D-13.12.** That entry justified
+leaving `text-[#0a0a0a]` as a literal because "the fill stays bright in both
+themes". True for lime; false for `#0f5f52`, where near-black text on a dark
+green fill is unreadable. On-fill text is now itself a token,
+`--color-cohab-on-fill` (near-black in dark, white in light), and all 14
+occurrences were replaced. No hardcoded colour utilities remain in the
+component tree.
+
+**Three UI gaps closed in the same pass, all reported by the user:**
+
+1. **`MatchDetail`'s empty box.** The desktop card rendered a name, a course
+   line and ~200px of nothing: the avatar was `cohab-desktop:hidden` and the
+   score panel is a fixed-width right column. The avatar now shows at both
+   breakpoints, and the explanation cards — fetched by the existing query and
+   previously rendered nowhere on this screen — fill the space under the
+   name, which is also the most useful thing to read there.
+
+2. **Missing sidebar filters.** The mockup's sidebar has Locality, Room type
+   and Move-in window; the app shipped with none of them. Room type and
+   move-in window needed no backend change — `MatchListItem` already carried
+   `listing_room_type` and `listing_available_from`, but the *frontend type*
+   never declared them, so the values arrived and were silently discarded.
+   Locality did need adding: it existed on the detail response only, so
+   `listing_locality` was added to `Candidate`, the schema and the list
+   endpoint (no extra query — the `Listing` is already in hand in
+   `from_orm`). Move-in window compares the candidate's `available_from`
+   against the viewer's own `move_in_date`, and treats a missing date as
+   unfiltered rather than silently excluding the candidate.
+
+3. **Sparser ambient field than intended.** Density 46k → 17k (~2.7x the
+   points), node cap 48 → 110, link distance 132 → 172, with opacity dropped
+   to 0.45 so the busier field is no louder behind live data.
+
+**Debugging note worth keeping:** the locality field appeared correct in the
+schema, the dataclass and a direct `Candidate.from_orm` call, yet was absent
+from the HTTP response. Cause was **two uvicorn processes bound to port
+8000** — an older one, started before the edit, was serving the requests.
+Worth checking `netstat -ano | grep :8000` before concluding that a backend
+change did not take effect.
+
+### D-13.15 Two-pane chat, theme-aware avatars, softer filter pills
+
+Four user-reported UI gaps, all in the same pass.
+
+**1. The open conversation hid the other threads.** `/matches/:id/chat`
+rendered the conversation alone, so while talking to one person there was no
+way to see or reach the others without going back to `/chats` — unlike
+WhatsApp Web, which the user named as the reference. `ChatThread`'s own
+docstring had already flagged this as ChatList's follow-up.
+
+The thread rail was extracted from `ChatList` into `features/chat/ThreadList.tsx`
+(`ThreadRail`, `ThreadRow`, `useThreads`, `CHAT_STATES`) and is now rendered by
+both screens: `/chats` is the nothing-selected state, and the thread route
+shows the same rail with `activeMatchId` highlighted (green left bar, mint
+ground, primary-coloured name). Rather than nested routing or splitting
+`ChatThread` into wrapper + presentational halves, the rail simply links to
+the existing route — the same navigation mobile already used.
+
+Desktop only. On a phone the list and the conversation stay separate screens,
+which is what WhatsApp does too.
+
+*Layout note:* `ThreadRail` carries its own `hidden cohab-desktop:flex` rather
+than being wrapped in a visibility div. Wrapped, it became a flex item that
+sized to its content, and the rail's right border stopped halfway down the
+card instead of running its full height. As a direct grid child it stretches
+to the row.
+
+**2. Generated avatars ignored the theme.** `seed_avatars.py` bakes a *dark*
+ground into every PNG, so under the light theme the circles stayed dark-green
+squares of phosphor type against beige. Since a generated avatar is only
+initials on a flat ground — exactly what `Avatar`'s CSS fallback already
+draws — `Avatar` now skips the file for generated sources and renders the
+fallback, which reads theme tokens. Genuine uploads are photographs and are
+still shown as-is. No regeneration of the 1551 PNGs was needed, and none of
+the ~40 call sites changed.
+
+The fallback got its own token pair, `--color-cohab-avatar-bg` /
+`--color-cohab-avatar-ink`, rather than reusing tint/primary: the two themes
+want opposite treatments — dark ground with phosphor initials in dark,
+the mockup's solid `#0f5f52` with white initials in light. Verified live:
+`rgb(15,95,82)`/white and `rgb(27,38,32)`/`rgb(174,210,164)`, with zero
+`img[src*="/avatar-"]` still rendering.
+
+**3. Filter pills read as square boxes.** `Tab` used `rounded` (4px), which
+next to the rent `Input`s at `rounded-[10px]` looked like an inconsistency
+rather than a choice. Now `rounded-[10px]`, matching them.
+
+**Verification note.** Two intermediate readings during this work were wrong
+and are worth recording, because both looked like real bugs:
+
+- A `getBoundingClientRect` measurement said the chat card overflowed the
+  viewport (bottom 1064 in a 1000px window). It did not — `document.body.scrollHeight`
+  was exactly 1000 and the computed height matched `calc(100vh-170px)`. The
+  rect was read against a scrolled page. Changing the offset to `118px` on
+  the strength of that reading *introduced* a clipped composer, and was
+  reverted. Screenshots caught what the numbers had not.
+- A Playwright selector of `a[href*="/chat"]` matches the "Chat" nav link,
+  not only thread links, so a "thread rail" assertion was really re-testing
+  `/chats`. Anchored to `^/matches/[^/]+/chat$` instead.
+
+### D-13.16 Interaction motion: press feedback, a firmer route transition, and message entrances
+
+The user asked for motion on click and on navigation. An audit first, because
+some of it already existed: `PageTransition` was wired into `AppShell` and
+`RevealGroup` already re-staggered on `runKey` change. The real gaps were
+that the route transition was too subtle to notice and that press feedback
+covered only the `Button` component.
+
+**Route transition.** Was `y: 10` over `MOTION.fast` (0.28s) — hardcoded,
+bypassing the token system it was supposed to follow. Now `MOTION.pageRise`
+(24px) over `MOTION.page` (0.42s), both new tokens in `lib/motion.ts`. Kept
+enter-only: an exit animation holds the old screen on-screen after the user
+has committed to leaving, which makes every navigation feel slower than it is.
+
+**Press feedback.** `.cohab-press` (scale 0.975 on `:active`) already existed
+but was applied only via `Button`. Roughly 20 files use raw `<button>` and had
+no active state at all, so the most-clicked controls in the app — filter tabs,
+questionnaire option pills and radios, the chat send button, the back button,
+save toggle, account menu, photo upload — gave no physical response. The class
+is now on the shared components, which covers most call sites at once. No new
+CSS: `.cohab-press` already uses longhand transition properties so it composes
+with `transition-colors` instead of clobbering it, and reduced-motion is
+already honoured.
+
+**Message entrances.** New `components/motion/MessageEnter.tsx`. A sent bubble
+fades and scales from 0.96 with `transformOrigin` at the anchored corner, so
+it reads as emerging from the composer.
+
+The hard constraint is that ChatThread **polls every 3s**. Animating on render
+would make the whole conversation pulse three times a second, so a
+module-scoped `seen` set of message ids gates the entrance to genuinely new
+messages. Module-scoped rather than component state on purpose: the bubble
+unmounts and remounts as the polled list is replaced, so per-component state
+would be lost exactly when needed. It is bounded at 500 ids. A `firstPaint`
+ref suppresses the animation for history already in the thread when it opens.
+
+**A StrictMode bug this exposed, worth recording.** The first implementation
+marked an id seen *before* starting the tween. Under StrictMode's
+mount/unmount/remount, the first pass flagged the id and its cleanup reverted
+the tween; the second pass then saw `seen=true` and bailed, so the bubble
+never moved. This was not merely a dev-mode artifact — any real remount would
+hit it. Fixed by marking seen in `onComplete`, with a cleanup-time fallback
+guarded on `!el.isConnected` so a genuinely unmounted bubble does not replay
+its entrance on the next poll.
+
+**An unrelated theming bug found while adding press to SaveToggle.** The
+bookmark had literal `fill`/`stroke` of `#7fee64` — the dark-theme lime —
+which stayed lime on the light theme's beige, where it barely reads. Now
+`currentColor` driven by `text-cohab-primary` / `text-cohab-subtle`, so it
+follows the tokens like everything else. Verified resolving to different
+values per theme.
+
+**Verified in-browser, not by inspection:** idle polling produced 0 animated
+samples across 40 samples over 10s with 4 bubbles on screen (the churn risk);
+a sent message did animate; changing a filter re-staggered the surviving
+cards; press class and its transition-property list confirmed present in both
+themes; 0 console errors.
+
+### D-13.17 Two favicon files, swapped by the app, not one that self-switches
+
+The first attempt at a theme-aware tab icon was a single `favicon.svg`
+carrying its own `@media (prefers-color-scheme: dark)` block. It is the
+tidier artefact and it does work — but only against the *operating system*
+setting. A favicon is fetched as an independent document: its internal CSS
+cannot see `document.documentElement[data-theme]`, so the in-app theme
+toggle had no effect on it. With the OS on dark, choosing Light in the
+account menu left a dark icon sitting above a light UI. The user reported
+this twice before it was diagnosed correctly.
+
+So the icon is now two files, `favicon-light.svg` and `favicon-dark.svg`,
+identical in geometry and differing only in palette, with
+`lib/theme.ts::applyFavicon` rewriting `link[rel=icon]`'s href.
+`applyTheme` is the single choke point every path already funnels through,
+so hooking it there covers the toggle, the stored choice on load, and the
+OS-flip listener without touching any caller.
+
+Two details that are load-bearing:
+
+- The href comparison is against `new URL(link.href).pathname`, not the raw
+  `link.href`. The property reflects an absolute URL carrying the
+  cache-busting query, so a naive equality check never matches and the icon
+  is rewritten and re-fetched on every theme application.
+- `index.html`'s pre-paint script performs the same swap inline. Leaving it
+  to React would show the wrong-palette icon until mount, which is the
+  favicon equivalent of the flash-of-wrong-theme D-13.12 exists to prevent.
+  The static `href` defaults to light so a JS-disabled browser still gets a
+  real icon rather than a 404.
+
+**The mark itself:** two overlapping roof forms — two people, one home. The
+overlap is the product's actual claim, that this matches on compatibility
+rather than listing availability; the shared floor line beneath is the match.
+Colours are the app's own tokens. The dark tile is Surface 1 (`#181818`)
+rather than the theme's pure-black Surface 0, because a black tile
+disappears into a dark browser tab strip and leaves the strokes floating.
+
+Verified in-browser across all four OS/stored-choice combinations at first
+paint, and across toggle changes with the OS forced to dark — the case that
+was broken. Both files serve 200; the mark stays legible at 16px.

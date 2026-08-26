@@ -49,6 +49,14 @@ export interface UserOut {
   is_moderator: boolean
 }
 
+/** PATCH /auth/me — only the keys present are applied (D-13.9). An empty
+ * string clears `phone_number`; omitting a key leaves it untouched. */
+export interface AccountUpdateRequest {
+  full_name?: string
+  course?: string
+  phone_number?: string
+}
+
 export interface ProfileUpsertRequest {
   city?: string
   budget_min: number
@@ -104,6 +112,16 @@ export interface MatchListItem {
   budget_min: number
   budget_max: number
   avatar_url: string | null
+  state: string
+  // Sent by the API (schemas.py::MatchListItem) but previously not declared
+  // here, so the values arrived and were discarded. These back the Locality,
+  // Room type and Move-in window filters (D-13.14). The three `listing_*`
+  // fields are null for a needs_place candidate, who has no listing.
+  course?: string | null
+  move_in_date?: string | null
+  listing_room_type?: string | null
+  listing_available_from?: string | null
+  listing_locality?: string | null
 }
 
 export interface ExplanationCard {
@@ -147,6 +165,13 @@ export interface MatchExplanationResponse {
 
 export interface ExpressInterestResponse {
   state: string
+}
+
+// --- saved matches ------------------------------------------------------
+
+export interface SavedMatchOut {
+  saved_at: string
+  match: MatchListItem
 }
 
 export interface UploadImageResponse {

@@ -47,6 +47,25 @@ class RegisterRequest(BaseModel):
     phone_number: str | None = None
 
 
+class AccountUpdateRequest(BaseModel):
+    """Editable account details (docs/DECISIONS.md D-13.9).
+
+    Everything here was previously write-once at registration, so a member
+    who mistyped their name or wanted to add a phone number later had no way
+    to change it. Deliberately narrow: `email` is the verification anchor and
+    `gender`/`seeker_type` feed Stage 1 eligibility, so neither belongs in a
+    casual profile edit — changing a seeker type would silently invalidate an
+    existing listing and every match computed from it.
+
+    All three fields are optional; only those present in the body are
+    applied, so the client can PATCH one field without echoing the rest.
+    """
+
+    full_name: str | None = Field(default=None, min_length=1, max_length=200)
+    course: str | None = Field(default=None, max_length=200)
+    phone_number: str | None = Field(default=None, max_length=32)
+
+
 class RegisterResponse(BaseModel):
     user_id: uuid.UUID
 
@@ -173,6 +192,18 @@ class MatchListItem(BaseModel):
     budget_min: int
     budget_max: int
     avatar_url: str | None = None
+    state: str
+    # Second enrichment wave (mockup screen 8, docs/DECISIONS.md D-13.1). All
+    # four are already on `Candidate` by the time the card is built, so this
+    # costs no extra query. `course` was previously detail-only; the three
+    # `listing_*` fields are what the "Room type" and "Move-in window" filters
+    # and the move-in summary line are computed from, and are null for a
+    # needs_place candidate, who has no listing.
+    course: str | None = None
+    move_in_date: date | None = None
+    listing_room_type: str | None = None
+    listing_available_from: date | None = None
+    listing_locality: str | None = None
 
 
 class ExplanationCard(BaseModel):
@@ -192,6 +223,9 @@ class MatchListingSummary(BaseModel):
     available_from: date
     amenities: list[str]
     photos: list[str]
+    # Mockup screen 9's OCCUPANCY fact. Already a column on `Listing`; the
+    # detail response just never carried it (docs/DECISIONS.md D-13.1).
+    current_housemates: int = 0
 
 
 class MatchExplanationResponse(BaseModel):
@@ -209,10 +243,28 @@ class MatchExplanationResponse(BaseModel):
     candidate_course: str | None = None
     candidate_avatar_url: str | None = None
     listing: MatchListingSummary | None = None
+    # Mockup screen 9 prints "under weight set v2" beside the harmonic mean.
+    # CLAUDE.md makes the stored `weight_set_id` an invariant precisely so a
+    # historical explanation stays reproducible; showing the version is what
+    # makes that guarantee visible to the user rather than only true in the
+    # database. Sourced from the active `WeightSet.version`.
+    weight_set_version: int | None = None
 
 
 class ExpressInterestResponse(BaseModel):
     state: str
+
+
+# --- saved matches -------------------------------------------------------
+# New scope, not in COHAB_PRD.md/COHAB_MATCHING_SPEC.md — see
+# services/saved.py. Wraps the existing `MatchListItem` card rather than
+# inventing a parallel shape, plus the one field a saved-list view needs
+# that a live match list doesn't: when it was saved.
+
+
+class SavedMatchOut(BaseModel):
+    saved_at: datetime
+    match: MatchListItem
 
 
 # --- feedback ---------------------------------------------------------

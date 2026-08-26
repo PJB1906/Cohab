@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { safetyApi } from '@/api/safety'
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
 import type { MatchListItem } from '@/api/types'
 
 /** PRD §10: blocking "removes the pair from each other's eligible pool at
@@ -42,32 +43,29 @@ export function BlockConfirmDialog({
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
-        <h2 className="text-base font-semibold mb-2">Block {blockedUserName}?</h2>
-        <p className="text-[13.5px] text-cohab-muted mb-5">
-          You won't be matched with each other again, and any existing conversation disappears
-          for both of you. {blockedUserName} isn't notified, and can't undo this.
+    <Dialog open onClose={onClose} title={`Block ${blockedUserName}?`} className="cohab-desktop:max-w-[440px]">
+      <p className="text-[14px] cohab-desktop:text-[13.5px] leading-[1.55] text-cohab-muted mb-6">
+        You won't be matched with each other again, and any existing conversation disappears
+        for both of you. {blockedUserName} isn't notified, and can't undo this.
+      </p>
+      {mutation.isError && (
+        <p className="text-[13px] text-cohab-accent mb-3">
+          {mutation.error instanceof ApiError ? mutation.error.message : 'Could not block this person.'}
         </p>
-        {mutation.isError && (
-          <p className="text-[13px] text-cohab-accent mb-3">
-            {mutation.error instanceof ApiError ? mutation.error.message : 'Could not block this person.'}
-          </p>
-        )}
-        <div className="flex flex-col gap-2">
-          <Button variant="secondary" onClick={onClose} className="w-full">
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-            className="w-full"
-          >
-            Block {blockedUserName}
-          </Button>
-        </div>
+      )}
+      <div className="flex flex-col gap-2.5">
+        <Button variant="secondary" onClick={onClose} className="w-full">
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="w-full"
+        >
+          Block {blockedUserName}
+        </Button>
       </div>
-    </div>
+    </Dialog>
   )
 }

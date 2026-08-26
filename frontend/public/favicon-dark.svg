@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Cohab">
+  <!--
+    Cohab's mark, dark theme. Same geometry as favicon-light.svg — only the
+    palette differs, so the two read as one logo in two outfits rather than
+    two logos.
+
+    Colours are the app's own dark tokens (frontend/src/index.css): lime
+    phosphor primary, warm accent. The tile is Surface 1 (#181818) and not
+    the theme's pure-black Surface 0 on purpose — a black tile disappears
+    into a dark browser tab strip, leaving the strokes floating.
+
+    Swapped in by `lib/theme.ts::applyFavicon`. See docs/DECISIONS.md D-13.17.
+  -->
+  <rect width="48" height="48" rx="11" fill="#181818"/>
+
+  <!-- Left roof — the candidate. Accent, drawn first so primary overlaps it. -->
+  <path d="M9 31.5 19.5 20.2a2 2 0 0 1 2.94 0L32.94 31.5"
+        fill="none" stroke="#c96a4d" stroke-width="3.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Right roof — you. The dominant voice, in the primary. -->
+  <path d="M15.06 31.5 25.56 20.2a2 2 0 0 1 2.94 0L39 31.5"
+        fill="none" stroke="#7fee64" stroke-width="3.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Shared floor: the match itself. -->
+  <path d="M15.5 37.2h17" fill="none" stroke="#7fee64" stroke-width="3.4"
+        stroke-linecap="round"/>
+</svg>

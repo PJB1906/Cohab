@@ -7,8 +7,11 @@ import { ImportanceWeights } from '@/features/onboarding/ImportanceWeights'
 import { OnboardingProvider } from '@/features/onboarding/OnboardingContext'
 import { MatchList } from '@/features/matches/MatchList'
 import { MatchDetail } from '@/features/matches/MatchDetail'
+import { SavedList } from '@/features/matches/SavedList'
 import { ChatThread } from '@/features/chat/ChatThread'
+import { ChatList } from '@/features/chat/ChatList'
 import { ContactShare } from '@/features/chat/ContactShare'
+import { ProfilePage } from '@/features/profile/ProfilePage'
 import { ModerationQueue } from '@/features/moderation/ModerationQueue'
 import { ReportReview } from '@/features/moderation/ReportReview'
 import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
@@ -58,6 +61,10 @@ export default function App() {
       <Route path="/matches/:matchId" element={<ProtectedRoute><MatchDetail /></ProtectedRoute>} />
       <Route path="/matches/:matchId/chat" element={<ProtectedRoute><ChatThread /></ProtectedRoute>} />
       <Route path="/matches/:matchId/contact-share" element={<ProtectedRoute><ContactShare /></ProtectedRoute>} />
+
+      <Route path="/saved" element={<ProtectedRoute><SavedList /></ProtectedRoute>} />
+      <Route path="/chats" element={<ProtectedRoute><ChatList /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
       <Route path="/moderation" element={<Moderation><ModerationQueue /></Moderation>} />
       <Route path="/moderation/reports/:reportId" element={<Moderation><ReportReview /></Moderation>} />

@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { OnboardingHeader } from '@/components/OnboardingHeader'
 import { useNavigate } from 'react-router-dom'
 import { useOnboarding } from './OnboardingContext'
 import { WEIGHT_TILES } from '@/data/questionnaire'
 import { WeightTile } from '@/components/WeightTile'
 import { Button } from '@/components/ui/button'
+import { Eyebrow } from '@/components/Eyebrow'
 import { profileApi } from '@/api/profile'
 import { ApiError } from '@/api/client'
 import type { ProfileUpsertRequest } from '@/api/types'
@@ -55,43 +57,93 @@ export function ImportanceWeights() {
     }
   }
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
-      <p className="font-mono text-[10px] uppercase tracking-wider text-cohab-subtle mb-3">
-        Step 4 of 4 · Priorities
-      </p>
-      <h1 className="text-2xl font-semibold tracking-tight mb-2">Pick the three that matter most to you</h1>
-      <p className="text-[15px] text-cohab-muted mb-1">
-        Your three are weighted more heavily when Cohab scores candidates for you. Everyone
-        weights these differently, which is why your ranking and theirs aren't the same list.
-      </p>
-      <p className="text-[13px] text-cohab-subtle mb-6">{draft.importantAttributes.length} of 3 selected</p>
+  const count = draft.importantAttributes.length
+  const mobileCtaLabel = busy ? 'Saving…' : count === 0 ? 'Pick three to continue' : count < 3 ? `${3 - count} more to pick` : 'See my matches'
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-        {WEIGHT_TILES.map((tile) => {
-          const idx = draft.importantAttributes.indexOf(tile.id)
-          return (
-            <WeightTile
-              key={tile.id}
-              title={tile.title}
-              sub={tile.sub}
-              rank={idx >= 0 ? idx + 1 : null}
-              onClick={() => toggle(tile.id)}
-            />
-          )
-        })}
+  return (
+    <>
+      <OnboardingHeader hasOwnMobileBack />
+    <div className="min-h-dvh flex flex-col cohab-desktop:block">
+      {/* Mobile header — back arrow only, no step counter (proto s6 omits it). */}
+      <div className="cohab-desktop:hidden px-2 py-1">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="w-11 h-11 flex items-center justify-center text-cohab-ink text-[22px] cursor-pointer"
+        >
+          ←
+        </button>
       </div>
 
-      {error && <p className="text-sm text-cohab-accent mb-4">{error}</p>}
+      <div className="flex-1 px-4 pb-4 cohab-desktop:max-w-[1160px] cohab-desktop:mx-auto cohab-desktop:px-6 cohab-desktop:py-14 cohab-desktop:pb-0">
+        <Eyebrow className="hidden cohab-desktop:block mb-3.5">Step 4 of 4 · Priorities</Eyebrow>
+        <h1 className="hidden cohab-desktop:block text-[26px] font-semibold tracking-[-.015em] leading-[1.18] mb-2">
+          Pick the three that matter most to you
+        </h1>
+        <h1 className="cohab-desktop:hidden text-[26px] font-semibold tracking-[-.02em] leading-[1.2] mb-2">
+          What matters most to you?
+        </h1>
+        <p className="text-[15px] cohab-desktop:text-[15px] text-cohab-muted-mobile cohab-desktop:text-cohab-score leading-[1.5] mb-1.5 cohab-desktop:mb-2 cohab-desktop:max-w-[660px]">
+          <span className="cohab-desktop:hidden">
+            Tap the three you'd least want to get wrong. They count for more in your ranking —
+            everything else still counts.
+          </span>
+          <span className="hidden cohab-desktop:inline">
+            Your three are weighted more heavily when Cohab scores candidates for you. Everyone
+            weights these differently, which is why your ranking and theirs are not the same list.
+          </span>
+        </p>
+        <p className="text-[13px] font-medium text-cohab-primary cohab-desktop:font-normal cohab-desktop:text-cohab-subtle mb-3 cohab-desktop:mb-[26px]">
+          {count} of 3 selected
+        </p>
 
-      <div className="flex items-center gap-4">
-        <Button onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : 'See my matches'}
+        <div className="flex flex-col gap-[9px] cohab-desktop:grid cohab-desktop:grid-cols-3 cohab-desktop:gap-3">
+          {WEIGHT_TILES.map((tile) => {
+            const idx = draft.importantAttributes.indexOf(tile.id)
+            return (
+              <WeightTile
+                key={tile.id}
+                title={tile.title}
+                sub={tile.sub}
+                rank={idx >= 0 ? idx + 1 : null}
+                onClick={() => toggle(tile.id)}
+              />
+            )
+          })}
+        </div>
+
+        <div className="cohab-desktop:hidden mt-[18px] px-[15px] py-3.5 bg-cohab-card rounded-2xl text-[13px] leading-[1.5] text-cohab-muted-mobile">
+          Skip this and we use the platform defaults, which are weighted from reported conflict
+          data. Nothing breaks either way.
+        </div>
+
+        {error && <p className="text-sm text-cohab-accent mt-4">{error}</p>}
+
+        <div className="hidden cohab-desktop:flex items-center gap-3.5 mt-7">
+          <Button onClick={save} disabled={busy}>
+            {busy ? 'Saving…' : 'See my matches'}
+          </Button>
+          <Button variant="ghost" onClick={save} disabled={busy}>
+            Skip — use the platform defaults
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile sticky footer */}
+      <div className="cohab-desktop:hidden flex-none px-4 pt-3 pb-2 border-t border-cohab-border-soft bg-cohab-card sticky bottom-0">
+        <Button className="w-full" onClick={save} disabled={busy}>
+          {mobileCtaLabel}
         </Button>
-        <Button variant="ghost" onClick={save} disabled={busy}>
-          Skip — use the platform defaults
-        </Button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={busy}
+          className="block w-full text-center text-sm font-medium text-cohab-muted-mobile py-3.5 cursor-pointer disabled:opacity-50"
+        >
+          Skip — use the defaults
+        </button>
       </div>
     </div>
+    </>
   )
 }

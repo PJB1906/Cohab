@@ -28,6 +28,22 @@ OTP_LENGTH = 6  # proposed — not specified in any document
 OTP_TTL_MINUTES = 10  # proposed — not specified in any document
 OTP_MAX_ATTEMPTS = 5  # proposed — not specified in any document
 
+# Phase 11 addendum: real OTP email delivery via Resend, `services/otp.py`'s
+# `get_otp_sender()`. Unset (the default) keeps the console-log sender every
+# prior session used. `OTP_SENDER_EMAIL` defaults to Resend's own shared
+# sandbox address, not a personal one — deliberately not the developer's
+# email (docs/DECISIONS.md, Phase 11 addendum).
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+OTP_SENDER_EMAIL = os.environ.get("OTP_SENDER_EMAIL", "onboarding@resend.dev")
+
+# Plain-SMTP alternative (checked first — see get_otp_sender): no domain
+# verification needed, delivers to any recipient. Point at a throwaway
+# mailbox's app-password SMTP (e.g. smtp.gmail.com:587), not a personal one.
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+
 # `/auth/resend-otp` (docs/DECISIONS.md D-10.1/D-10.6) has no auth of its own
 # — a cooldown between resends is the cheap guard against both spamming the
 # OTP delivery mechanism and using rapid resends to keep resetting

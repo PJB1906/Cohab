@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Cohab">
+  <!--
+    Cohab's mark, light theme: two overlapping roof forms — two people, one
+    home. The overlap is the point of the product: not a listings board, but
+    the region where two households actually agree. The shared floor line
+    beneath them is the match itself.
+
+    Colours are the app's own light tokens (frontend/src/index.css): the
+    mockup's beige ground, deep teal primary, terracotta accent.
+
+    Two files rather than one file with `prefers-color-scheme`: a favicon's
+    internal CSS can only see the OS setting, so a single self-switching icon
+    ignored the in-app theme toggle entirely and stayed dark whenever the OS
+    was dark. `lib/theme.ts::applyFavicon` swaps between this and
+    favicon-dark.svg on every theme change. See docs/DECISIONS.md D-13.17.
+  -->
+  <rect width="48" height="48" rx="11" fill="#eceae5"/>
+
+  <!-- Left roof — the candidate. Accent, drawn first so primary overlaps it. -->
+  <path d="M9 31.5 19.5 20.2a2 2 0 0 1 2.94 0L32.94 31.5"
+        fill="none" stroke="#a8442a" stroke-width="3.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Right roof — you. The dominant voice, in the primary. -->
+  <path d="M15.06 31.5 25.56 20.2a2 2 0 0 1 2.94 0L39 31.5"
+        fill="none" stroke="#0f5f52" stroke-width="3.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Shared floor: the match itself. -->
+  <path d="M15.5 37.2h17" fill="none" stroke="#0f5f52" stroke-width="3.4"
+        stroke-linecap="round"/>
+</svg>

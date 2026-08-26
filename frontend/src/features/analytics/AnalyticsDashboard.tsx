@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/api/analytics'
 import { AppShell } from '@/components/AppShell'
+import { Reveal } from '@/components/motion/Reveal'
+import { CountUp } from '@/components/motion/CountUp'
 
 const VERIFICATION_LABELS: Record<string, string> = {
   unverified: 'Unverified',
@@ -35,19 +37,65 @@ const REPORT_STATUS_LABELS: Record<string, string> = {
   action_taken: 'Action taken',
 }
 
-function StatSection({ title, counts, labels }: { title: string; counts: Record<string, number>; labels: Record<string, string> }) {
+/** A count plus its share of the section total.
+ *
+ * The bare number alone told a moderator almost nothing — "42 mutual" only
+ * means something against how many matches exist. The share bar is computed
+ * client-side from the same dict the tile already renders, so it adds a
+ * dimension of meaning without a new field or endpoint. */
+function StatTile({
+  label,
+  count,
+  total,
+}: {
+  label: string
+  count: number
+  total: number
+}) {
+  const pct = total === 0 ? 0 : Math.round((count / total) * 100)
   return (
-    <div className="bg-white border border-cohab-border rounded-2xl p-6 mt-4">
-      <h2 className="text-base font-semibold mb-4">{title}</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-cohab-border rounded-xl overflow-hidden border border-cohab-border">
-        {Object.entries(counts).map(([key, count]) => (
-          <div key={key} className="bg-white p-3.5">
-            <span className="block text-2xl font-bold tabular-nums">{count}</span>
-            <span className="block text-[11.5px] text-cohab-muted mt-0.5">{labels[key] ?? key}</span>
-          </div>
-        ))}
+    <div className="bg-cohab-card p-4 flex flex-col">
+      <CountUp value={count} locale="en-IN" className="block text-[26px] leading-none font-semibold tabular-nums" />
+      <span className="block text-[11.5px] leading-[1.35] text-cohab-muted mt-1.5 mb-2.5">{label}</span>
+      <div className="mt-auto flex items-center gap-2">
+        <div className="flex-1 h-1 rounded-full bg-cohab-border-soft overflow-hidden">
+          <div className="h-full rounded-full bg-cohab-primary" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-[11px] tabular-nums text-cohab-subtle w-8 text-right">{pct}%</span>
       </div>
     </div>
+  )
+}
+
+function StatSection({
+  title,
+  caption,
+  counts,
+  labels,
+}: {
+  title: string
+  caption: string
+  counts: Record<string, number>
+  labels: Record<string, string>
+}) {
+  const entries = Object.entries(counts)
+  const total = entries.reduce((sum, [, n]) => sum + n, 0)
+
+  return (
+    <Reveal className="bg-cohab-card border border-cohab-border rounded-2xl p-6">
+      <div className="flex items-baseline justify-between gap-4 mb-1">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <span className="text-[12px] tabular-nums text-cohab-subtle flex-none">
+          {total.toLocaleString('en-IN')} total
+        </span>
+      </div>
+      <p className="text-[12.5px] leading-[1.45] text-cohab-subtle mb-4">{caption}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-cohab-border rounded-xl overflow-hidden border border-cohab-border">
+        {entries.map(([key, count]) => (
+          <StatTile key={key} label={labels[key] ?? key} count={count} total={total} />
+        ))}
+      </div>
+    </Reveal>
   )
 }
 
@@ -65,9 +113,12 @@ export function AnalyticsDashboard() {
 
   return (
     <AppShell>
-      <div className="max-w-2xl mx-auto px-4 py-7 pb-12">
+      {/* Widened from `max-w-2xl` (672px) to the app's own 1800px rhythm and
+          laid out two-up (docs/DECISIONS.md D-13.4) — at desktop widths the
+          narrow column left most of the screen empty, reported by the user. */}
+      <div className="max-w-[1800px] mx-auto px-4 cohab-desktop:px-6 py-7 pb-12">
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Analytics</h1>
-        <p className="text-[13.5px] text-cohab-muted mb-2">
+        <p className="text-[13.5px] leading-[1.5] text-cohab-muted mb-6 max-w-[720px]">
           Aggregated, read-only counts — no individual member data. Housing outcomes are covered
           in the evaluation report, not here.
         </p>
@@ -76,12 +127,32 @@ export function AnalyticsDashboard() {
         {error && <p className="text-cohab-accent">Couldn't load analytics.</p>}
 
         {data && (
-          <>
-            <StatSection title="Members by verification" counts={data.members_by_verification_status} labels={VERIFICATION_LABELS} />
-            <StatSection title="Members by account status" counts={data.members_by_account_status} labels={ACCOUNT_LABELS} />
-            <StatSection title="Matches by state" counts={data.matches_by_state} labels={MATCH_STATE_LABELS} />
-            <StatSection title="Reports by status" counts={data.reports_by_status} labels={REPORT_STATUS_LABELS} />
-          </>
+          <div className="grid gap-4 grid-cols-1 cohab-desktop:grid-cols-2 items-start">
+            <StatSection
+              title="Members by verification"
+              caption="Only verified members enter anyone's candidate pool."
+              counts={data.members_by_verification_status}
+              labels={VERIFICATION_LABELS}
+            />
+            <StatSection
+              title="Members by account status"
+              caption="Suspended and banned accounts are excluded from matching."
+              counts={data.members_by_account_status}
+              labels={ACCOUNT_LABELS}
+            />
+            <StatSection
+              title="Matches by state"
+              caption="Every suggested pair that progressed, and how far it got."
+              counts={data.matches_by_state}
+              labels={MATCH_STATE_LABELS}
+            />
+            <StatSection
+              title="Reports by status"
+              caption="Safety cases filed by members, by where they sit now."
+              counts={data.reports_by_status}
+              labels={REPORT_STATUS_LABELS}
+            />
+          </div>
         )}
       </div>
     </AppShell>

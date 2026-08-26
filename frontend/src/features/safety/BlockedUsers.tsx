@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { safetyApi } from '@/api/safety'
 import { AppShell } from '@/components/AppShell'
+import { RevealGroup } from '@/components/motion/RevealGroup'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import type { BlockedUserOut } from '@/api/types'
@@ -42,11 +43,11 @@ export function BlockedUsers() {
         {error && <p className="text-cohab-accent">Couldn't load your blocked users.</p>}
         {data && data.length === 0 && <p className="text-cohab-muted">You haven't blocked anyone.</p>}
 
-        <div className="flex flex-col gap-2">
+        <RevealGroup className="flex flex-col gap-2" runKey={data?.length}>
           {data?.map((u) => (
             <div
               key={u.id}
-              className="flex items-center gap-3 bg-white border border-cohab-border rounded-2xl p-4"
+              className="flex items-center gap-3 bg-cohab-card border border-cohab-border rounded-2xl p-4"
             >
               <Avatar name={u.full_name} src={u.avatar_url} size={44} />
               <span className="flex-1 text-[14.5px] font-medium text-cohab-ink truncate">{u.full_name}</span>
@@ -60,7 +61,7 @@ export function BlockedUsers() {
               </Button>
             </div>
           ))}
-        </div>
+        </RevealGroup>
       </div>
     </AppShell>
   )

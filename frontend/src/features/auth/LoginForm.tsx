@@ -5,6 +5,7 @@ import { useSetSession } from '@/hooks/useSession'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Logo } from '@/components/Logo'
 
 export function LoginForm({
   onSwitchToSignup,
@@ -16,6 +17,7 @@ export function LoginForm({
   const setSession = useSetSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -35,9 +37,15 @@ export function LoginForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col">
-      <h2 className="text-xl font-semibold mb-1.5">Log in</h2>
-      <p className="text-sm text-cohab-muted mb-6">Use the institutional email you verified with.</p>
+    <form onSubmit={submit} className="flex flex-1 flex-col">
+      <Logo className="mb-11 cohab-desktop:hidden" />
+
+      <h2 className="text-2xl cohab-desktop:text-[19px] font-semibold tracking-[-0.02em] cohab-desktop:tracking-normal leading-[1.2] cohab-desktop:leading-[1.1] mb-2 cohab-desktop:mb-1.5">
+        Log in
+      </h2>
+      <p className="text-[15px] cohab-desktop:text-[13px] leading-[1.5] cohab-desktop:leading-[1.45] text-cohab-muted mb-7 cohab-desktop:mb-7">
+        Use the institutional email you verified with.
+      </p>
 
       <Label htmlFor="login-email">Institutional email</Label>
       <Input
@@ -47,10 +55,20 @@ export function LoginForm({
         placeholder="name@msds.christuniversity.in"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="mb-4"
+        className="mb-[18px]"
       />
 
-      <Label htmlFor="login-password">Password</Label>
+      <div className="flex items-baseline justify-between mb-[7px]">
+        <Label htmlFor="login-password" className="mb-0">
+          Password
+        </Label>
+        <button
+          type="button"
+          className="text-xs font-medium text-cohab-primary cursor-pointer bg-transparent border-none p-0"
+        >
+          Forgot password?
+        </button>
+      </div>
       <Input
         id="login-password"
         type="password"
@@ -58,12 +76,32 @@ export function LoginForm({
         placeholder="••••••••"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="mb-2"
+        className="mb-4"
       />
 
-      {error && <p className="text-sm text-cohab-accent mt-2">{error}</p>}
+      <button
+        type="button"
+        onClick={() => setKeepLoggedIn((v) => !v)}
+        className="flex items-center gap-2.5 mb-6 text-sm text-cohab-muted-mobile cursor-pointer select-none bg-transparent border-none p-0 text-left"
+      >
+        <span
+          className={
+            'w-5 h-5 rounded-[7px] flex-none flex items-center justify-center border-[1.5px] transition-colors ' +
+            (keepLoggedIn ? 'bg-cohab-primary border-cohab-primary' : 'bg-cohab-card border-cohab-border')
+          }
+        >
+          {keepLoggedIn && (
+            <svg width="11" height="8" viewBox="0 0 12 9" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4.6L4.3 8 11 1.2" />
+            </svg>
+          )}
+        </span>
+        Keep me logged in on this device
+      </button>
 
-      <Button type="submit" disabled={busy} className="w-full mt-4">
+      {error && <p className="text-sm text-cohab-accent mb-2">{error}</p>}
+
+      <Button type="submit" disabled={busy} className="w-full">
         {busy ? 'Logging in…' : 'Log in'}
       </Button>
 
@@ -75,6 +113,14 @@ export function LoginForm({
       <Button type="button" variant="secondary" onClick={onSwitchToSignup} className="w-full">
         Sign up
       </Button>
+      <p className="text-xs leading-[1.5] text-cohab-subtle text-center mt-4">
+        Accounts are limited to verified students during the pilot.
+      </p>
+
+      <div className="flex-1 min-h-4 cohab-desktop:hidden" />
+      <p className="text-xs leading-[1.5] text-cohab-subtle text-center border-t border-cohab-border-soft pt-4 cohab-desktop:hidden">
+        Cohab never handles rent, deposits or payments.
+      </p>
     </form>
   )
 }

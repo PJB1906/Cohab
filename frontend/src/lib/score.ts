@@ -14,20 +14,24 @@ export function scoreBand(pct: number): ScoreBandName {
   return 'Fair'
 }
 
-// Colours beyond "Strong" are a UI extrapolation, not sourced from either
-// mockup — the mockups only ever showed the Strong (primary) and Good
-// (muted sage) bars.
+// The *thresholds* above stay mockup-sourced (Cohab Prototype.html states the
+// legend verbatim: "Strong 80+ · Good 65-79 · Fair below 65"). The colours no
+// longer are — D-13.2 replaced the mockup palette with Modal's, so a band now
+// reads: Strong = Lime Pulse (the rationed accent, earned by the top band),
+// Good = Sage 60, Fair = the desaturated brick kept as the one non-green
+// signal so a weak match is distinguishable from a strong one by hue and not
+// only by bar length.
 export const BAND_COLOR: Record<ScoreBandName, string> = {
-  Strong: '#0f5f52',
-  Good: '#7d9c92',
-  Fair: '#a8442a',
+  Strong: '#7fee64',
+  Good: '#8cab87',
+  Fair: '#c96a4d',
 }
 
 // Static literal classes (not built from BAND_COLOR) so Tailwind's scanner
 // can see them at build time — arbitrary-value classes assembled from a JS
 // variable at runtime won't be generated.
 export const BAND_BAR_CLASS: Record<ScoreBandName, string> = {
-  Strong: 'bg-[#0f5f52]',
-  Good: 'bg-[#7d9c92]',
-  Fair: 'bg-[#a8442a]',
+  Strong: 'bg-[#7fee64]',
+  Good: 'bg-[#8cab87]',
+  Fair: 'bg-[#c96a4d]',
 }
