@@ -288,7 +288,7 @@ export function SignUpWizard({
             placeholder="name@msds.christuniversity.in"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mb-1 cohab-desktop:mb-1.5"
+            className="mb-4 cohab-desktop:mb-1.5"
           />
           <p className="hidden cohab-desktop:block text-xs leading-[1.4] text-cohab-subtle mb-[18px]">
             Personal domains are not accepted during the pilot.
@@ -337,15 +337,9 @@ export function SignUpWizard({
             className="mb-4"
           />
 
-          <div className="border border-cohab-border rounded-xl bg-cohab-tint px-[15px] py-[13px] mb-6">
-            <p className="text-xs font-semibold text-cohab-primary mb-1">Your number stays private.</p>
-            <p className="hidden cohab-desktop:block text-xs leading-[1.45] text-cohab-muted">
-              It is never shown on your profile, in matches or in chat. It is released only after
-              you and the other person have both agreed to share contact details.
-            </p>
-            <p className="cohab-desktop:hidden text-xs leading-[1.45] text-cohab-muted">
-              Released only if both agree.
-            </p>
+          <div className="mt-20 mb-6 mx-auto max-w-[280px] text-center">
+            <p className="text-[8px] font-semibold text-cohab-primary mb-1">Your number stays private.</p>
+            <p className="text-[8px] leading-[1.4] text-cohab-muted">Released only if both agree.</p>
           </div>
 
           {error && <p className="text-sm text-cohab-accent mb-2">{error}</p>}

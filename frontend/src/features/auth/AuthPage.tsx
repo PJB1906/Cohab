@@ -113,7 +113,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           up from dead-centre (reported by the user, screenshots) — justify-
           center splits free space by whatever padding remains on each side,
           so more bottom than top shifts the visual centre upward. */}
-      <div className="relative flex-1 flex flex-col bg-transparent cohab-desktop:bg-cohab-card px-6 pt-3 pb-7 cohab-desktop:px-14 cohab-desktop:pt-8 cohab-desktop:pb-28 cohab-desktop:justify-center box-border">
+      <div className="relative flex-1 flex flex-col bg-transparent cohab-desktop:bg-cohab-card px-6 pt-3 pb-7 cohab-desktop:px-14 cohab-desktop:pt-10 cohab-desktop:justify-start box-border">
         <AmbientField />
         {children}
       </div>
