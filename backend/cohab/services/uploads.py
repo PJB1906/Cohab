@@ -1,20 +1,20 @@
-"""Local-disk photo storage — build plan §4 Phase 5 (extended scope, see
-docs/DECISIONS.md). No object-storage service exists anywhere in this stack;
-files land under `core.config.UPLOAD_DIR` and are served back through the
-`/media` StaticFiles mount (`cohab/main.py`). No resizing/thumbnailing —
-flagged as a documented future step, not built for the pilot.
+"""Photo upload validation — build plan §4 Phase 5 (extended scope, see
+docs/DECISIONS.md). Storage itself is behind `services/storage.py`'s
+`ImageStorage` interface (local disk or R2 depending on config); this module
+only validates and hands bytes off to it. No resizing/thumbnailing — flagged
+as a documented future step, not built for the pilot.
 """
 
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
-from cohab.core.config import MAX_UPLOAD_MB, UPLOAD_DIR
+from cohab.core.config import MAX_UPLOAD_MB
 from cohab.models import User
+from cohab.services.storage import get_image_storage
 
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg": "jpg",
@@ -68,9 +68,7 @@ def save_image(file: UploadFile, contents: bytes) -> str:
 
     ext = ALLOWED_CONTENT_TYPES[file.content_type]
     name = f"{uuid.uuid4().hex}.{ext}"
-    directory = Path(UPLOAD_DIR)
-    directory.mkdir(parents=True, exist_ok=True)
-    (directory / name).write_bytes(contents)
+    get_image_storage().save(name, contents)
     return f"/media/{name}"
 
 

@@ -183,6 +183,12 @@ Keep these accurate as the repo takes shape:
   `COOKIE_SECURE=True` (or unset it — that's the default) and a real
   `SECRET_KEY` before doing this anywhere but localhost (docs/DECISIONS.md
   D-13.19).
+- **First moderator on a fresh DB:** `python -m cohab.promote_moderator
+  someone@example.com` (from `backend/`). Register the account through the app
+  first, then run this once. There's no API route for granting `is_moderator`
+  — an endpoint that could set it would be a privilege-escalation hole
+  (docs/DECISIONS.md D-7.1) — so a brand-new production database starts with
+  zero moderators and this is the only way to seat the first one.
 
 ## Conventions
 

@@ -1,0 +1,10 @@
+# Extras for local report/evaluation work only — never installed on the
+# deployed server (docs/DECISIONS.md). `sentence-transformers` pulls in a
+# ~2GB GPU build of torch and is only used by
+# `services/matching/tuning.py`'s TF-IDF-vs-embedding ablation; `matplotlib`
+# only by `services/matching/evaluation.py`'s report charts. Neither is
+# imported by the running app or by pytest — main.py wires TfidfSimilarity
+# only, and every EmbeddingSimilarity test injects a fake encoder.
+-r requirements.txt
+sentence-transformers==3.3.1
+matplotlib==3.10.7

@@ -50,12 +50,19 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 # `otp_attempts`. Proposed, same footing as the constants above.
 RESEND_OTP_COOLDOWN_SECONDS = 30
 
-# Phase 5 photo uploads — local disk for the pilot (docs/DECISIONS.md): no
-# object-storage service exists anywhere in this stack, and CLAUDE.md defers
-# Redis on the same "no new infra the pilot doesn't need" grounds. Served
-# back via the /media StaticFiles mount (cohab/main.py).
+# Phase 5 photo uploads — local disk by default (docs/DECISIONS.md). Used by
+# services/storage.py::LocalDiskStorage, still the fallback when the R2
+# settings below aren't all set (dev, and CI/tests).
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
 MAX_UPLOAD_MB = 5  # proposed — not specified in any document
+
+# Cloudflare R2 (S3-compatible) object storage — services/storage.py picks
+# R2Storage over LocalDiskStorage when all four of these are set, so that
+# uploaded images survive a redeploy on a host with no persistent disk.
+R2_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL")
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME")
 
 # CLAUDE.md: "vite build, and FastAPI serves the static bundle" in prod.
 # Relative to the backend process's cwd, same convention as UPLOAD_DIR —

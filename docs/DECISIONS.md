@@ -3283,3 +3283,92 @@ back to them rather than assumed fixed.
 `cohab/core/config.py` (`FRONTEND_DIST_DIR`),
 `tests/test_frontend_serving.py` (new), `backend/.env` (`SECRET_KEY`,
 local only, not committed).
+
+### D-13.20 First moderator on a fresh production DB — a CLI grant, not an API route
+
+**Raised by the user**, asking how a single account gets moderator/admin
+access once the app is deployed with an empty database rather than the dev
+seed. It's a real gap: `is_moderator` (`models/user.py`) defaults `False` and
+is set `True` in exactly two places in the whole codebase — `demo_seed.py`
+and test fixtures. There is no API route that can set it (`api/moderation.py`
+gates on `is_moderator` per D-7.1, deliberately with no self-service
+promotion path, since an endpoint that could grant it would be a
+privilege-escalation hole). On a brand-new prod DB, nobody has the flag and
+nothing in the running app can grant it.
+
+**Decision:** a standalone management script, the same shape as
+`demo_seed.py` — `python -m cohab.promote_moderator <email>`
+(`cohab/promote_moderator.py`, new) — looks up the account by email and sets
+`is_moderator = True` directly via `SessionLocal`. No HTTP surface at all:
+whoever runs it needs deploy/DB access already, which is the same trust
+level required to seat the first moderator by any means. Documented in
+CLAUDE.md's Commands section ("First moderator on a fresh DB"): register the
+account normally through the app first, then run the script once against it.
+
+**Not done:** no admin UI or invite-based promotion flow — out of scope for
+the pilot, and the one-off script is sufficient for seating a small, known
+set of moderators by hand.
+
+**Code:** `cohab/promote_moderator.py` (new), `CLAUDE.md` (Commands).
+
+### D-13.21 User-uploaded images move from local disk to Cloudflare R2
+
+**Raised by the user**, while scoping free hosting options. `services/uploads.py`
+wrote every avatar/listing photo straight to `UPLOAD_DIR` on local disk,
+served back via a `/media` StaticFiles mount (`main.py`) — fine on a host
+with a persistent disk, but silently loses every image on the next restart
+or redeploy on the free tiers under consideration (Render, Cloud Run, Koyeb),
+whose filesystems are ephemeral. `seed_avatars.py` and `seed_photos.py` wrote
+through the exact same local-disk path, so the gap wasn't limited to real
+user uploads.
+
+**Decision:** Cloudflare R2 (S3-compatible, no egress fees, free tier doesn't
+expire — unlike Supabase Storage, which pauses the whole project after a
+week idle, or S3, whose free tier is 12 months only). Storage sits behind a
+new `ImageStorage` protocol (`services/storage.py`), the same
+swap-behind-an-interface pattern `OTPSender` already uses (`services/otp.py`)
+— `LocalDiskStorage` and `R2Storage`, picked by `get_image_storage()` based
+on whether `R2_ENDPOINT_URL`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/
+`R2_BUCKET_NAME` are all set. Unset (dev, CI, tests) still uses local disk —
+no test changes needed, no network dependency in the test suite.
+
+Images are proxied through the app rather than linked at R2's public URL
+directly: `main.py`'s `/media/{name}` is now an explicit route (not a
+`StaticFiles` mount) that calls `get_image_storage().load(name)` regardless
+of backend, and stamps `X-Content-Type-Options: nosniff` on the response
+either way. This was a deliberate choice over serving R2 URLs to the browser
+directly — direct serving is less server load and marginally faster, but R2
+doesn't attach that header to publicly-served objects without an added
+Cloudflare Worker/Transform Rule, which would have dropped the D-10.2
+content-sniffing guard silently. Proxying keeps that guard intact at the
+cost of every image request round-tripping through the single uvicorn
+worker — acceptable at pilot scale, revisit if it measurably isn't.
+
+Verified live against a real R2 bucket (not just the local-disk fallback):
+upload → stored in R2 → served back through `/media/<name>` with the nosniff
+header intact, all 7 `test_uploads.py` cases passing unchanged. Full suite:
+333 passed, 2 pre-existing failures unrelated to this change (confirmed via
+`git stash` — `test_analytics_summary_counts_reflect_seeded_members` and
+`test_put_profile_persists_and_computes_text_vector` fail identically on
+unmodified code; not investigated further here, out of scope for this pass).
+
+**Also found, not part of this decision:** the local `backend/.env` had
+`COOKIE_SECURE=True`, which broke ~13 unrelated tests (a `Secure` cookie
+isn't sent back over `TestClient`'s plain-http scheme) — flipped to `False`
+locally to match `.env.example`'s documented local-dev value; `True` is
+still correct on the actual deployed server. Separately, the user asked to
+commit `backend/.env` (containing the live R2 secret, `SECRET_KEY`, and a
+Gmail app password) to git — declined: `.env` is gitignored specifically so
+these never enter git history, and a later "remove it" commit would not
+undo that exposure. Deployment env vars belong in the hosting platform's own
+config, not the repo.
+
+**Not done:** no image resizing/thumbnailing (pre-existing, unrelated to
+this change — `services/uploads.py`'s own docstring already flags it as
+future work). No custom domain on the R2 bucket — the Public Development
+URL is unused anyway under the proxy-serving design above.
+
+**Code:** `cohab/services/storage.py` (new), `cohab/services/uploads.py`,
+`cohab/seed_avatars.py`, `cohab/seed_photos.py`, `cohab/main.py` (`/media`
+route), `cohab/core/config.py` (`R2_*`), `backend/requirements.txt`
+(`boto3`), `backend/.env.example` (`R2_*` placeholders).

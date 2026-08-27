@@ -35,15 +35,14 @@ from __future__ import annotations
 import argparse
 import io
 import uuid
-from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cohab.core.config import UPLOAD_DIR
 from cohab.db import SessionLocal
 from cohab.models import User
+from cohab.services.storage import get_image_storage
 
 # Modal-palette grounds (frontend/src/index.css). Each is a dark surface with
 # a phosphor-family foreground, so an avatar reads as part of the app rather
@@ -120,8 +119,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     args = parser.parse_args()
 
-    dest = Path(UPLOAD_DIR)
-    dest.mkdir(parents=True, exist_ok=True)
+    storage = get_image_storage()
 
     session: Session = SessionLocal()
     try:
@@ -140,7 +138,7 @@ def main() -> None:
             png = render_png(initials(user.full_name), bg, fg)
 
             name = f"avatar-{user.id.hex}.png"
-            (dest / name).write_bytes(png)
+            storage.save(name, png)
             user.avatar_url = f"/media/{name}"
 
             if i % 200 == 0:
@@ -148,7 +146,7 @@ def main() -> None:
                 print(f"  {i}/{len(users)}…")
 
         session.commit()
-        print(f"\nDone. {len(users)} avatar(s) written to {dest.resolve()}.")
+        print(f"\nDone. {len(users)} avatar(s) written, served at /media/<name>.")
     except Exception:
         session.rollback()
         raise

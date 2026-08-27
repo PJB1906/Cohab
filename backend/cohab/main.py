@@ -5,8 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException, Request, status
 from sqlalchemy import select
 from starlette.responses import FileResponse, Response
 
@@ -21,10 +20,11 @@ from cohab.api.profile import router as profile_router
 from cohab.api.reports import router as reports_router
 from cohab.api.saved import router as saved_router
 from cohab.api.uploads import router as uploads_router
-from cohab.core.config import FRONTEND_DIST_DIR, UPLOAD_DIR
+from cohab.core.config import FRONTEND_DIST_DIR
 from cohab.db import SessionLocal
 from cohab.models import PreferenceProfile
 from cohab.services.matching.text import TfidfSimilarity
+from cohab.services.storage import get_image_storage, guess_content_type
 
 # Found live: `ConsoleOTPSender` (services/otp.py) logs the OTP via
 # `logging.getLogger("cohab.otp").info(...)`, which only ever reached a
@@ -117,21 +117,26 @@ app.include_router(moderation_router)
 app.include_router(feedback_router)
 app.include_router(analytics_router)
 
-class _NoSniffStaticFiles(StaticFiles):
-    """`X-Content-Type-Options: nosniff` on every served file — content
-    sniffing by the browser is exactly the risk the upload-time magic-byte
-    check (services/uploads.py) closes off at write time; this closes the
-    matching gap on the serving side. docs/DECISIONS.md D-10.2."""
-
-    def file_response(self, *args: object, **kwargs: object) -> Response:
-        response = super().file_response(*args, **kwargs)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        return response
-
-
-# Phase 5 photo uploads — local disk, served back at /media (docs/DECISIONS.md).
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-app.mount("/media", _NoSniffStaticFiles(directory=UPLOAD_DIR), name="media")
+@app.get("/media/{name}")
+def get_media(name: str) -> Response:
+    """Proxies the stored image through the app rather than mounting the
+    storage directory directly — works the same whether `services/storage.py`
+    is backed by local disk or R2, and keeps `X-Content-Type-Options: nosniff`
+    on every response, pairing the upload-time magic-byte check
+    (services/uploads.py, D-10.2) with an equivalent guard on the serving
+    side. `name` only ever comes from `uuid.uuid4().hex`-derived filenames
+    this app itself generated, so a literal check is enough to refuse
+    anything else rather than trusting path-join safety implicitly."""
+    if "/" in name or ".." in name:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    contents = get_image_storage().load(name)
+    if contents is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    return Response(
+        content=contents,
+        media_type=guess_content_type(name),
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 FRONTEND_DIST = Path(FRONTEND_DIST_DIR)
 

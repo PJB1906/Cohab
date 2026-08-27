@@ -1,0 +1,17 @@
+**/.venv
+**/venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+backend/uploads
+backend/_to_delete
+backend/.env
+frontend/dist
+.git
+.claude
+.qodo
+SDD
+report_assets
+folder_structure.txt
+handoff.md
+*.html

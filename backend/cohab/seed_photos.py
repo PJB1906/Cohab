@@ -4,10 +4,10 @@ Run: `python -m cohab.seed_photos`           (all users + all listings)
      `python -m cohab.seed_photos --limit 60` (a demo-sized subset)
      `python -m cohab.seed_photos --force`     (re-fetch, replacing existing)
 
-Downloads once into `UPLOAD_DIR` and points `user.avatar_url` /
-`listing.photos` at the resulting `/media/<name>` paths — the same shape
-`services/uploads.py::save_image` produces, so the app cannot tell these
-apart from a genuine upload and no serving code needed changing.
+Downloads once through `services/storage.py::get_image_storage()` and points
+`user.avatar_url` / `listing.photos` at the resulting `/media/<name>` paths —
+the same shape `services/uploads.py::save_image` produces, so the app cannot
+tell these apart from a genuine upload and no serving code needed changing.
 
 Sources, and the honest caveat (docs/DECISIONS.md D-13.10):
 
@@ -28,15 +28,14 @@ from __future__ import annotations
 import argparse
 import sys
 import uuid
-from pathlib import Path
 
 import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cohab.core.config import UPLOAD_DIR
 from cohab.db import SessionLocal
 from cohab.models import Listing, User
+from cohab.services.storage import ImageStorage, get_image_storage
 
 # pravatar exposes a fixed gallery of 70 portraits addressed by index.
 PRAVATAR_COUNT = 70
@@ -50,7 +49,7 @@ def _stable_index(row_id: uuid.UUID, modulo: int) -> int:
     return int(row_id.hex[:8], 16) % modulo
 
 
-def _download(client: httpx.Client, url: str, dest_dir: Path) -> str | None:
+def _download(client: httpx.Client, url: str, storage: ImageStorage) -> str | None:
     """Fetch one image, write it under a content-addressed-ish name, and
     return its `/media/...` path. Returns None on any failure — a seed that
     aborts halfway through 1500 downloads because one host hiccupped is
@@ -64,11 +63,11 @@ def _download(client: httpx.Client, url: str, dest_dir: Path) -> str | None:
     content_type = response.headers.get("content-type", "")
     ext = "png" if "png" in content_type else "webp" if "webp" in content_type else "jpg"
     name = f"seed-{uuid.uuid4().hex}.{ext}"
-    (dest_dir / name).write_bytes(response.content)
+    storage.save(name, response.content)
     return f"/media/{name}"
 
 
-def seed_avatars(session: Session, client: httpx.Client, dest: Path, *, limit: int | None, force: bool) -> int:
+def seed_avatars(session: Session, client: httpx.Client, storage: ImageStorage, *, limit: int | None, force: bool) -> int:
     query = select(User).order_by(User.created_at)
     if not force:
         query = query.where(User.avatar_url.is_(None))
@@ -81,7 +80,7 @@ def seed_avatars(session: Session, client: httpx.Client, dest: Path, *, limit: i
     done = 0
     for i, user in enumerate(users, 1):
         idx = _stable_index(user.id, PRAVATAR_COUNT) + 1
-        url = _download(client, f"https://i.pravatar.cc/400?img={idx}", dest)
+        url = _download(client, f"https://i.pravatar.cc/400?img={idx}", storage)
         if url is None:
             continue
         user.avatar_url = url
@@ -93,7 +92,7 @@ def seed_avatars(session: Session, client: httpx.Client, dest: Path, *, limit: i
     return done
 
 
-def seed_listing_photos(session: Session, client: httpx.Client, dest: Path, *, limit: int | None, force: bool) -> int:
+def seed_listing_photos(session: Session, client: httpx.Client, storage: ImageStorage, *, limit: int | None, force: bool) -> int:
     listings = list(session.scalars(select(Listing).order_by(Listing.created_at)))
     if not force:
         listings = [listing for listing in listings if not listing.photos]
@@ -110,7 +109,7 @@ def seed_listing_photos(session: Session, client: httpx.Client, dest: Path, *, l
             # `/seed/<key>/` makes Picsum return the same photo for the same
             # key, which is what keeps this deterministic across runs.
             key = f"cohab{base + offset}"
-            url = _download(client, f"https://picsum.photos/seed/{key}/900/600", dest)
+            url = _download(client, f"https://picsum.photos/seed/{key}/900/600", storage)
             if url:
                 urls.append(url)
         if not urls:
@@ -134,8 +133,7 @@ def main() -> None:
     parser.add_argument("--skip-listings", action="store_true")
     args = parser.parse_args()
 
-    dest = Path(UPLOAD_DIR)
-    dest.mkdir(parents=True, exist_ok=True)
+    storage = get_image_storage()
 
     session = SessionLocal()
     try:
@@ -143,13 +141,12 @@ def main() -> None:
             avatars = listings = 0
             if not args.skip_avatars:
                 print("[1/2] Avatars")
-                avatars = seed_avatars(session, client, dest, limit=args.limit, force=args.force)
+                avatars = seed_avatars(session, client, storage, limit=args.limit, force=args.force)
             if not args.skip_listings:
                 print("[2/2] Listing photos")
-                listings = seed_listing_photos(session, client, dest, limit=args.limit, force=args.force)
+                listings = seed_listing_photos(session, client, storage, limit=args.limit, force=args.force)
 
-        print(f"\nDone. {avatars} avatar(s), {listings} listing(s) photographed.")
-        print(f"Files under {dest.resolve()}, served at /media/<name>.")
+        print(f"\nDone. {avatars} avatar(s), {listings} listing(s) photographed, served at /media/<name>.")
     except Exception:
         session.rollback()
         raise
