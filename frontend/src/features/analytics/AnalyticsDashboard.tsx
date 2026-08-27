@@ -47,17 +47,24 @@ function StatTile({
   label,
   count,
   total,
+  span = '',
+  barWidth = '',
 }: {
   label: string
   count: number
   total: number
+  span?: string
+  barWidth?: string
 }) {
   const pct = total === 0 ? 0 : Math.round((count / total) * 100)
   return (
-    <div className="bg-cohab-card p-4 flex flex-col">
+    <div className={`bg-cohab-card p-4 flex flex-col ${span}`}>
       <CountUp value={count} locale="en-IN" className="block text-[26px] leading-none font-semibold tabular-nums" />
       <span className="block text-[11.5px] leading-[1.35] text-cohab-muted mt-1.5 mb-2.5">{label}</span>
-      <div className="mt-auto flex items-center gap-2">
+      {/* A tile stretched over a part-empty row is capped back to one
+          column's width, so its meter reads at the same length as its
+          row-mates' rather than several times theirs. */}
+      <div className={`mt-auto flex items-center gap-2 ${barWidth}`}>
         <div className="flex-1 h-1 rounded-full bg-cohab-border-soft overflow-hidden">
           <div className="h-full rounded-full bg-cohab-primary" style={{ width: `${pct}%` }} />
         </div>
@@ -65,6 +72,38 @@ function StatTile({
       </div>
     </div>
   )
+}
+
+/** Tailwind only sees class names it can read literally, so the span classes
+ * are looked up rather than interpolated. Indices are the number of cells the
+ * entries leave empty in the final row; the tile spans one more than that.
+ *
+ * The bar caps undo the stretch for the meter: inside a tile of `k` columns
+ * the row is `p-4`-inset, so one column of it measures `100%/k` less the
+ * padding the extra column boundaries swallow. */
+const COL_SPAN = ['col-span-1', 'col-span-2'] as const
+const SM_COL_SPAN = ['sm:col-span-1', 'sm:col-span-2', 'sm:col-span-3'] as const
+const BAR_WIDTH = ['max-w-none', 'max-w-[calc(50%-16px)]'] as const
+const SM_BAR_WIDTH = [
+  'sm:max-w-none',
+  'sm:max-w-[calc(50%-16px)]',
+  'sm:max-w-[calc(33.333%-22px)]',
+] as const
+
+/** How far the last tile must stretch to close its row.
+ *
+ * The tiles are a `gap-px` mosaic over a border-coloured background, so every
+ * cell the entries don't fill shows that background as a grey slab — four
+ * account statuses in a three-column grid left two dead cells, reported by the
+ * user. Stretching the final tile over the remainder keeps the grid flush at
+ * both breakpoints without varying the column count between sections that sit
+ * side by side. */
+function lastTileShape(count: number): { span: string; barWidth: string } {
+  const fill = (cols: number) => (cols - (count % cols)) % cols
+  return {
+    span: `${COL_SPAN[fill(2)]} ${SM_COL_SPAN[fill(3)]}`,
+    barWidth: `${BAR_WIDTH[fill(2)]} ${SM_BAR_WIDTH[fill(3)]}`,
+  }
 }
 
 function StatSection({
@@ -91,8 +130,14 @@ function StatSection({
       </div>
       <p className="text-[12.5px] leading-[1.45] text-cohab-subtle mb-4">{caption}</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-cohab-border rounded-xl overflow-hidden border border-cohab-border">
-        {entries.map(([key, count]) => (
-          <StatTile key={key} label={labels[key] ?? key} count={count} total={total} />
+        {entries.map(([key, count], i) => (
+          <StatTile
+            key={key}
+            label={labels[key] ?? key}
+            count={count}
+            total={total}
+            {...(i === entries.length - 1 ? lastTileShape(entries.length) : {})}
+          />
         ))}
       </div>
     </Reveal>
