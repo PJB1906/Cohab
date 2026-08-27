@@ -22,9 +22,12 @@ export function getStoredChoice(): ThemeChoice {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw === 'light' || raw === 'dark' || raw === 'system') return raw
   } catch {
-    // Private mode / blocked storage — fall through to the system default.
+    // Private mode / blocked storage — fall through to the default below.
   }
-  return 'system'
+  // First visit, nothing chosen yet: open light rather than following the
+  // OS. "System" is still a fully-supported explicit choice via the theme
+  // toggle — this only changes what a first-time visitor sees.
+  return 'light'
 }
 
 export function systemPrefersDark(): boolean {

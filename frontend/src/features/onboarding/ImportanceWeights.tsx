@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { OnboardingHeader } from '@/components/OnboardingHeader'
+import { PageTransition } from '@/components/motion/PageTransition'
 import { useNavigate } from 'react-router-dom'
 import { useOnboarding } from './OnboardingContext'
 import { WEIGHT_TILES } from '@/data/questionnaire'
@@ -63,6 +64,7 @@ export function ImportanceWeights() {
   return (
     <>
       <OnboardingHeader hasOwnMobileBack />
+    <PageTransition>
     <div className="min-h-dvh flex flex-col cohab-desktop:block">
       {/* Mobile header — back arrow only, no step counter (proto s6 omits it). */}
       <div className="cohab-desktop:hidden px-2 py-1">
@@ -144,6 +146,7 @@ export function ImportanceWeights() {
         </button>
       </div>
     </div>
+    </PageTransition>
     </>
   )
 }

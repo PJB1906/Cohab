@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { OnboardingHeader } from '@/components/OnboardingHeader'
+import { PageTransition } from '@/components/motion/PageTransition'
 import { useOnboarding } from './OnboardingContext'
 import { OPTIONAL_TIER2_QUESTIONS, INTEREST_TAGS, LIFESTYLE_NOTES_PROMPT } from '@/data/questionnaire'
 import { ChipPill } from '@/components/OptionPill'
@@ -36,6 +37,7 @@ export function OptionalQuestionnaire() {
   return (
     <>
       <OnboardingHeader hasOwnMobileBack />
+    <PageTransition>
     <div className="cohab-desktop:max-w-[1500px] cohab-desktop:mx-auto cohab-desktop:px-6 cohab-desktop:py-12 cohab-desktop:grid cohab-desktop:grid-cols-[268px_1fr] cohab-desktop:gap-11 cohab-desktop:items-start">
       {/* Mobile header — back arrow + skip link, no step counter (that lives
           in the progress-summary card further down, per proto s5). */}
@@ -187,6 +189,7 @@ export function OptionalQuestionnaire() {
         </div>
       </div>
     </div>
+    </PageTransition>
     </>
   )
 }

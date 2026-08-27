@@ -66,12 +66,23 @@ export function CompatibilityField({
     // greens wash out to near-invisible, so the palette is chosen per theme
     // and the effect re-runs when the stamped theme changes.
     const light = document.documentElement.dataset.theme === 'light'
-    const LIME = light ? '47, 125, 30' : '127, 238, 100'
-    const SAGE = light ? '107, 125, 103' : '140, 171, 135'
-    // The dark field reads at 0.42 alpha on black; the same alpha on paper is
-    // heavier than intended, so line weight drops in the light theme.
-    const LINK_ALPHA = light ? 0.3 : 0.42
-    const DOT_ALPHA = light ? [0.62, 0.4] : [0.85, 0.55]
+    // Light values are the theme's own green (`--color-cohab-primary`) rather
+    // than a lightened lime: the beige ground is bright, so what makes the
+    // field visible is going darker than the surface, not paler. Hue does the
+    // work here so alpha does not have to — a deep green at low opacity stays
+    // legible where a pale one at high opacity would only fog the page.
+    const LIME = light ? '15, 95, 82' : '127, 238, 100'
+    const SAGE = light ? '96, 112, 106' : '140, 171, 135'
+    // Tuned against the text that sits on top of it, not in isolation: the
+    // first pass at 0.6/0.95 was visible but greyed the hero copy behind it.
+    // These are the values where the network still reads as a network and the
+    // paragraph over it still reads as black on beige.
+    const LINK_ALPHA = light ? 0.4 : 0.42
+    const DOT_ALPHA = light ? [0.82, 0.55] : [0.85, 0.55]
+    // Sub-pixel strokes get antialiased away to nothing on the light ground,
+    // where there is no glow to carry them; a floor keeps the weakest links
+    // faint-but-present instead of absent.
+    const LINE_FLOOR = light ? 0.6 : 0
     // Beyond this separation no line is drawn at all — the Stage 1 hard
     // constraint. Within it, opacity grades with closeness — Stage 2.
     const LINK_DISTANCE = linkDistance
@@ -130,7 +141,7 @@ export function CompatibilityField({
           if (dist > LINK_DISTANCE) continue
           const strength = 1 - dist / LINK_DISTANCE
           ctx!.strokeStyle = `rgba(${LIME}, ${(strength * LINK_ALPHA).toFixed(3)})`
-          ctx!.lineWidth = strength * 1.1
+          ctx!.lineWidth = Math.max(LINE_FLOOR, strength * 1.1)
           ctx!.beginPath()
           ctx!.moveTo(a.x, a.y)
           ctx!.lineTo(b.x, b.y)
@@ -202,7 +213,8 @@ export function AmbientField() {
       density={17_000}
       maxNodes={110}
       linkDistance={172}
-      className="fixed inset-0 w-full h-full pointer-events-none -z-10 opacity-[0.45]"
+      // `cohab-ambient` is what index.css keys the light theme's opacity off.
+      className="cohab-ambient fixed inset-0 w-full h-full pointer-events-none -z-10 opacity-[0.45]"
     />
   )
 }

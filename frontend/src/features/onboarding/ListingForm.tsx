@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { OnboardingHeader } from '@/components/OnboardingHeader'
+import { PageTransition } from '@/components/motion/PageTransition'
 import { useNavigate } from 'react-router-dom'
 import { listingApi } from '@/api/listing'
 import { ApiError } from '@/api/client'
@@ -108,6 +109,7 @@ export function ListingForm() {
   return (
     <>
       <OnboardingHeader hasOwnMobileBack />
+    <PageTransition>
     <form onSubmit={submit} className="cohab-desktop:max-w-[1300px] cohab-desktop:mx-auto cohab-desktop:px-6 cohab-desktop:py-14">
       {error && (
         <p className="px-6 pt-3 text-sm text-cohab-accent cohab-desktop:px-0">{error}</p>
@@ -365,6 +367,7 @@ export function ListingForm() {
         </div>
       </div>
     </form>
+    </PageTransition>
     </>
   )
 }

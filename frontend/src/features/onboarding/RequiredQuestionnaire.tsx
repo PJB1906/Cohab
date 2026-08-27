@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { OnboardingHeader } from '@/components/OnboardingHeader'
+import { StepTransition } from '@/components/motion/StepTransition'
 import { useNavigate } from 'react-router-dom'
 import { useOnboarding } from './OnboardingContext'
 import { REQUIRED_QUESTIONS, type Question } from '@/data/questionnaire'
@@ -283,8 +284,10 @@ export function RequiredQuestionnaire() {
           </p>
         </aside>
 
-        {/* Mobile: scrollable page of QUESTIONS_PER_PAGE questions */}
-        <div className="cohab-desktop:hidden flex-1 overflow-auto px-4 pt-5 pb-4">
+        {/* Mobile: scrollable page of QUESTIONS_PER_PAGE questions. Keyed on
+            pageStart so advancing to the next group of questions re-fires
+            the entrance rather than only the first page ever animating. */}
+        <StepTransition step={`mobile-${pageStart}`} className="cohab-desktop:hidden flex-1 overflow-auto px-4 pt-5 pb-4">
           {pageQuestions.map((q, i) => (
             <div key={q.id} className="mb-7 pb-6 border-b border-cohab-border-soft last:border-b-0 last:mb-0 last:pb-0">
               <p className="text-[11px] font-semibold uppercase tracking-[.07em] text-cohab-subtle-mobile mb-2">
@@ -301,10 +304,13 @@ export function RequiredQuestionnaire() {
             Answer honestly rather than aspirationally — an inflated cleanliness answer produces a
             match you'll regret in week two.
           </p>
-        </div>
+        </StepTransition>
 
         {/* Desktop: single question card, one at a time */}
-        <div className="hidden cohab-desktop:flex cohab-desktop:flex-col bg-cohab-card border border-cohab-border rounded-[18px] px-11 py-10 min-h-[520px]">
+        <StepTransition
+          step={`desktop-${currentIndex}`}
+          className="hidden cohab-desktop:flex cohab-desktop:flex-col bg-cohab-card border border-cohab-border rounded-[18px] px-11 py-10 min-h-[520px]"
+        >
           <Eyebrow>{currentQuestion.theme}</Eyebrow>
           <h1 className="text-[26px] font-semibold tracking-[-.015em] leading-[1.2] mt-3 max-w-[640px]">
             {currentQuestion.title}
@@ -327,7 +333,7 @@ export function RequiredQuestionnaire() {
             <div className="flex-1" />
             <span className="text-xs text-cohab-subtle">{doneCount} of {total} answered</span>
           </div>
-        </div>
+        </StepTransition>
       </div>
 
       {/* Mobile fixed footer */}

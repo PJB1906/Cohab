@@ -24,7 +24,9 @@
     <script>
       (function () {
         try {
-          var choice = localStorage.getItem('cohab-theme') || 'system'
+          // No stored choice yet: open light rather than following the OS
+          // (matches lib/theme.ts's getStoredChoice default).
+          var choice = localStorage.getItem('cohab-theme') || 'light'
           var dark =
             choice === 'dark' ||
             (choice === 'system' &&
@@ -35,7 +37,7 @@
           var icon = document.querySelector('link[rel="icon"]')
           if (icon) icon.href = dark ? '/favicon-dark.svg' : '/favicon-light.svg'
         } catch (e) {
-          document.documentElement.dataset.theme = 'dark'
+          document.documentElement.dataset.theme = 'light'
         }
       })()
     </script>

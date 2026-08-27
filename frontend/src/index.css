@@ -199,6 +199,17 @@
   --color-cohab-bar-mid: #63706d;
 }
 
+/* The app-wide ambient field (CompatibilityField.tsx) is held at 45% behind
+   live data so it never competes with content. On black that is plenty; on
+   the light theme's beige the same wash reads as almost nothing even after
+   the canvas switches to its green palette, so daylight gets a little more.
+   A little, deliberately: this multiplies every canvas alpha, so it is also
+   the fastest way to fog the text sitting on top. Kept here rather than as a
+   `light:` utility because the component has no theme-aware class hook. */
+:root[data-theme='light'] .cohab-ambient {
+  opacity: 0.52;
+}
+
 /* The dark theme is the `@theme` default, so it needs no token overrides —
    only the hint that lets native controls, scrollbars and browser focus
    rings render dark. */

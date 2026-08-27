@@ -3372,3 +3372,104 @@ URL is unused anyway under the proxy-serving design above.
 `cohab/seed_avatars.py`, `cohab/seed_photos.py`, `cohab/main.py` (`/media`
 route), `cohab/core/config.py` (`R2_*`), `backend/requirements.txt`
 (`boto3`), `backend/.env.example` (`R2_*` placeholders).
+
+### D-13.22 Auth/signup/onboarding motion parity, a live-caught Neon connection bug, and a light-mode default
+
+**Raised by the user**, live-testing the deployed-toward app on a phone
+browser: light theme should be the default (not follow the OS), the ambient
+dots background should appear everywhere including mobile, the desktop
+seeker-type step had no way back to login, the desktop account-creation form
+was missing its "Already have an account?" link (mobile had one), and there
+was "not much animation... going to next page," especially on mobile.
+
+**Light theme by default:** `lib/theme.ts::getStoredChoice()` and the
+pre-mount inline script in `index.html` both defaulted an unset choice to
+`'system'` (follow the OS). Changed to `'light'` — `'system'` remains a
+fully-supported explicit choice via the existing three-way toggle, this only
+changes what a first-time visitor with no stored preference sees. Both
+places had to change together or the pre-mount script (which exists
+specifically to avoid a flash-of-wrong-theme before React mounts) would
+paint dark first and then flip.
+
+**Ambient dots on the auth/signup flow:** turned out the app-wide
+`AmbientField` (`CompatibilityField.tsx`, D-13.11) already covers every
+other screen — `AppShell`, `OnboardingHeader`, and the moderation screens
+all already mount it, confirmed by grep before touching anything. The actual
+gap was narrower: the login/signup screens use their own `AuthShell`, whose
+dots (`HeroStagger`'s own `CompatibilityField` instance) are desktop-only by
+design, and the signup wizard's seeker-type step doesn't use `AuthShell` at
+all. Fixed by mounting `AmbientField` in both places. `AuthShell`'s form
+panel had an opaque `bg-cohab-card` covering the entire mobile viewport,
+which would have silently hidden the canvas behind it exactly the way
+`AppShell`'s own comment warns against — made transparent on mobile only
+(`bg-transparent cohab-desktop:bg-cohab-card`), confirmed `Input`/`Select`
+already carry their own backgrounds so legibility doesn't depend on the page
+wrapper.
+
+**Motion between steps that aren't route changes:** `PageTransition`
+(D-12.1) only fires on a `useLocation().pathname` change. The login↔signup
+switch and the signup wizard's seeker/form/otp/avatar steps are local
+`useState`, never a URL change, so it never fired there — this is very
+likely the real source of "not much animation... going to next page," since
+this is the first thing every new user (or anyone testing fresh) goes
+through. Added `StepTransition` (new,
+`components/motion/StepTransition.tsx`): the same GSAP tokens and enter-only
+behaviour as `PageTransition`, keyed on an arbitrary step string instead of
+the pathname. Wired into every auth/signup step, the 12-question
+`RequiredQuestionnaire`'s per-question entrance (previously zero motion
+across all 12 clicks — probably the single biggest contributor to the
+complaint), and `PageTransition` itself into the three other onboarding
+routes, which don't use `AppShell` (D-13.3) and so never got it either.
+
+**A `StepTransition` bug found and fixed within this same pass:** wrapping
+`RequiredQuestionnaire`'s mobile and desktop question blocks broke the
+`cohab-desktop:grid cohab-desktop:grid-cols-[268px_1fr]` layout — the
+`hidden`/`cohab-desktop:hidden` classes were on the *inner* wrapped div, not
+on `StepTransition`'s own (unstyled, always-`display:block`) wrapper div, so
+at desktop width the invisible wrapper still consumed a grid track and
+pushed the real content out of view. Gave `StepTransition` a `className`
+prop and collapsed the double-nesting at each call site instead of wrapping
+from outside — caught by live browser testing, not by `tsc` or the build.
+
+**A real login-breaking bug, found live, unrelated to any of the above:**
+logging in against Neon threw a 500 —
+`sqlalchemy.exc.OperationalError: ... SSL connection has been closed
+unexpectedly`. Neon's free tier suspends its compute after idle time;
+`db.py`'s `create_engine()` had no `pool_pre_ping`, so the first request
+after any idle period reused a dead pooled connection instead of
+transparently reconnecting. This would have hit the deployed app the first
+time anyone used it after it sat idle — `pool_pre_ping=True` is the standard
+SQLAlchemy fix for exactly this class of problem (serverless/autosuspending
+Postgres + a long-lived connection pool). Full test suite re-run after:
+333 passed, the same 2 pre-existing failures from D-13.21 (confirmed
+unrelated there via `git stash`), zero regressions.
+
+**A vertical-centering nudge**, also reported live (screenshots): the
+login/signup form panel's `justify-center` left it looking too far down.
+`justify-content: center` splits whatever padding-free space remains
+between top and bottom equally, so asymmetric padding
+(`cohab-desktop:pt-8 cohab-desktop:pb-28`, replacing the previous equal
+`py-14`) shifts the visual centre up without abandoning centering outright.
+
+**Also on disk, not authored in this pass:** `CompatibilityField.tsx` and
+`index.css` carry a retuning of the ambient field's light-theme colours
+(deep green instead of a lightened lime, since the beige ground is already
+bright — going darker than the surface is what makes it legible, not paler)
+and a minimum line-width floor so the faintest links don't antialias to
+nothing without the dark theme's glow to carry them.
+
+**Not done:** no live verification of `AmbientField`/`PageTransition` on
+routes reached only via WebSocket-chat or listing-photo upload flows —
+out of scope for this pass, same class of gap D-12.7 already flags for the
+rest of the motion system.
+
+**Code:** `frontend/src/lib/theme.ts`, `frontend/index.html`,
+`frontend/src/features/auth/AuthPage.tsx`,
+`frontend/src/features/auth/SignUpWizard.tsx`,
+`frontend/src/components/motion/StepTransition.tsx` (new),
+`frontend/src/features/onboarding/RequiredQuestionnaire.tsx`,
+`frontend/src/features/onboarding/OptionalQuestionnaire.tsx`,
+`frontend/src/features/onboarding/ListingForm.tsx`,
+`frontend/src/features/onboarding/ImportanceWeights.tsx`,
+`frontend/src/main.tsx` (touch-listener), `backend/cohab/db.py`
+(`pool_pre_ping`).

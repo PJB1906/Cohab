@@ -11,6 +11,8 @@ import { Logo } from '@/components/Logo'
 import { Eyebrow } from '@/components/Eyebrow'
 import { OptionRadio } from '@/components/OptionRadio'
 import { MobileStepHeader } from '@/components/MobileStepHeader'
+import { StepTransition } from '@/components/motion/StepTransition'
+import { AmbientField } from '@/components/CompatibilityField'
 import { AuthShell } from './AuthPage'
 import type { Gender, SeekerType } from '@/api/types'
 
@@ -127,10 +129,21 @@ export function SignUpWizard({
 
   if (step === 'seeker') {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col relative">
+        <AmbientField />
         <MobileStepHeader step={1} totalSteps={4} minutesLeft={5} onBack={onSwitchToLogin} progressPercent={25} />
 
+        <StepTransition step="seeker">
         <div className="flex-1 flex flex-col px-6 pt-6 pb-7 cohab-desktop:flex-none cohab-desktop:px-6 cohab-desktop:max-w-[1200px] cohab-desktop:mx-auto cohab-desktop:pt-[72px] cohab-desktop:pb-[72px] cohab-desktop:w-full">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onSwitchToLogin}
+            className="hidden cohab-desktop:inline-flex mb-[18px] self-start px-0"
+          >
+            ← Back to login
+          </Button>
+
           <Eyebrow className="hidden cohab-desktop:block mb-3.5">Step 1 of 4 · Setup</Eyebrow>
 
           <h1 className="text-2xl cohab-desktop:text-[26px] font-semibold tracking-[-0.02em] cohab-desktop:leading-[1.18] leading-[1.2] mb-2">
@@ -225,6 +238,7 @@ export function SignUpWizard({
             {!seekerType && <span className="text-[13px] text-cohab-subtle">Pick one to continue.</span>}
           </div>
         </div>
+        </StepTransition>
       </div>
     )
   }
@@ -232,6 +246,7 @@ export function SignUpWizard({
   if (step === 'form') {
     return (
       <AuthShell>
+        <StepTransition step="form">
         <form onSubmit={submitAccount} className="flex flex-1 flex-col">
           <Logo className="mb-[22px] cohab-desktop:hidden" />
           <Button
@@ -357,7 +372,18 @@ export function SignUpWizard({
               Log in
             </button>
           </p>
+          <p className="hidden cohab-desktop:block text-[13px] text-cohab-subtle text-center pt-4">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-cohab-primary font-semibold bg-transparent border-none p-0 cursor-pointer"
+            >
+              Log in
+            </button>
+          </p>
         </form>
+        </StepTransition>
       </AuthShell>
     )
   }
@@ -365,6 +391,7 @@ export function SignUpWizard({
   if (step === 'otp') {
     return (
       <AuthShell>
+        <StepTransition step="otp">
         <button
           type="button"
           onClick={() => setStep('form')}
@@ -465,6 +492,7 @@ export function SignUpWizard({
             </button>
           </p>
         </form>
+        </StepTransition>
       </AuthShell>
     )
   }
@@ -472,6 +500,7 @@ export function SignUpWizard({
   // step === 'avatar'
   return (
     <AuthShell>
+      <StepTransition step="avatar">
       <div className="flex flex-1 flex-col">
         <h2 className="text-2xl cohab-desktop:text-[19px] font-semibold tracking-[-0.02em] cohab-desktop:tracking-normal leading-[1.2] cohab-desktop:leading-[1.1] mb-2 cohab-desktop:mb-1.5">
           Add a profile photo
@@ -491,6 +520,7 @@ export function SignUpWizard({
           Continue
         </Button>
       </div>
+      </StepTransition>
     </AuthShell>
   )
 }
