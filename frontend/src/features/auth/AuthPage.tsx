@@ -44,7 +44,17 @@ const LANDING_CHIPS = [
  * login form and the signup wizard's account/OTP steps — mockup screen 1.
  * The wizard's seeker-type step (screen 2) does not use this shell; it has
  * its own centred layout. Mobile never shows the marketing panel. */
-export function AuthShell({ children }: { children: React.ReactNode }) {
+export function AuthShell({
+  children,
+  /** Trims the desktop top padding for the one step tall enough to need it.
+   * The signup account form overflows a laptop viewport, so pixels above its
+   * heading are pixels the user has to scroll past; login, OTP and the avatar
+   * step are short, and sit better with the roomier default. */
+  compactTop = false,
+}: {
+  children: React.ReactNode
+  compactTop?: boolean
+}) {
   return (
     <div className="min-h-screen flex flex-col cohab-desktop:grid cohab-desktop:grid-cols-[minmax(0,1fr)_minmax(460px,40%)]">
       {/* `relative` so the ambient canvas can sit behind the copy; the panel's
@@ -110,11 +120,14 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           space around the form (matches AppShell's pattern, D-13.11) — the
           form panel's own bg-cohab-card only applies once the hero panel is
           also visible, so the two-column contrast stays desktop-only. */}
-      {/* Asymmetric top/bottom padding nudges the vertically-centered content
-          up from dead-centre (reported by the user, screenshots) — justify-
-          center splits free space by whatever padding remains on each side,
-          so more bottom than top shifts the visual centre upward. */}
-      <div className="relative flex-1 flex flex-col bg-transparent cohab-desktop:bg-cohab-card px-6 pt-3 pb-7 cohab-desktop:px-14 cohab-desktop:pt-20 cohab-desktop:justify-start box-border">
+      {/* Top-anchored rather than centred. `pt-12` still clears the
+          absolutely-positioned theme toggle (top-8, ~36px tall); it is the
+          opt-in because only the tall step benefits from the tighter value. */}
+      <div
+        className={`relative flex-1 flex flex-col bg-transparent cohab-desktop:bg-cohab-card px-6 pt-3 pb-7 cohab-desktop:px-14 cohab-desktop:justify-start box-border ${
+          compactTop ? 'cohab-desktop:pt-12' : 'cohab-desktop:pt-20'
+        }`}
+      >
         <AmbientField />
         <ThemeToggle
           iconOnly

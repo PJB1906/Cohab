@@ -253,7 +253,7 @@ export function SignUpWizard({
 
   if (step === 'form') {
     return (
-      <AuthShell>
+      <AuthShell compactTop>
         <StepTransition step="form">
         <form onSubmit={submitAccount} className="flex flex-1 flex-col">
           <Logo className="mb-[22px] cohab-desktop:hidden" />
