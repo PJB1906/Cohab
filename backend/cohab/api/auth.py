@@ -6,6 +6,8 @@ session cookie is set here, not in the service — cookies are an HTTP concern.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
@@ -40,6 +42,7 @@ from cohab.services.auth import (
 from cohab.services.otp import OTPDeliveryFailed, get_otp_sender
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger("cohab.auth")
 
 
 def _set_session_cookie(response: Response, user: User) -> None:
@@ -71,7 +74,8 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)) -> RegisterRe
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "email domain is not a registered institution")
     except EmailAlreadyRegistered:
         raise HTTPException(status.HTTP_409_CONFLICT, "this email is already registered")
-    except OTPDeliveryFailed:
+    except OTPDeliveryFailed as exc:
+        logger.error("OTP delivery failed: %s", str(exc).replace(body.email, "[email]"))
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "couldn't send the verification email — try again shortly")
     return RegisterResponse(user_id=user.id)
 
@@ -87,7 +91,8 @@ def resend_otp(body: ResendOTPRequest, db: Session = Depends(get_db)) -> Registe
         raise HTTPException(status.HTTP_409_CONFLICT, "this account is already verified — log in instead")
     except ResendTooSoon as exc:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, f"wait a moment before requesting another code ({exc})")
-    except OTPDeliveryFailed:
+    except OTPDeliveryFailed as exc:
+        logger.error("OTP delivery failed: %s", str(exc).replace(body.email, "[email]"))
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "couldn't send the verification email — try again shortly")
     return RegisterResponse(user_id=user.id)
 
