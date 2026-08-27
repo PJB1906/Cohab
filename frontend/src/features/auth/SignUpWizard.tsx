@@ -13,6 +13,7 @@ import { OptionRadio } from '@/components/OptionRadio'
 import { MobileStepHeader } from '@/components/MobileStepHeader'
 import { StepTransition } from '@/components/motion/StepTransition'
 import { AmbientField } from '@/components/CompatibilityField'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { AuthShell } from './AuthPage'
 import type { Gender, SeekerType } from '@/api/types'
 
@@ -131,7 +132,14 @@ export function SignUpWizard({
     return (
       <div className="min-h-screen flex flex-col relative">
         <AmbientField />
+        <ThemeToggle
+          iconOnly
+          className="hidden cohab-desktop:grid absolute cohab-desktop:top-8 cohab-desktop:right-8 z-10"
+        />
         <MobileStepHeader step={1} totalSteps={4} minutesLeft={5} onBack={onSwitchToLogin} progressPercent={25} />
+        <div className="cohab-desktop:hidden flex justify-end px-4 pt-2">
+          <ThemeToggle iconOnly />
+        </div>
 
         <StepTransition step="seeker">
         <div className="flex-1 flex flex-col px-6 pt-6 pb-7 cohab-desktop:flex-none cohab-desktop:px-6 cohab-desktop:max-w-[1200px] cohab-desktop:mx-auto cohab-desktop:pt-[72px] cohab-desktop:pb-[72px] cohab-desktop:w-full">

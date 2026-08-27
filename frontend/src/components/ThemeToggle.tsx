@@ -37,7 +37,17 @@ const OPTIONS: { value: ThemeChoice; label: string; icon: JSX.Element }[] = [
  * into a binary toggle would silently freeze the user on whichever theme
  * their OS happened to be using the first time they touched the control.
  */
-export function ThemeToggle() {
+export function ThemeToggle({
+  className,
+  iconOnly = false,
+}: {
+  className?: string
+  /** Icons with no visible label — for tight spots like the login/signup
+   * panel, where the full labelled control reads as too heavy. The button
+   * still needs an accessible name with the label gone, so `aria-label`
+   * carries it instead of the (now icon-only) button's text content. */
+  iconOnly?: boolean
+}) {
   const [choice, setChoice] = useState<ThemeChoice>(() => getStoredChoice())
 
   // While on "auto", follow the OS if it flips mid-session.
@@ -52,7 +62,11 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Colour theme"
-      className="grid grid-cols-3 gap-1 rounded-lg border border-cohab-border bg-cohab-bg p-1"
+      className={cn(
+        'grid grid-cols-3 gap-1 rounded-lg',
+        iconOnly ? 'p-0.5' : 'border border-cohab-border bg-cohab-bg p-1',
+        className,
+      )}
     >
       {OPTIONS.map((opt) => {
         const selected = choice === opt.value
@@ -62,9 +76,11 @@ export function ThemeToggle() {
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-label={iconOnly ? opt.label : undefined}
             onClick={() => pick(opt.value)}
             className={cn(
-              'flex flex-col items-center gap-1 rounded-md py-1.5 text-[11px] font-medium cursor-pointer',
+              'flex items-center justify-center rounded-md cursor-pointer',
+              iconOnly ? 'p-1.5' : 'flex-col gap-1 py-1.5 text-[11px] font-medium',
               'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cohab-primary',
               selected
                 ? 'bg-cohab-tint text-cohab-primary'
@@ -84,7 +100,7 @@ export function ThemeToggle() {
             >
               {opt.icon}
             </svg>
-            {opt.label}
+            {!iconOnly && opt.label}
           </button>
         )
       })}

@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo'
 import { HeroStagger } from '@/components/motion/HeroStagger'
 import { StepTransition } from '@/components/motion/StepTransition'
 import { CompatibilityField, AmbientField } from '@/components/CompatibilityField'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 const LANDING_STATS: { big: string; caption: string }[] = [
   { big: '12', caption: 'lifestyle questions, under 4 minutes' },
@@ -113,8 +114,12 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           up from dead-centre (reported by the user, screenshots) — justify-
           center splits free space by whatever padding remains on each side,
           so more bottom than top shifts the visual centre upward. */}
-      <div className="relative flex-1 flex flex-col bg-transparent cohab-desktop:bg-cohab-card px-6 pt-3 pb-7 cohab-desktop:px-14 cohab-desktop:pt-10 cohab-desktop:justify-start box-border">
+      <div className="relative flex-1 flex flex-col bg-transparent cohab-desktop:bg-cohab-card px-6 pt-3 pb-7 cohab-desktop:px-14 cohab-desktop:pt-20 cohab-desktop:justify-start box-border">
         <AmbientField />
+        <ThemeToggle
+          iconOnly
+          className="self-end w-auto shrink-0 mb-3 cohab-desktop:absolute cohab-desktop:top-8 cohab-desktop:right-8 cohab-desktop:mb-0"
+        />
         {children}
       </div>
     </div>
