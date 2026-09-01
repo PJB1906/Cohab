@@ -3473,3 +3473,88 @@ rest of the motion system.
 `frontend/src/features/onboarding/ImportanceWeights.tsx`,
 `frontend/src/main.tsx` (touch-listener), `backend/cohab/db.py`
 (`pool_pre_ping`).
+
+### D-13.23 A theme control before login, and the light theme tuned by looking at it twice
+
+**Raised by the user**, live-testing in the browser: there was no way to
+change theme before logging in; the ambient dots were "barely visible" in
+the light theme; and the create-account form sat too low on the screen.
+
+**A theme toggle before login.** `ThemeToggle` already existed post-login in
+`AccountMenu`, but nowhere on the way in — a first-time visitor landing on a
+light default (D-13.22) had no way to switch without registering first. Added
+to `AuthShell` (login, and the wizard's form/otp/avatar steps) and separately
+to the seeker-type step, which does not use `AuthShell`. The labelled, boxed
+version read as too heavy for a login screen, so the component gained an
+`iconOnly` mode and loses its bordered container here — three bare icons,
+absolutely positioned top-right on desktop so they cost no vertical space.
+The post-login dropdown is unchanged.
+
+**The ambient field's light palette, corrected twice.** The canvas
+(`CompatibilityField.tsx`, D-13.5/D-13.11) cannot inherit the CSS tokens the
+rest of the app re-themes through, so it picks a palette per theme — and the
+first light palette was a lightened lime (`47, 125, 30`) at 0.3 link alpha,
+which on the beige ground was very nearly invisible.
+
+The first correction over-shot: `--color-cohab-primary-dark` (`10, 71, 61`)
+at 0.6 link alpha and 0.72 field opacity. Visible, but the user reported it
+was now reducing the legibility of text sitting over it — a decorative layer
+had started competing with content. The second pass lightened to the brand
+`--color-cohab-primary` (`15, 95, 82`), link alpha 0.4, dots 0.82/0.55, field
+opacity 0.52.
+
+The principle that survived both passes is worth stating, because it is the
+opposite of the instinct: on a bright ground, legibility comes from the hue
+being *darker than the surface*, not from more opacity. Getting the hue right
+lets alpha stay low, which is what keeps text over the field readable. Going
+paler and compensating with opacity does the reverse — it fogs the page
+without ever making the network legible.
+
+Two smaller pieces fall out of the same reasoning. A minimum line width
+(0.6px in light) stops the faintest links antialiasing to nothing: the dark
+theme has a glow to carry a sub-pixel stroke and the light theme does not.
+And the app-wide instance's opacity is a CSS rule
+(`:root[data-theme='light'] .cohab-ambient`) rather than a Tailwind variant,
+because the component has no theme-aware class hook — that wrapper opacity
+multiplies every canvas alpha, so it is simultaneously the strongest lever on
+visibility and the fastest way to fog the content above it.
+
+**Vertical position, settled after three attempts.** D-13.22 recorded
+`justify-center` with asymmetric `pt-8`/`pb-28`; two further rounds of live
+feedback moved it up, then down again. **That paragraph is superseded.** The
+panel is now top-anchored (`justify-start`) with `cohab-desktop:pt-20`, which
+removes the coupling entirely — with centring, every change to content height
+moved the content, which is why it took three passes to settle.
+
+The account form then needed less top padding than the rest, so `AuthShell`
+takes a `compactTop` prop (`pt-12`, 48px) that only the signup form step
+passes. Scoped rather than applied to the shell outright because the two
+cases genuinely differ: the account form is ~824px of content in a 730px
+viewport, so padding above its heading is height the user scrolls past, while
+login, OTP and the avatar step are short enough that shrinking the padding
+globally just left the login heading at y=65 above a ~150px void. 48px is the
+floor that still clears the absolutely-positioned toggle (`top-8`, ~36px).
+
+**Verified by measurement, not by eye.** Each change was checked against
+computed styles and bounding boxes in a live browser rather than screenshots
+alone — signup `padding-top` 48px with its heading moving y=157 → 121, login
+unchanged at 80px and y=94. This also settled a report that the login
+placeholder had been dimmed: it computes to `rgb(125, 138, 134)`, exactly
+`--color-cohab-placeholder`, at full opacity and untouched by the diff. The
+real cause was the then-darker canvas showing through the form panel, which
+is deliberately transparent below the desktop breakpoint (D-13.22) — the
+lighter palette resolved it.
+
+**Not done:** the field was never rendered at a mobile viewport during this
+pass — the browser-automation window resize silently failed — so the mobile
+reasoning is from the code path, not from a screenshot. The account form also
+still overflows the viewport by ~301px; that is set by the taller hero column
+beside it, so lifting the form repositions it without shortening the scroll.
+
+**Code:** `frontend/src/components/CompatibilityField.tsx`,
+`frontend/src/index.css`, `frontend/src/features/auth/AuthPage.tsx`,
+`frontend/src/features/auth/SignUpWizard.tsx`,
+`frontend/src/components/ThemeToggle.tsx`,
+`frontend/src/components/ui/input.tsx`,
+`frontend/src/components/ui/select.tsx`,
+`frontend/src/components/ui/textarea.tsx`.
