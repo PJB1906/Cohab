@@ -37,7 +37,7 @@ from cohab.core.security import hash_password
 from cohab.db import SessionLocal
 from cohab.models import Institution, PreferenceProfile, User
 from cohab.models.chat import ContactShare, Message
-from cohab.models.matching import MatchScore
+from cohab.models.matching import MatchScore, WeightSet
 from cohab.models.safety import Moderator, Report
 from cohab.seed import (
     LOCALITY_BUDGET_RANGE,
@@ -45,6 +45,9 @@ from cohab.seed import (
     make_preference_profile,
     random_questionnaire,
 )
+from cohab.services.matches import MatchesService
+from cohab.services.matching.recompute import _load_candidates
+from cohab.services.matching.text import TfidfSimilarity
 
 # Read from the seed's own table rather than hardcoded, so this cannot drift
 # out of sync with the localities the bulk pool actually uses — a mismatch
@@ -54,6 +57,17 @@ DEMO_LOCALITY = next(iter(LOCALITY_BUDGET_RANGE))
 DEMO_EMAIL = "demo@christuniversity.in"
 DEMO_PASSWORD = "demo-pass-1234"
 OWNER_EMAIL = "puranjyoti.bera@msds.christuniversity.in"
+
+# Three single-purpose logins for manual testing: one of each seeker_type,
+# plus a moderator account. seeker_type is NOT NULL in the schema (only
+# "needs_place"/"has_place" — models/user.py), so the moderator account still
+# needs one; it gets no PreferenceProfile since it's not meant to seek.
+HAS_PLACE_EMAIL = "has-place-demo@christuniversity.in"
+HAS_PLACE_PASSWORD = "has-place-pass-1234"
+NEEDS_PLACE_EMAIL = "needs-place-demo@christuniversity.in"
+NEEDS_PLACE_PASSWORD = "needs-place-pass-1234"
+MODERATOR_EMAIL = "moderator-demo@christuniversity.in"
+MODERATOR_PASSWORD = "moderator-pass-1234"
 
 # One match promoted into each state the UI gates on. `suggested` is left
 # alone — the bulk seed already provides 43k of those.
@@ -91,37 +105,160 @@ def _ensure_profile(session: Session, user: User, *, label: str) -> bool:
     return True
 
 
-def _ensure_demo_user(session: Session) -> User:
-    user = session.scalar(select(User).where(User.email == DEMO_EMAIL))
+def _ensure_login(
+    session: Session,
+    *,
+    email: str,
+    password: str,
+    full_name: str,
+    gender: str,
+    seeker_type: str,
+    is_moderator: bool,
+    with_profile: bool,
+) -> User:
+    user = session.scalar(select(User).where(User.email == email))
     if user is not None:
-        print(f"  demo user exists: {DEMO_EMAIL}")
+        print(f"  {email}: already exists")
     else:
         institution = session.scalar(select(Institution))
         if institution is None:
             sys.exit("No institution row — run the bulk seed (`python -m cohab.seed`) first.")
         user = User(
             institution=institution,
-            email=DEMO_EMAIL,
-            password_hash=hash_password(DEMO_PASSWORD),
-            full_name="Demo Student",
-            gender="female",
-            seeker_type="needs_place",
+            email=email,
+            password_hash=hash_password(password),
+            full_name=full_name,
+            gender=gender,
+            seeker_type=seeker_type,
             verification_status="verified",
             account_status="active",
             course="MSc Data Science, 2nd year",
         )
         session.add(user)
         session.flush()
-        print(f"  created demo user: {DEMO_EMAIL} / {DEMO_PASSWORD}")
+        print(f"  created: {email} / {password}")
 
-    # Moderator access — screens 14 (queue), report review, and analytics are
-    # all gated on this single flag (App.tsx's ModeratorGate).
-    if not user.is_moderator:
+    if is_moderator and not user.is_moderator:
         user.is_moderator = True
-        print("  granted is_moderator (unlocks Moderation + Analytics)")
+        print(f"  {email}: granted is_moderator (unlocks Moderation + Analytics)")
 
-    _ensure_profile(session, user, label="demo user")
+    if with_profile:
+        _ensure_profile(session, user, label=email)
     return user
+
+
+def _ensure_demo_user(session: Session) -> User:
+    return _ensure_login(
+        session,
+        email=DEMO_EMAIL,
+        password=DEMO_PASSWORD,
+        full_name="Demo Student",
+        gender="female",
+        seeker_type="needs_place",
+        is_moderator=True,
+        with_profile=True,
+    )
+
+
+def _ensure_role_logins(session: Session) -> None:
+    """Three single-purpose logins for manual testing (not part of the
+    walk-every-screen demo account above)."""
+    _ensure_login(
+        session,
+        email=HAS_PLACE_EMAIL,
+        password=HAS_PLACE_PASSWORD,
+        full_name="Has Place Demo",
+        gender="female",
+        seeker_type="has_place",
+        is_moderator=False,
+        with_profile=True,
+    )
+    _ensure_login(
+        session,
+        email=NEEDS_PLACE_EMAIL,
+        password=NEEDS_PLACE_PASSWORD,
+        full_name="Needs Place Demo",
+        gender="male",
+        seeker_type="needs_place",
+        is_moderator=False,
+        with_profile=True,
+    )
+    _ensure_login(
+        session,
+        email=MODERATOR_EMAIL,
+        password=MODERATOR_PASSWORD,
+        full_name="Moderator Demo",
+        gender="female",
+        seeker_type="needs_place",
+        is_moderator=True,
+        with_profile=False,
+    )
+
+
+def _pair_key(a: uuid.UUID, b: uuid.UUID) -> tuple[uuid.UUID, uuid.UUID]:
+    return (a, b) if a < b else (b, a)
+
+
+def _seed_role_login_chat(session: Session) -> None:
+    """A short thread between the two role-only demo logins (screen 9),
+    reachable without touching the walk-every-screen `demo` account.
+
+    `_ensure_role_logins` gives both a `PreferenceProfile` generated by the
+    same fixed-seed RNG (`_rng()` reseeds to the same value each call), so
+    every field lands byte-identical between the two. That is eligibility
+    poison for anything symmetric: `gender_preference` was a 1-in-3 draw
+    that fails two times out of three (male vs male-preferred female, etc),
+    and both profiles landed on `smoking_behaviour="indoors"` +
+    `smoking_dealbreaker=True` — a self-conflict, since a dealbreaker check
+    is symmetric and identical profiles always trip their own condition.
+    Both are forced to a value that clears their own check, so the pair is
+    eligible deterministically rather than depending on the shared draw.
+    """
+    has_place = session.scalar(select(User).where(User.email == HAS_PLACE_EMAIL))
+    needs_place = session.scalar(select(User).where(User.email == NEEDS_PLACE_EMAIL))
+    if has_place is None or needs_place is None:
+        print("  role logins missing — skipped")
+        return
+
+    for u in (has_place, needs_place):
+        profile = session.scalar(select(PreferenceProfile).where(PreferenceProfile.user_id == u.id))
+        if profile is None:
+            continue
+        if profile.gender_preference != "any":
+            profile.gender_preference = "any"
+        if profile.smoking_dealbreaker:
+            profile.smoking_dealbreaker = False
+    session.flush()
+
+    a_id, b_id = _pair_key(has_place.id, needs_place.id)
+    row = session.scalar(
+        select(MatchScore).where(MatchScore.user_id_a == a_id, MatchScore.user_id_b == b_id)
+    )
+    if row is None:
+        # Real Stage 1 + Stage 2 scoring, same path `GET /matches` uses
+        # (CLAUDE.md: no invented `combined_score` values) — not a full
+        # `recompute`, just this one subject against the existing pool.
+        weight_set = session.scalar(select(WeightSet).where(WeightSet.is_active.is_(True)))
+        if weight_set is None:
+            print("  no active weight_set — run the matcher/recompute first, skipped")
+            return
+        pool = _load_candidates(session)
+        text_similarity = TfidfSimilarity().fit([c.lifestyle_notes for c in pool])
+        service = MatchesService(session, weight_set, text_similarity)
+        service.get_matches(has_place, limit=len(pool) or 1)
+        row = session.scalar(
+            select(MatchScore).where(MatchScore.user_id_a == a_id, MatchScore.user_id_b == b_id)
+        )
+    if row is None:
+        print("  has-place/needs-place still not eligible against each other — skipped")
+        return
+
+    row.state = "chatting"
+    row.interested_by_a = True
+    row.interested_by_b = True
+    session.flush()
+    print(f"  role-login match {str(row.id)[:8]} -> chatting")
+    _seed_thread(session, has_place, row.id)
 
 
 def _promote_match_states(session: Session, user: User) -> dict[str, uuid.UUID]:
@@ -260,11 +397,12 @@ def main() -> None:
     try:
         print("Demo seed — additive, safe to re-run.\n")
 
-        print("[1/4] Demo account")
+        print("[1/5] Demo account")
         demo = _ensure_demo_user(session)
+        _ensure_role_logins(session)
         session.flush()
 
-        print("\n[2/4] Your own account")
+        print("\n[2/5] Your own account")
         owner = session.scalar(select(User).where(User.email == OWNER_EMAIL))
         if owner is None:
             print(f"  {OWNER_EMAIL} not found — skipped")
@@ -278,18 +416,24 @@ def main() -> None:
                 print("  marked verified")
         session.flush()
 
-        print("\n[3/4] Match states for the demo account")
+        print("\n[3/5] Match states for the demo account")
         promoted = _promote_match_states(session, demo)
 
-        print("\n[4/4] Thread, contact share, moderation case")
+        print("\n[4/5] Thread, contact share, moderation case")
         if "chatting" in promoted:
             _seed_thread(session, demo, promoted["chatting"])
         if "contact_shared" in promoted:
             _seed_contact_share(session, demo, promoted["contact_shared"])
         _seed_open_report(session, demo)
 
+        print("\n[5/5] Chat between the has-place and needs-place role logins")
+        _seed_role_login_chat(session)
+
         session.commit()
-        print(f"\nDone.\n  Log in as: {DEMO_EMAIL} / {DEMO_PASSWORD}")
+        print(f"\nDone.\n  Log in as: {DEMO_EMAIL} / {DEMO_PASSWORD}  (needs_place, moderator, walks every screen)")
+        print(f"             {HAS_PLACE_EMAIL} / {HAS_PLACE_PASSWORD}  (has_place)")
+        print(f"             {NEEDS_PLACE_EMAIL} / {NEEDS_PLACE_PASSWORD}  (needs_place)")
+        print(f"             {MODERATOR_EMAIL} / {MODERATOR_PASSWORD}  (moderator only)")
         if promoted:
             print("  Reachable states: " + ", ".join(sorted(promoted)))
     except Exception:

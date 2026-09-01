@@ -89,7 +89,7 @@ export function ChatThread() {
 
   if (isLoading || !match) {
     return (
-      <AppShell>
+      <AppShell hideBottomNav>
         {/* Same two-pane frame as the loaded state, so the rail does not pop
             in once the conversation resolves. */}
         <div className="cohab-desktop:max-w-[1800px] cohab-desktop:mx-auto cohab-desktop:px-6 cohab-desktop:my-8">
@@ -106,7 +106,7 @@ export function ChatThread() {
   const listing = match.listing
 
   return (
-    <AppShell>
+    <AppShell hideBottomNav>
       {/* Desktop is the mockup's two-pane screen 9: the thread rail stays
           visible beside the open conversation, so the other people you are
           talking to are reachable without going back to /chats (D-13.15).

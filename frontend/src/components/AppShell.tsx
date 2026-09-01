@@ -33,7 +33,7 @@ function bottomNavTab(pathname: string): 'matches' | 'saved' | 'chats' | 'profil
  * bar collapses to just the logo. "Blocked" moved into the Profile hub on
  * both breakpoints rather than living as a standalone nav link, since
  * neither mockup's header shows it directly. */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, hideBottomNav }: { children: React.ReactNode; hideBottomNav?: boolean }) {
   const { data: user } = useSession()
   const { pathname } = useLocation()
 
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main>
         <PageTransition>{children}</PageTransition>
       </main>
-      <BottomNav active={bottomNavTab(pathname)} />
+      {!hideBottomNav && <BottomNav active={bottomNavTab(pathname)} />}
     </div>
   )
 }
