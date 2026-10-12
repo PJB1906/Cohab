@@ -93,25 +93,13 @@ cd backend && alembic upgrade head && uvicorn cohab.main:app --reload
 cd frontend && npm run dev
 ```
 
-### 4. Seed data
+### First moderator
 
-Run these from `backend/` with the venv active:
-
-```bash
-python -m cohab.seed                          # ~1,500 synthetic profiles + weight set
-python -m cohab.services.matching.recompute   # optional: pre-fill match_score (GET /matches also scores on read)
-python -m cohab.demo_seed                     # demo logins (printed on completion)
-```
-
-`demo_seed` creates four local demo accounts (one that reaches every screen, plus a has-place, a needs-place and a moderator-only login) and prints their credentials when it finishes. Never run it against a deployed database.
-
-To make someone the first moderator on a fresh database, register the account in the app first and then run:
+A new database has no moderators, and there is deliberately no API route for granting the role ([docs/DECISIONS.md](docs/DECISIONS.md) D-7.1). Register the account in the app first, then run this from `backend/`:
 
 ```bash
 python -m cohab.promote_moderator someone@example.com
 ```
-
-There is deliberately no API route for this ([docs/DECISIONS.md](docs/DECISIONS.md) D-7.1).
 
 ## Tests
 
