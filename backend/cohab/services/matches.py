@@ -22,12 +22,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, literal_column, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, selectinload
 
 from cohab.models import Listing, MatchScore, User, WeightSet
 from cohab.services.match_access import ensure_pair_active
+from cohab.services.match_events import Exposure, log_exposures, policy_version, record_creation, transition
 from cohab.services.matching.candidate import Candidate
 from cohab.services.matching.canonical import flip
 from cohab.services.matching.explanations import Explanation, build_explanation
@@ -35,6 +36,11 @@ from cohab.services.matching.ranker import MatchRanker
 from cohab.services.matching.scoring import CompatibilityMatcher, MatchResult
 from cohab.services.matching.text import TextSimilarity
 from cohab.services.safety import blocked_pairs_for
+
+
+# Rows per INSERT .. VALUES statement; keeps the bind-parameter count far
+# below Postgres's 65,535 limit at RECOMPUTE_LIMIT-sized reads.
+UPSERT_CHUNK = 500
 
 
 class MatchesError(Exception):
@@ -65,6 +71,9 @@ class MatchListEntry:
     # screen (features/chat/ChatList.tsx) filter to chatting/contact_shared
     # matches without a second endpoint or an N+1 explanation fetch.
     state: str
+    # Subject-oriented per-attribute breakdown (sim_a/w_a = the viewer), for
+    # the calibrated confidence tier (services/insights.py).
+    breakdown: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -145,55 +154,86 @@ class MatchesService:
         matcher = CompatibilityMatcher(weight_set.weights, weight_set.id, text_similarity=text_similarity)
         self.ranker = MatchRanker(matcher)
 
-    def _upsert(self, subject_id: uuid.UUID, candidate_id: uuid.UUID, result: MatchResult) -> MatchScore:
-        if subject_id < candidate_id:
-            a_id, b_id, canonical = subject_id, candidate_id, result
-        else:
-            a_id, b_id, canonical = candidate_id, subject_id, flip(result)
+    def _bulk_upsert(self, subject_id: uuid.UUID, results: list[MatchResult]) -> dict[uuid.UUID, MatchScore]:
+        """Persist the ranked results in one `INSERT .. ON CONFLICT` per chunk
+        (v2 W1, replacing v1's SELECT + flush per candidate).
 
-        def _refresh_if_suggested(row: MatchScore) -> None:
-            # Once a row has been viewed (or moved further), its
-            # score/breakdown is a record of what the user was actually
-            # shown — CLAUDE.md's weight_set immutability guarantee requires
-            # that stay reproducible, not silently rewritten by a later
-            # rescore under a newly-published weight_set (docs/DECISIONS.md
-            # D-4.6, resolved in Phase 8). Only a still-"suggested" row,
-            # which nobody has looked at yet, is safe to freely refresh.
-            if row.state == "suggested":
-                row.weight_set_id = canonical.weight_set_id
-                row.score_ab = canonical.score_ab
-                row.score_ba = canonical.score_ba
-                row.combined_score = canonical.combined_score
-                row.breakdown = canonical.breakdown
-            # state / interested_by_a / interested_by_b intentionally
-            # untouched — a rescore must not erase a user's recorded interest.
+        The conflict branch only fires for a row that is still "suggested"
+        AND whose score or weight_set actually changed, so a repeat read of an
+        unchanged pool writes no score rows at all. A viewed-or-later row is
+        never touched: it is the record of what the user was shown
+        (docs/DECISIONS.md D-4.6). Returns {candidate_id: row}.
+        """
+        if not results:
+            return {}
+        now = datetime.now(timezone.utc)
+        values: list[dict] = []
+        pair_for_candidate: dict[tuple[uuid.UUID, uuid.UUID], uuid.UUID] = {}
+        for result in results:
+            candidate_id = result.candidate_id
+            if subject_id < candidate_id:
+                a_id, b_id, canonical = subject_id, candidate_id, result
+            else:
+                a_id, b_id, canonical = candidate_id, subject_id, flip(result)
+            pair_for_candidate[(a_id, b_id)] = candidate_id
+            values.append(
+                {
+                    "id": uuid.uuid4(),
+                    "user_id_a": a_id,
+                    "user_id_b": b_id,
+                    "weight_set_id": canonical.weight_set_id,
+                    "score_ab": canonical.score_ab,
+                    "score_ba": canonical.score_ba,
+                    "combined_score": canonical.combined_score,
+                    "breakdown": canonical.breakdown,
+                    "state": "suggested",
+                    "interested_by_a": False,
+                    "interested_by_b": False,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
 
-        row = self.session.scalar(
-            select(MatchScore).where(MatchScore.user_id_a == a_id, MatchScore.user_id_b == b_id)
-        )
-        if row is None:
-            row = MatchScore(user_id_a=a_id, user_id_b=b_id, state="suggested")
-            self.session.add(row)
-            _refresh_if_suggested(row)
-            try:
-                # A SAVEPOINT, not a full rollback: `get_matches` calls
-                # `_upsert` once per ranked candidate inside one transaction,
-                # so a plain `session.rollback()` here (the pattern used for
-                # the other three check-then-insert races this diff fixed)
-                # would discard every other candidate already upserted in
-                # this same batch, not just this one row's race.
-                with self.session.begin_nested():
-                    self.session.flush()
-            except IntegrityError:
-                row = self.session.scalar(
-                    select(MatchScore).where(MatchScore.user_id_a == a_id, MatchScore.user_id_b == b_id)
-                )
-                _refresh_if_suggested(row)
-                self.session.flush()
-        else:
-            _refresh_if_suggested(row)
-            self.session.flush()
-        return row
+        inserted_ids: list[uuid.UUID] = []
+        for i in range(0, len(values), UPSERT_CHUNK):
+            stmt = pg_insert(MatchScore).values(values[i : i + UPSERT_CHUNK])
+            excluded = stmt.excluded
+            stmt = stmt.on_conflict_do_update(
+                constraint="uq_match_score_pair",
+                set_={
+                    "weight_set_id": excluded.weight_set_id,
+                    "score_ab": excluded.score_ab,
+                    "score_ba": excluded.score_ba,
+                    "combined_score": excluded.combined_score,
+                    "breakdown": excluded.breakdown,
+                    "updated_at": excluded.updated_at,
+                },
+                where=and_(
+                    MatchScore.state == "suggested",
+                    or_(
+                        MatchScore.weight_set_id != excluded.weight_set_id,
+                        MatchScore.score_ab != excluded.score_ab,
+                        MatchScore.score_ba != excluded.score_ba,
+                    ),
+                ),
+            ).returning(MatchScore.id, literal_column("(xmax = 0)").label("inserted"))
+            for row_id, inserted in self.session.execute(stmt).all():
+                if inserted:
+                    inserted_ids.append(row_id)
+        record_creation(self.session, inserted_ids)
+
+        conds = [
+            and_(MatchScore.user_id_a == a, MatchScore.user_id_b == b) for (a, b) in pair_for_candidate
+        ]
+        rows: dict[uuid.UUID, MatchScore] = {}
+        for i in range(0, len(conds), UPSERT_CHUNK):
+            for row in self.session.scalars(
+                select(MatchScore)
+                .where(or_(*conds[i : i + UPSERT_CHUNK]))
+                .execution_options(populate_existing=True)
+            ).all():
+                rows[pair_for_candidate[(row.user_id_a, row.user_id_b)]] = row
+        return rows
 
     def _load_pair_row(self, subject_user: User, match_id: uuid.UUID) -> MatchScore:
         row = self.session.get(MatchScore, match_id)
@@ -222,7 +262,7 @@ class MatchesService:
             row.interested_by_b = True
 
         if row.state in ("suggested", "viewed"):
-            row.state = "interested"
+            transition(self.session, row, "interested", actor_id=subject_user.id)
         # Guard against regressing a pair that has already moved past Mutual
         # (chatting/contact_shared/...) back down to it — a repeat POST with
         # both flags already True (stale tab, client retry) would otherwise
@@ -232,7 +272,7 @@ class MatchesService:
             and row.interested_by_b
             and row.state in ("suggested", "viewed", "interested", "mutual")
         ):
-            row.state = "mutual"
+            transition(self.session, row, "mutual", actor_id=subject_user.id)
 
         self.session.commit()
         return row.state
@@ -246,12 +286,12 @@ class MatchesService:
         if row.state != "contact_shared":
             raise InvalidStateTransition(row.state)
 
-        row.state = "cohabiting"
+        transition(self.session, row, "cohabiting", actor_id=subject_user.id)
         row.cohabiting_since = datetime.now(timezone.utc)
         self.session.commit()
         return row.state
 
-    def reject(self, subject_user: User, match_id: uuid.UUID) -> str:
+    def reject(self, subject_user: User, match_id: uuid.UUID, reason: str | None = None) -> str:
         """PRD §8.2's "Viewed -> Rejected: dismisses" and "Chatting ->
         Rejected: either withdraws" are both "one party unilaterally ends
         it" — modelled as one transition, valid from any non-terminal state
@@ -263,11 +303,22 @@ class MatchesService:
         if row.state not in ("viewed", "interested", "mutual", "chatting", "contact_shared"):
             raise InvalidStateTransition(row.state)
 
-        row.state = "rejected"
+        row.rejection_reason = reason
+        transition(
+            self.session,
+            row,
+            "rejected",
+            actor_id=subject_user.id,
+            metadata={"rejection_reason": reason} if reason else None,
+        )
         self.session.commit()
         return row.state
 
-    def get_matches(self, subject_user: User, limit: int = 10) -> list[MatchListEntry]:
+    def get_matches(
+        self, subject_user: User, limit: int = 10, *, log_exposure: bool = True
+    ) -> list[MatchListEntry]:
+        """`log_exposure=False` is for batch callers (recompute) whose reads
+        are not impressions anyone saw."""
         subject = _load_candidate(self.session, subject_user.id)
         if subject is None:
             return []
@@ -282,9 +333,10 @@ class MatchesService:
         self.ranker.filter.settled_pairs = _settled_pairs_for(self.session, subject_user.id)
 
         ranked = self.ranker.rank(subject, pool)[:limit]
+        rows = self._bulk_upsert(subject.user_id, [m.result for m in ranked])
         entries = []
         for m in ranked:
-            row = self._upsert(subject.user_id, m.candidate.user_id, m.result)
+            row = rows[m.candidate.user_id]
             entries.append(
                 MatchListEntry(
                     match_id=row.id,
@@ -292,7 +344,20 @@ class MatchesService:
                     combined_score=m.result.combined_score,
                     explanation=m.explanation,
                     state=row.state,
+                    breakdown=m.result.breakdown,
                 )
+            )
+        if log_exposure:
+            log_exposures(
+                self.session,
+                viewer_id=subject_user.id,
+                exposures=[
+                    Exposure(match_score_id=e.match_id, rank_position=i + 1, combined_score=e.combined_score)
+                    for i, e in enumerate(entries)
+                ],
+                surface="list",
+                weight_set_id=self.weight_set.id,
+                policy=policy_version(self.weight_set.source, self.weight_set.version),
             )
         self.session.commit()
         return entries
@@ -320,7 +385,7 @@ class MatchesService:
         explanation = build_explanation(subject, other, result)
 
         if row.state == "suggested":
-            row.state = "viewed"
+            transition(self.session, row, "viewed", actor_id=subject_user.id)
             self.session.commit()
 
         listing = None

@@ -1,0 +1,22 @@
+{
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d",
+    "seconds": 737.9
+  },
+  "kinds": {
+    "tier": "dryrun",
+    "lab": "dryrun",
+    "pairs": "dryrun",
+    "rank_stability": "simulation",
+    "policy_comparison": "simulation",
+    "misreporting": "simulation",
+    "power": "simulation",
+    "fairness_synthetic": "simulation",
+    "transfer": "public"
+  }
+}

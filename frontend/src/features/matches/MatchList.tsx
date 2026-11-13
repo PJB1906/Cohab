@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { matchesApi } from '@/api/matches'
 import { feedbackApi } from '@/api/feedback'
+import { insightsApi } from '@/api/v2'
 import { MatchCard } from './MatchCard'
+import { MatchInsightsPanel } from './MatchInsightsPanel'
 import { AppShell } from '@/components/AppShell'
 import { Tab } from '@/components/Tab'
 import { ChipPill } from '@/components/OptionPill'
@@ -87,6 +89,12 @@ export function MatchList() {
     queryFn: () => feedbackApi.pending(),
   })
 
+  // `pool: null` from the insights endpoint means this account has no
+  // preference profile yet, which is a different empty state from "nobody
+  // fits": the fix is to finish the profile, not to wait.
+  const { data: insights } = useQuery({ queryKey: ['matches', 'insights'], queryFn: insightsApi.get, staleTime: 60_000 })
+  const noProfile = insights !== undefined && insights.pool === null
+
   const [sortBy, setSortBy] = useState<SortKey>('best')
   const [seekerFilter, setSeekerFilter] = useState<SeekerFilter>('all')
   const [rentMin, setRentMin] = useState('')
@@ -158,10 +166,24 @@ export function MatchList() {
 
   const emptyMessage =
     data && data.length === 0
-      ? "No matches yet — once more verified profiles join your area, they'll show up here."
+      ? noProfile
+        ? null
+        : "No matches yet — once more verified profiles join your area, they'll show up here."
       : data && filtered.length === 0
         ? 'No matches fit these filters — try widening your rent range or clearing a filter.'
         : null
+
+  const profilePrompt = data && data.length === 0 && noProfile && (
+    <div className="bg-cohab-card border border-cohab-border rounded-2xl p-5 max-w-[560px]">
+      <p className="text-[15px] font-medium mb-1">Finish your profile to see matches</p>
+      <p className="text-[13.5px] text-cohab-muted mb-3">
+        Matches are worked out from your budget, move-in date and lifestyle answers. It takes about four minutes.
+      </p>
+      <Link to="/onboarding/questionnaire" className="text-cohab-primary font-medium text-[14px]">
+        Answer the questions →
+      </Link>
+    </div>
+  )
 
   const pendingBanner = pending && pending.length > 0 && (
     <div className="bg-cohab-tint border border-cohab-primary rounded-2xl p-4 mb-5">
@@ -338,9 +360,12 @@ export function MatchList() {
 
           {pendingBanner}
 
+          {data && <MatchInsightsPanel className="mb-5 max-w-[720px]" listSize={data.length} />}
+
           {isLoading && <p className="text-cohab-muted">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your matches. Try again shortly.</p>}
           {emptyMessage && <p className="text-cohab-muted">{emptyMessage}</p>}
+          {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3.5" runKey={runKey}>
             {filtered.map((item) => (
@@ -380,9 +405,12 @@ export function MatchList() {
         <div className="px-5 py-3.5">
           {pendingBanner}
 
+          {data && <MatchInsightsPanel className="mb-4" listSize={data.length} />}
+
           {isLoading && <p className="text-cohab-muted-mobile">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your matches. Try again shortly.</p>}
           {emptyMessage && <p className="text-cohab-muted-mobile">{emptyMessage}</p>}
+          {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3" runKey={runKey}>
             {filtered.map((item) => (

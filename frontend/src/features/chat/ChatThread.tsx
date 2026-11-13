@@ -40,17 +40,19 @@ export function ChatThread() {
   const [warning, setWarning] = useState<{ message: string; body: string } | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
 
-  const { data: match } = useQuery({
+  const { data: match, isError: matchFailed } = useQuery({
     queryKey: ['match', matchId],
     queryFn: () => matchesApi.explanation(matchId!),
     enabled: Boolean(matchId),
   })
 
-  const { data: messages, isLoading } = useQuery({
+  const { data: messages, isLoading, isError: messagesFailed } = useQuery({
     queryKey: ['chat', matchId, 'messages'],
     queryFn: () => chatApi.list(matchId!),
     enabled: Boolean(matchId),
-    refetchInterval: 3000,
+    // Stop polling once a request has failed (a bad link would otherwise hit
+    // the API every three seconds forever).
+    refetchInterval: (q) => (q.state.status === 'error' ? false : 3000),
   })
 
   const sendMutation = useMutation({
@@ -71,6 +73,18 @@ export function ChatThread() {
     },
   })
 
+  // v2: the server no longer marks messages read when they are fetched. Send
+  // an explicit receipt only while this thread is actually visible and there
+  // is something unread from the other person.
+  const unreadFromOther = messages?.some((m) => m.sender_id === match?.candidate_id && !m.is_read) ?? false
+  useEffect(() => {
+    if (!matchId || !unreadFromOther || document.visibilityState !== 'visible') return
+    chatApi
+      .markRead(matchId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['chat', matchId, 'messages'] }))
+      .catch(() => {})
+  }, [matchId, unreadFromOther, queryClient])
+
   // Runs after the first render that actually had messages in hand, so every
   // later poll (and anything the user sends) counts as new and animates.
   useEffect(() => {
@@ -85,6 +99,22 @@ export function ChatThread() {
 
   function dismissWarning() {
     setWarning(null)
+  }
+
+  if (matchFailed || messagesFailed) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto px-4 py-12 text-center">
+          <p className="text-[15px] font-medium mb-1.5">This conversation isn't available</p>
+          <p className="text-[13.5px] text-cohab-muted mb-5">
+            The link may be old, or chat hasn't opened for this match yet. Chat opens once you've both said you're interested.
+          </p>
+          <Link to="/chats" className="text-cohab-primary font-medium text-[14px]">
+            Back to your chats
+          </Link>
+        </div>
+      </AppShell>
+    )
   }
 
   if (isLoading || !match) {
@@ -222,7 +252,7 @@ export function ChatThread() {
           {warning && (
             <>
               {/* PII banner — mobile */}
-              <div className="cohab-desktop:hidden border border-cohab-warn-border bg-cohab-accent-tint rounded-2xl px-[13px] py-3 mb-2.5">
+              <div role="alert" className="cohab-desktop:hidden border border-cohab-warn-border bg-cohab-accent-tint rounded-2xl px-[13px] py-3 mb-2.5">
                 <p className="text-[13.5px] font-semibold text-cohab-accent mb-1">
                   You're about to share contact details
                 </p>
@@ -253,7 +283,7 @@ export function ChatThread() {
               </div>
 
               {/* PII banner — desktop */}
-              <div className="hidden cohab-desktop:flex border-[1.5px] border-cohab-accent rounded-xl px-4 py-3.5 mb-3 gap-3.5 items-start">
+              <div role="alert" className="hidden cohab-desktop:flex border-[1.5px] border-cohab-accent rounded-xl px-4 py-3.5 mb-3 gap-3.5 items-start">
                 <div className="flex-1">
                   <p className="text-[13px] font-semibold text-cohab-accent mb-1">
                     Careful — that looks like contact info

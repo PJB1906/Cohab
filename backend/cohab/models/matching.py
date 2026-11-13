@@ -15,6 +15,19 @@ from cohab.models.base import (
 
 WEIGHT_SET_SOURCES = ("expert", "fitted", "gbt")
 
+# v2: why a match was rejected. Optional; "other" carries no free text on
+# purpose (free text here would be an unmoderated channel about a person).
+REJECTION_REASONS = (
+    "not_interested",
+    "budget",
+    "location",
+    "lifestyle",
+    "schedule",
+    "found_elsewhere",
+    "safety",
+    "other",
+)
+
 # COHAB_PRD.md §8.2 match lifecycle states.
 MATCH_STATES = (
     "suggested",
@@ -52,6 +65,10 @@ class MatchScore(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
         CheckConstraint("user_id_a < user_id_b", name="ck_match_score_ordered_pair"),
         UniqueConstraint("user_id_a", "user_id_b", name="uq_match_score_pair"),
         CheckConstraint(check_in("state", MATCH_STATES), name="ck_match_score_state"),
+        CheckConstraint(
+            "rejection_reason IS NULL OR " + check_in("rejection_reason", REJECTION_REASONS),
+            name="ck_match_score_rejection_reason",
+        ),
     )
 
     user_id_a: Mapped[uuid.UUID] = mapped_column(
@@ -75,5 +92,11 @@ class MatchScore(Base, UUIDPKMixin, CreatedAtMixin, UpdatedAtMixin):
     # Anchors both the 30/90-day feedback cadence and the survival duration
     # Phase 9's Kaplan-Meier estimator needs — never overwritten afterwards.
     cohabiting_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # v2 W1 instrumentation. `first_shown_at` is set by the first exposure,
+    # `first_messaged_at` by the first chat message; neither is overwritten.
+    rejection_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    first_shown_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_messaged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     weight_set: Mapped["WeightSet"] = relationship(back_populates="match_scores")

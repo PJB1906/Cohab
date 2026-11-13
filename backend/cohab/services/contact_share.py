@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from cohab.models import ContactShare, MatchScore, User
 from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked, ensure_pair_active, load_match
+from cohab.services.match_events import transition
 
 __all__ = [
     "AlreadyMutuallyShared",
@@ -42,6 +43,12 @@ class ContactShareError(Exception):
 
 class ChatNotOpenYet(ContactShareError):
     """PRD screen order: chat (9) precedes contact share (10)."""
+
+
+class NoPhoneOnFile(ContactShareError):
+    """v2 audit: opting in to "share my phone number" with no number on the
+    account completed the consent and released nothing, so the other person
+    agreed in exchange for an empty card. Refuse it with a way to fix it."""
 
 
 class AlreadyMutuallyShared(ContactShareError):
@@ -88,6 +95,8 @@ class ContactShareService:
         ensure_pair_active(self.session, row)
         if row.state not in _OPT_IN_ALLOWED_STATES:
             raise ChatNotOpenYet(match_id)
+        if not (user.phone_number or "").strip():
+            raise NoPhoneOnFile(match_id)
 
         existing = self.session.scalar(
             select(ContactShare).where(
@@ -114,7 +123,8 @@ class ContactShareService:
 
         status = self._status(user, row)
         if status.you_consented and status.other_consented and row.state == "chatting":
-            row.state = "contact_shared"  # PRD §8.2: Chatting -> ContactShared, both opt in
+            # PRD §8.2: Chatting -> ContactShared, both opt in
+            transition(self.session, row, "contact_shared", actor_id=user.id)
 
         self.session.commit()
         return self._status(user, row)

@@ -1,0 +1,297 @@
+{
+  "kind": "policy_comparison",
+  "data_source": "simulation",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "config": {
+      "n_agents": 1000,
+      "truth_concentration": 30.0,
+      "pair_noise_sd": 0.05,
+      "misreport_share": 0.0,
+      "study_raters": 50,
+      "include_irving": true
+    },
+    "runs": 200,
+    "seeds": [
+      1000,
+      1199
+    ],
+    "table": {
+      "random": {
+        "match_rate": {
+          "mean": 0.15166,
+          "ci95": [
+            0.14946454147250973,
+            0.15385545852749025
+          ],
+          "n": 200
+        },
+        "welfare_per_agent": {
+          "mean": 0.12269086625289387,
+          "ci95": [
+            0.12093289478900845,
+            0.12444883771677928
+          ],
+          "n": 200
+        },
+        "mean_true_utility_matched": {
+          "mean": 0.8091639965674358,
+          "ci95": [
+            0.8075457425939692,
+            0.8107822505409024
+          ],
+          "n": 200
+        },
+        "exposure_gini": {
+          "mean": 0.6275932729009248,
+          "ci95": [
+            0.625999485458369,
+            0.6291870603434806
+          ],
+          "n": 200
+        },
+        "coverage": {
+          "mean": 0.86993,
+          "ci95": [
+            0.8683087630627098,
+            0.8715512369372902
+          ],
+          "n": 200
+        },
+        "regret": {
+          "mean": 0.2553829845016312,
+          "ci95": [
+            0.2523555659509477,
+            0.2584104030523147
+          ],
+          "n": 200
+        },
+        "top10_overlap_with_oracle": {
+          "mean": 0.551088873826863,
+          "ci95": [
+            0.5479597355535845,
+            0.5542180121001415
+          ],
+          "n": 200
+        }
+      },
+      "expert": {
+        "match_rate": {
+          "mean": 0.3605,
+          "ci95": [
+            0.35749415640483523,
+            0.36350584359516475
+          ],
+          "n": 200
+        },
+        "welfare_per_agent": {
+          "mean": 0.3152123833707023,
+          "ci95": [
+            0.3125410640167603,
+            0.3178837027246443
+          ],
+          "n": 200
+        },
+        "mean_true_utility_matched": {
+          "mean": 0.874378027654168,
+          "ci95": [
+            0.8730423482152407,
+            0.8757137070930954
+          ],
+          "n": 200
+        },
+        "exposure_gini": {
+          "mean": 0.6598808197753522,
+          "ci95": [
+            0.6581924376361892,
+            0.6615692019145152
+          ],
+          "n": 200
+        },
+        "coverage": {
+          "mean": 0.830355,
+          "ci95": [
+            0.8285688741310032,
+            0.8321411258689967
+          ],
+          "n": 200
+        },
+        "regret": {
+          "mean": 0.06286146738382282,
+          "ci95": [
+            0.06064056803423231,
+            0.06508236673341333
+          ],
+          "n": 200
+        },
+        "top10_overlap_with_oracle": {
+          "mean": 0.7270882663102164,
+          "ci95": [
+            0.723686271959255,
+            0.7304902606611778
+          ],
+          "n": 200
+        }
+      },
+      "learned": {
+        "match_rate": {
+          "mean": 0.3696900000000001,
+          "ci95": [
+            0.365868943623767,
+            0.37351105637623316
+          ],
+          "n": 200
+        },
+        "welfare_per_agent": {
+          "mean": 0.3252604207757728,
+          "ci95": [
+            0.32186531642001787,
+            0.3286555251315277
+          ],
+          "n": 200
+        },
+        "mean_true_utility_matched": {
+          "mean": 0.8798313749091118,
+          "ci95": [
+            0.8785199990188777,
+            0.8811427507993459
+          ],
+          "n": 200
+        },
+        "exposure_gini": {
+          "mean": 0.6592419197956833,
+          "ci95": [
+            0.6572912042884158,
+            0.6611926353029507
+          ],
+          "n": 200
+        },
+        "coverage": {
+          "mean": 0.830285,
+          "ci95": [
+            0.8280566413706261,
+            0.832513358629374
+          ],
+          "n": 200
+        },
+        "regret": {
+          "mean": 0.05281342997875228,
+          "ci95": [
+            0.050537336792019154,
+            0.05508952316548541
+          ],
+          "n": 200
+        },
+        "top10_overlap_with_oracle": {
+          "mean": 0.7543095184919774,
+          "ci95": [
+            0.751242144943352,
+            0.7573768920406028
+          ],
+          "n": 200
+        }
+      },
+      "oracle": {
+        "match_rate": {
+          "mean": 0.41960000000000003,
+          "ci95": [
+            0.41652127938860717,
+            0.4226787206113929
+          ],
+          "n": 200
+        },
+        "welfare_per_agent": {
+          "mean": 0.378073850754525,
+          "ci95": [
+            0.3753261044757323,
+            0.3808215970333177
+          ],
+          "n": 200
+        },
+        "mean_true_utility_matched": {
+          "mean": 0.9011163098015058,
+          "ci95": [
+            0.8997764741210165,
+            0.9024561454819952
+          ],
+          "n": 200
+        },
+        "exposure_gini": {
+          "mean": 0.6457487989746806,
+          "ci95": [
+            0.643890024727745,
+            0.6476075732216162
+          ],
+          "n": 200
+        },
+        "coverage": {
+          "mean": 0.84772,
+          "ci95": [
+            0.8455965167108743,
+            0.8498434832891257
+          ],
+          "n": 200
+        },
+        "regret": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "n": 200
+        },
+        "top10_overlap_with_oracle": {
+          "mean": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ],
+          "n": 200
+        }
+      }
+    },
+    "irving_expert": {
+      "share_runs_with_stable_matching": 1.0,
+      "match_rate": {
+        "mean": 0.68466,
+        "ci95": [
+          0.6823968250444127,
+          0.6869231749555874
+        ],
+        "n": 200
+      },
+      "welfare_per_agent": {
+        "mean": 0.5600655994800516,
+        "ci95": [
+          0.5580747556666865,
+          0.5620564432934168
+        ],
+        "n": 200
+      }
+    },
+    "learned_weight_corr_with_truth": {
+      "mean": 0.9069417788856053,
+      "ci95": [
+        0.8988859468356543,
+        0.9149976109355564
+      ],
+      "n": 200
+    },
+    "expert_weight_corr_with_truth": {
+      "mean": 0.6590754328327963,
+      "ci95": [
+        0.6382069698317455,
+        0.6799438958338472
+      ],
+      "n": 200
+    },
+    "assumptions": "- A population of N synthetic agents from the v1 seed distribution.\n- Hidden true compatibility: true attribute weights w* (a Dirichlet draw\n  around the expert vector), plus a symmetric pair-specific term eps_ij that\n  no questionnaire can see. U_ij = sum_k w*_k s_kij + eps_ij. Held out from\n  every policy.\n- Each policy shows every agent a top-10 list of Stage-1-eligible candidates.\n- Behaviour: an agent views rank r with probability 0.85^(r-1) and expresses\n  interest with probability sigmoid(a * (U_ij - c)). A pair is mutual when\n  both saw and liked each other. Mutual pairs are resolved into at most one\n  cohabitation per person, greedily by true utility.\n\nPolicies: random (eligible), expert weights, learned weights (fitted to a\nsimulated 50-rater study drawn from w*), and the oracle (true U). Irving's\nstable roommates on expert preferences is run as an assignment benchmark\n(simulation only: the product never assigns)."
+  }
+}

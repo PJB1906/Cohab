@@ -1,0 +1,396 @@
+{
+  "kind": "fairness_synthetic",
+  "data_source": "simulation",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "n": 1500,
+    "parity_band": [
+      0.8,
+      1.25
+    ],
+    "groupings": {
+      "gender": {
+        "table": [
+          {
+            "group": "female",
+            "n": 479,
+            "stage1_pass_rate": 0.04212411614702077,
+            "pass_rate_ratio": 1.2051924565030692,
+            "mean_exposure": 12.24634655532359,
+            "exposure_ratio": 1.372088424931684,
+            "flag": true
+          },
+          {
+            "group": "male",
+            "n": 506,
+            "stage1_pass_rate": 0.04085332250485831,
+            "pass_rate_ratio": 1.1688344019871983,
+            "mean_exposure": 11.345849802371541,
+            "exposure_ratio": 1.271196198353549,
+            "flag": true
+          },
+          {
+            "group": "non_binary",
+            "n": 515,
+            "stage1_pass_rate": 0.02248359747922563,
+            "pass_rate_ratio": 0.6432671959796262,
+            "mean_exposure": 3.458252427184466,
+            "exposure_ratio": 0.38746479240937404,
+            "flag": true
+          }
+        ],
+        "constraint_marginal_pool_gain": {
+          "not_verified_or_active": {
+            "female": 0.0,
+            "male": 0.0,
+            "non_binary": 0.0
+          },
+          "both_have_place": {
+            "female": 365.2609603340292,
+            "male": 364.5,
+            "non_binary": 335.4815533980582
+          },
+          "different_city": {
+            "female": 0.0,
+            "male": 0.0,
+            "non_binary": 0.0
+          },
+          "budget_no_overlap": {
+            "female": 790.1482254697286,
+            "male": 794.9071146245059,
+            "non_binary": 804.9048543689321
+          },
+          "move_in_too_far": {
+            "female": 114.58455114822547,
+            "male": 103.99802371541502,
+            "non_binary": 116.29320388349515
+          },
+          "gender_preference": {
+            "female": 138.12526096033403,
+            "male": 149.54743083003953,
+            "non_binary": 194.14563106796118
+          },
+          "severe_allergy": {
+            "female": 0.0,
+            "male": 0.0,
+            "non_binary": 0.0
+          },
+          "pet_conflict": {
+            "female": 9.267223382045929,
+            "male": 10.964426877470355,
+            "non_binary": 5.815533980582524
+          },
+          "smoking_dealbreaker": {
+            "female": 18.46972860125261,
+            "male": 13.84387351778656,
+            "non_binary": 8.65631067961165
+          }
+        }
+      },
+      "diet": {
+        "table": [
+          {
+            "group": "eggetarian",
+            "n": 179,
+            "stage1_pass_rate": 0.03080265801036818,
+            "pass_rate_ratio": 0.8812797625182957,
+            "mean_exposure": 8.519553072625698,
+            "exposure_ratio": 0.9545361225678628,
+            "flag": false
+          },
+          {
+            "group": "jain",
+            "n": 139,
+            "stage1_pass_rate": 0.0373198439247268,
+            "pass_rate_ratio": 1.0677397768768064,
+            "mean_exposure": 9.179856115107913,
+            "exposure_ratio": 1.0285168936855296,
+            "flag": false
+          },
+          {
+            "group": "nonveg",
+            "n": 519,
+            "stage1_pass_rate": 0.03804591628844406,
+            "pass_rate_ratio": 1.0885130776761225,
+            "mean_exposure": 9.0616570327553,
+            "exposure_ratio": 1.0152737936310838,
+            "flag": false
+          },
+          {
+            "group": "veg",
+            "n": 594,
+            "stage1_pass_rate": 0.0330354916745844,
+            "pass_rate_ratio": 0.9451622729393439,
+            "mean_exposure": 8.93939393939394,
+            "exposure_ratio": 1.001575359209061,
+            "flag": false
+          },
+          {
+            "group": "vegan",
+            "n": 69,
+            "stage1_pass_rate": 0.03417737428817279,
+            "pass_rate_ratio": 0.9778321171517561,
+            "mean_exposure": 8.318840579710145,
+            "exposure_ratio": 0.9320481677296996,
+            "flag": false
+          }
+        ],
+        "constraint_marginal_pool_gain": {
+          "not_verified_or_active": {
+            "eggetarian": 0.0,
+            "jain": 0.0,
+            "nonveg": 0.0,
+            "veg": 0.0,
+            "vegan": 0.0
+          },
+          "both_have_place": {
+            "eggetarian": 342.1005586592179,
+            "jain": 372.36690647482015,
+            "nonveg": 355.3699421965318,
+            "veg": 352.22727272727275,
+            "vegan": 369.7826086956522
+          },
+          "different_city": {
+            "eggetarian": 0.0,
+            "jain": 0.0,
+            "nonveg": 0.0,
+            "veg": 0.0,
+            "vegan": 0.0
+          },
+          "budget_no_overlap": {
+            "eggetarian": 808.1117318435754,
+            "jain": 780.8705035971223,
+            "nonveg": 790.3545279383429,
+            "veg": 802.989898989899,
+            "vegan": 795.1739130434783
+          },
+          "move_in_too_far": {
+            "eggetarian": 120.05586592178771,
+            "jain": 99.85611510791367,
+            "nonveg": 105.66666666666667,
+            "veg": 118.05555555555556,
+            "vegan": 102.3768115942029
+          },
+          "gender_preference": {
+            "eggetarian": 161.83240223463687,
+            "jain": 157.70503597122303,
+            "nonveg": 170.03853564547205,
+            "veg": 154.3872053872054,
+            "vegan": 159.02898550724638
+          },
+          "severe_allergy": {
+            "eggetarian": 0.0,
+            "jain": 0.0,
+            "nonveg": 0.0,
+            "veg": 0.0,
+            "vegan": 0.0
+          },
+          "pet_conflict": {
+            "eggetarian": 8.145251396648044,
+            "jain": 14.820143884892087,
+            "nonveg": 7.813102119460501,
+            "veg": 8.092592592592593,
+            "vegan": 8.72463768115942
+          },
+          "smoking_dealbreaker": {
+            "eggetarian": 12.581005586592179,
+            "jain": 17.43884892086331,
+            "nonveg": 12.726396917148362,
+            "veg": 13.727272727272727,
+            "vegan": 12.681159420289855
+          }
+        }
+      },
+      "budget_band": {
+        "table": [
+          {
+            "group": "10-15k",
+            "n": 716,
+            "stage1_pass_rate": 0.04787176553456494,
+            "pass_rate_ratio": 1.3696356381787667,
+            "mean_exposure": 10.391061452513966,
+            "exposure_ratio": 1.1642211068696557,
+            "flag": true
+          },
+          {
+            "group": "15-20k",
+            "n": 347,
+            "stage1_pass_rate": 0.02612116050469766,
+            "pass_rate_ratio": 0.7473397301795736,
+            "mean_exposure": 9.011527377521613,
+            "exposure_ratio": 1.0096572353064253,
+            "flag": true
+          },
+          {
+            "group": "20k+",
+            "n": 214,
+            "stage1_pass_rate": 0.011234904266395665,
+            "pass_rate_ratio": 0.32143634359321355,
+            "mean_exposure": 6.420560747663552,
+            "exposure_ratio": 0.7193636929709686,
+            "flag": true
+          },
+          {
+            "group": "<10k",
+            "n": 223,
+            "stage1_pass_rate": 0.029972148846615233,
+            "pass_rate_ratio": 0.8575184715818088,
+            "mean_exposure": 6.488789237668161,
+            "exposure_ratio": 0.7270080562072186,
+            "flag": true
+          }
+        ],
+        "constraint_marginal_pool_gain": {
+          "not_verified_or_active": {
+            "10-15k": 0.0,
+            "15-20k": 0.0,
+            "20k+": 0.0,
+            "<10k": 0.0
+          },
+          "both_have_place": {
+            "10-15k": 343.11871508379886,
+            "15-20k": 355.04610951008647,
+            "20k+": 354.2803738317757,
+            "<10k": 392.2869955156951
+          },
+          "different_city": {
+            "10-15k": 0.0,
+            "15-20k": 0.0,
+            "20k+": 0.0,
+            "<10k": 0.0
+          },
+          "budget_no_overlap": {
+            "10-15k": 679.159217877095,
+            "15-20k": 869.6512968299712,
+            "20k+": 1037.0280373831777,
+            "<10k": 830.7578475336323
+          },
+          "move_in_too_far": {
+            "10-15k": 152.88268156424581,
+            "15-20k": 89.7579250720461,
+            "20k+": 34.89252336448598,
+            "<10k": 86.65022421524664
+          },
+          "gender_preference": {
+            "10-15k": 220.4050279329609,
+            "15-20k": 130.94812680115274,
+            "20k+": 49.098130841121495,
+            "<10k": 125.83856502242152
+          },
+          "severe_allergy": {
+            "10-15k": 0.0,
+            "15-20k": 0.0,
+            "20k+": 0.0,
+            "<10k": 0.0
+          },
+          "pet_conflict": {
+            "10-15k": 12.266759776536313,
+            "15-20k": 6.195965417867435,
+            "20k+": 2.0186915887850465,
+            "<10k": 7.251121076233184
+          },
+          "smoking_dealbreaker": {
+            "10-15k": 19.407821229050278,
+            "15-20k": 8.244956772334294,
+            "20k+": 4.841121495327103,
+            "<10k": 11.286995515695068
+          }
+        }
+      },
+      "seeker_type": {
+        "table": [
+          {
+            "group": "has_place",
+            "n": 730,
+            "stage1_pass_rate": 0.018714759611430452,
+            "pass_rate_ratio": 0.53543882155874,
+            "mean_exposure": 3.5178082191780824,
+            "exposure_ratio": 0.39413746106715897,
+            "flag": true
+          },
+          {
+            "group": "needs_place",
+            "n": 770,
+            "stage1_pass_rate": 0.05034611819134834,
+            "pass_rate_ratio": 1.4404281302105453,
+            "mean_exposure": 14.051948051948052,
+            "exposure_ratio": 1.5743891602869795,
+            "flag": true
+          }
+        ],
+        "constraint_marginal_pool_gain": {
+          "not_verified_or_active": {
+            "has_place": 0.0,
+            "needs_place": 0.0
+          },
+          "both_have_place": {
+            "has_place": 729.0,
+            "needs_place": 0.0
+          },
+          "different_city": {
+            "has_place": 0.0,
+            "needs_place": 0.0
+          },
+          "budget_no_overlap": {
+            "has_place": 589.5164383561644,
+            "needs_place": 993.3545454545455
+          },
+          "move_in_too_far": {
+            "has_place": 57.775342465753425,
+            "needs_place": 162.62857142857143
+          },
+          "gender_preference": {
+            "has_place": 82.94383561643835,
+            "needs_place": 235.4142857142857
+          },
+          "severe_allergy": {
+            "has_place": 0.0,
+            "needs_place": 0.0
+          },
+          "pet_conflict": {
+            "has_place": 4.361643835616438,
+            "needs_place": 12.724675324675324
+          },
+          "smoking_dealbreaker": {
+            "has_place": 7.3493150684931505,
+            "needs_place": 19.40909090909091
+          }
+        }
+      }
+    },
+    "counterfactual_no_gender_preference": [
+      {
+        "gender": "female",
+        "n": 479,
+        "median_pool_before": 35.0,
+        "median_pool_after": 111.0,
+        "mean_exposure_before": 12.24634655532359,
+        "mean_exposure_after": 9.025052192066806
+      },
+      {
+        "gender": "male",
+        "n": 506,
+        "median_pool_before": 39.0,
+        "median_pool_after": 118.5,
+        "mean_exposure_before": 11.345849802371541,
+        "mean_exposure_after": 10.75889328063241
+      },
+      {
+        "gender": "non_binary",
+        "n": 515,
+        "median_pool_before": 18.0,
+        "median_pool_after": 115.0,
+        "mean_exposure_before": 3.458252427184466,
+        "mean_exposure_after": 9.776699029126213
+      }
+    ],
+    "share_with_gender_preference": 0.6393333333333333
+  }
+}

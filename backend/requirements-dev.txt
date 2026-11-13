@@ -5,6 +5,6 @@
 # only by `services/matching/evaluation.py`'s report charts. Neither is
 # imported by the running app or by pytest — main.py wires TfidfSimilarity
 # only, and every EmbeddingSimilarity test injects a fake encoder.
--r requirements.txt
+-r requirements-test.txt
 sentence-transformers==3.3.1
 matplotlib==3.10.7

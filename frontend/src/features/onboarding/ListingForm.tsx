@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { OnboardingHeader } from '@/components/OnboardingHeader'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { useNavigate } from 'react-router-dom'
@@ -36,6 +37,32 @@ export function ListingForm() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Editing an existing listing (Profile -> "Edit listing") used to open
+  // this form blank, so saving either failed validation or wiped the
+  // listing. Load the saved one once and fill the fields from it.
+  const queryClient = useQueryClient()
+  const existing = useQuery({
+    queryKey: ['listing', 'form-seed'],
+    queryFn: () => listingApi.get(),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+  })
+  const filled = useRef(false)
+  useEffect(() => {
+    const l = existing.data
+    if (!l || filled.current) return
+    filled.current = true
+    setLocality(l.locality ?? '')
+    setRent(String(l.rent_per_person ?? ''))
+    setDeposit(String(l.deposit ?? ''))
+    setRoomType(l.room_type)
+    setAvailableFrom(l.available_from ?? '')
+    setHousemates(String(l.current_housemates ?? 0))
+    setAmenities(l.amenities ?? [])
+    setPhotos([0, 1, 2, 3].map((i) => l.photos?.[i] ?? null))
+  }, [existing.data])
+
   function toggleAmenity(a: string) {
     setAmenities((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]))
   }
@@ -47,6 +74,10 @@ export function ListingForm() {
   const [draftSaved, setDraftSaved] = useState(false)
 
   async function save(advance: boolean) {
+    if (!locality.trim() || !(Number(rent) > 0) || !availableFrom) {
+      setError('Add the locality, the rent per person and the date the room is available.')
+      return
+    }
     setBusy(true)
     setError(null)
     setDraftSaved(false)
@@ -61,6 +92,10 @@ export function ListingForm() {
         photos: photos.filter((p): p is string => Boolean(p)),
         current_housemates: Number(housemates) || 0,
       })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['listing'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] }),
+      ])
       if (advance) navigate('/onboarding/questionnaire')
       else setDraftSaved(true)
     } catch (err) {

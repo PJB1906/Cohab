@@ -16,10 +16,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_db, require_verified_user
-from cohab.api.schemas import ContactStatusOut, MessageOut, SendMessageRequest
+from cohab.api.schemas import ContactStatusOut, MarkReadRequest, MarkReadResponse, MessageOut, SendMessageRequest
 from cohab.models import User
 from cohab.services.chat import ChatMessage, ChatService, PIIDetected, RateLimited, ThreadNotOpen
-from cohab.services.contact_share import AlreadyMutuallyShared, ChatNotOpenYet, ContactShareService
+from cohab.services.contact_share import AlreadyMutuallyShared, ChatNotOpenYet, ContactShareService, NoPhoneOnFile
 from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -76,6 +76,27 @@ def send_message(
     return _to_message_out(message)
 
 
+@router.post("/{match_id}/read", response_model=MarkReadResponse)
+def mark_read(
+    match_id: uuid.UUID,
+    body: MarkReadRequest | None = None,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+) -> MarkReadResponse:
+    """v2 W1: replaces v1's mark-everything-read-on-every-poll."""
+    try:
+        marked = ChatService(db).mark_read(user, match_id, up_to=body.up_to if body else None)
+    except MatchNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
+    except NotAParty:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not a party to this match")
+    except PairBlocked:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
+    except ThreadNotOpen:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "chat isn't open for this match yet")
+    return MarkReadResponse(marked=marked)
+
+
 @router.get("/{match_id}/contact-status", response_model=ContactStatusOut)
 def get_contact_status(
     match_id: uuid.UUID,
@@ -109,6 +130,11 @@ def share_contact(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "this conversation is not available")
     except ChatNotOpenYet:
         raise HTTPException(status.HTTP_409_CONFLICT, "open chat with this match before sharing contact")
+    except NoPhoneOnFile:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Add your phone number in Profile before sharing it. Nothing has been shared.",
+        )
     return ContactStatusOut(**status_.__dict__)
 
 

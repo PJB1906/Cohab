@@ -24,7 +24,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_api_prefix_is_stripped_onto_the_real_route(client: TestClient) -> None:
     resp = client.get("/api/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    assert resp.json() == {"status": "ok", "database": "ok"}
 
 
 def test_bare_api_route_is_unaffected_for_non_navigation_callers(client: TestClient) -> None:
@@ -33,7 +33,7 @@ def test_bare_api_route_is_unaffected_for_non_navigation_callers(client: TestCli
     exactly as every other test in this suite relies on."""
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    assert resp.json() == {"status": "ok", "database": "ok"}
 
 
 def test_a_page_navigation_gets_the_app_shell_even_at_a_colliding_api_path(client: TestClient) -> None:

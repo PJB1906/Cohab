@@ -20,7 +20,12 @@ COPY backend/ ./
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
 EXPOSE 8000
+# Structured logs in production: the app writes its own JSON access line per
+# request (with the request ID), so uvicorn's plain-text one is turned off below.
+ENV LOG_FORMAT=json
 # Render sets $PORT at runtime; alembic upgrade head is safe to run on every
 # boot (no-ops once already at head), which auto-migrates on every deploy
 # and every free-tier spin-down/wake cycle without a separate step.
-CMD alembic upgrade head && uvicorn cohab.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Shell form is required for ${PORT} expansion; exec makes uvicorn PID 1 so
+# it receives SIGTERM on redeploy and shuts down cleanly.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn cohab.main:app --host 0.0.0.0 --port ${PORT:-8000} --no-access-log"]

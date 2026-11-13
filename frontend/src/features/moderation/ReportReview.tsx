@@ -110,7 +110,7 @@ export function ReportReview() {
     </header>
   )
 
-  if (isLoading || !data) {
+  if (!error && (isLoading || !data)) {
     return (
       <div className="min-h-screen">
         <AmbientField />
@@ -119,7 +119,7 @@ export function ReportReview() {
       </div>
     )
   }
-  if (error) {
+  if (error || !data) {
     return (
       <div className="min-h-screen">
         <AmbientField />

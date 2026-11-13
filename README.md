@@ -13,6 +13,21 @@ Matching runs in two stages. The stages are kept separate on purpose; they are n
 
 The full questionnaire, the matrices, the default weights and the explanation templates are in [docs/COHAB_MATCHING_SPEC.md](docs/COHAB_MATCHING_SPEC.md).
 
+## v2: evidence, not more screens
+
+v2 replaces the expert-assigned weights with weights learned from people, and
+says how sure it is. It adds an anonymous pairwise study (Cohab Lab), a
+roommate-pair validation study, a Bradley–Terry fit shrunk toward the expert
+prior with grouped cross-validation and bootstrap intervals, calibrated
+confidence tiers, a top-3 "effectively tied" hint, a "why am I seeing so few
+people?" panel, a policy simulation with Irving's stable roommates as a
+reference, a fairness audit, and a moderator evidence page and playground.
+Every result regenerates with `make reproduce` (Windows: `reproduce.cmd`) and is
+tagged with its data source.
+
+Start at [docs/COHAB_V2.md](docs/COHAB_V2.md); the study protocol is
+[docs/COHAB_HUMAN_STUDY.md](docs/COHAB_HUMAN_STUDY.md).
+
 ## Stack
 
 | Layer | Tech |

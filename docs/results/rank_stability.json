@@ -1,0 +1,178 @@
+{
+  "kind": "rank_stability",
+  "data_source": "simulation",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "expert_prior": {
+      "20": {
+        "k": 5,
+        "n_subjects": 797,
+        "n_samples": 30,
+        "topk_jaccard_mean": 0.5097593156877975,
+        "topk_jaccard_quantiles": [
+          0.3278306878306878,
+          0.3915343915343915,
+          0.4886243386243386,
+          0.6059523809523809,
+          0.7255555555555557
+        ],
+        "p_first_changes_mean": 0.5606859054788791,
+        "share_first_changes_over_half": 0.6398996235884568,
+        "jaccard_histogram": [
+          0,
+          3,
+          48,
+          166,
+          206,
+          160,
+          123,
+          50,
+          28,
+          13
+        ]
+      },
+      "50": {
+        "k": 5,
+        "n_subjects": 797,
+        "n_samples": 30,
+        "topk_jaccard_mean": 0.6163418706392358,
+        "topk_jaccard_quantiles": [
+          0.43492063492063493,
+          0.5075396825396825,
+          0.613095238095238,
+          0.7111111111111111,
+          0.8111111111111112
+        ],
+        "p_first_changes_mean": 0.42936010037641154,
+        "share_first_changes_over_half": 0.3889585947302384,
+        "jaccard_histogram": [
+          0,
+          0,
+          3,
+          36,
+          141,
+          196,
+          198,
+          134,
+          58,
+          31
+        ]
+      },
+      "100": {
+        "k": 5,
+        "n_subjects": 797,
+        "n_samples": 30,
+        "topk_jaccard_mean": 0.704832606400988,
+        "topk_jaccard_quantiles": [
+          0.5329365079365079,
+          0.6107142857142858,
+          0.7067460317460318,
+          0.7984126984126986,
+          0.882222222222222
+        ],
+        "p_first_changes_mean": 0.3265161020493518,
+        "share_first_changes_over_half": 0.23212045169385195,
+        "jaccard_histogram": [
+          0,
+          0,
+          0,
+          6,
+          43,
+          130,
+          206,
+          214,
+          128,
+          70
+        ]
+      },
+      "300": {
+        "k": 5,
+        "n_subjects": 797,
+        "n_samples": 30,
+        "topk_jaccard_mean": 0.8071413634462569,
+        "topk_jaccard_quantiles": [
+          0.6555555555555557,
+          0.7238095238095237,
+          0.8111111111111112,
+          0.8920634920634922,
+          0.9666666666666667
+        ],
+        "p_first_changes_mean": 0.20372229192806357,
+        "share_first_changes_over_half": 0.09535759096612297,
+        "jaccard_histogram": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          29,
+          122,
+          204,
+          239,
+          199
+        ]
+      },
+      "1000": {
+        "k": 5,
+        "n_subjects": 797,
+        "n_samples": 30,
+        "topk_jaccard_mean": 0.8899748063173408,
+        "topk_jaccard_quantiles": [
+          0.7571428571428573,
+          0.8222222222222223,
+          0.9031746031746032,
+          0.9777777777777777,
+          1.0
+        ],
+        "p_first_changes_mean": 0.1093684650773735,
+        "share_first_changes_over_half": 0.033877038895859475,
+        "jaccard_histogram": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          25,
+          115,
+          229,
+          425
+        ]
+      }
+    },
+    "learned_bootstrap": {
+      "k": 5,
+      "n_subjects": 797,
+      "n_samples": 60,
+      "topk_jaccard_mean": 0.8155189267955892,
+      "topk_jaccard_quantiles": [
+        0.6656349206349206,
+        0.7388888888888887,
+        0.8142857142857143,
+        0.9055555555555554,
+        0.9722222222222221
+      ],
+      "p_first_changes_mean": 0.20510246758678374,
+      "share_first_changes_over_half": 0.10790464240903387,
+      "jaccard_histogram": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        22,
+        104,
+        232,
+        230,
+        206
+      ]
+    }
+  }
+}

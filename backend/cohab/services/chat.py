@@ -19,7 +19,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from cohab.core.config import (
@@ -29,6 +29,7 @@ from cohab.core.config import (
 from cohab.core.crypto import decrypt_message_safe, encrypt_message
 from cohab.models import ContactShare, MatchScore, Message, User
 from cohab.services.match_access import MatchNotFound, NotAParty, PairBlocked, ensure_pair_active, load_match
+from cohab.services.match_events import transition
 from cohab.services.moderation import AbuseFlagger, KeywordAbuseFlagger
 from cohab.services.pii import detect_pii
 
@@ -92,9 +93,10 @@ class ChatMessage:
     is_read: bool
 
 
-def _open_thread(row: MatchScore) -> None:
+def _open_thread(session: Session, row: MatchScore, actor_id: uuid.UUID) -> None:
     if row.state == _THREAD_OPENABLE_FROM:
-        row.state = "chatting"  # PRD §8.2: Mutual -> Chatting, thread created
+        # PRD §8.2: Mutual -> Chatting, thread created
+        transition(session, row, "chatting", actor_id=actor_id)
     elif row.state not in _THREAD_OPEN_STATES:
         raise ThreadNotOpen(row.id)
 
@@ -126,7 +128,7 @@ class ChatService:
     ) -> ChatMessage:
         row = load_match(self.session, sender, match_id)
         ensure_pair_active(self.session, row)
-        _open_thread(row)
+        _open_thread(self.session, row, sender.id)
 
         window_start = datetime.now(timezone.utc) - timedelta(minutes=1)
         if (
@@ -153,6 +155,8 @@ class ChatService:
             is_read=False,
         )
         self.session.add(message)
+        if row.first_messaged_at is None:
+            row.first_messaged_at = datetime.now(timezone.utc)
         self.session.commit()
         return ChatMessage(
             id=message.id,
@@ -162,22 +166,45 @@ class ChatService:
             is_read=message.is_read,
         )
 
+    def mark_read(self, reader: User, match_id: uuid.UUID, up_to: datetime | None = None) -> int:
+        """Explicit read receipt: mark the other party's messages up to
+        `up_to` (default: all) as read. Returns how many changed."""
+        row = load_match(self.session, reader, match_id)
+        ensure_pair_active(self.session, row)
+        if row.state not in _THREAD_OPEN_STATES:
+            raise ThreadNotOpen(row.id)
+        stmt = (
+            update(Message)
+            .where(
+                Message.match_score_id == match_id,
+                Message.sender_id != reader.id,
+                Message.is_read.is_(False),
+            )
+            .values(is_read=True)
+        )
+        if up_to is not None:
+            stmt = stmt.where(Message.created_at <= up_to)
+        changed = self.session.execute(stmt).rowcount or 0
+        self.session.commit()
+        return changed
+
     def list_messages(
         self, reader: User, match_id: uuid.UUID, since: datetime | None = None
     ) -> list[ChatMessage]:
         row = load_match(self.session, reader, match_id)
         ensure_pair_active(self.session, row)
-        _open_thread(row)
+        _open_thread(self.session, row, reader.id)
 
         stmt = select(Message).where(Message.match_score_id == match_id).order_by(Message.created_at)
         if since is not None:
             stmt = stmt.where(Message.created_at > since)
         messages = list(self.session.scalars(stmt).all())
-
-        for m in messages:
-            if m.sender_id != reader.id and not m.is_read:
-                m.is_read = True
-        self.session.commit()
+        # v2 W1: reading is side-effect free. v1 marked every message read
+        # and committed on every poll, so a background tab "read" messages
+        # nobody looked at. The client now calls `mark_read` explicitly.
+        # The only write left here is the Mutual -> Chatting transition.
+        if self.session.new or self.session.dirty:
+            self.session.commit()
 
         return [
             ChatMessage(

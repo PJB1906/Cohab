@@ -50,6 +50,15 @@ def _require_db() -> None:
 
 
 @pytest.fixture(autouse=True)
+def _reset_rate_limits() -> None:
+    """The study rate limiter is process state; give every test a clean one."""
+    from cohab.core import ratelimit
+
+    ratelimit.study_per_client.reset()
+    ratelimit.study_global.reset()
+
+
+@pytest.fixture(autouse=True)
 def _force_console_otp(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin OTP delivery to `ConsoleOTPSender` for the whole suite.
 

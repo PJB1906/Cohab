@@ -1,0 +1,17 @@
+{
+  "kind": "transfer",
+  "data_source": "public",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "status": "not_available",
+    "expected_path": "D:\\cohab-v2\\data\\public\\speed_dating.csv",
+    "how_to_get": "Download the Columbia speed-dating CSV ('Speed Dating Data.csv') and save it at the path above."
+  }
+}

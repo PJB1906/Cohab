@@ -1,0 +1,557 @@
+{
+  "kind": "power",
+  "data_source": "simulation",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "sizes": [
+      10,
+      20,
+      30,
+      40,
+      60,
+      80
+    ],
+    "reps": 12,
+    "attributes": [
+      "cleanliness_level",
+      "chore_approach",
+      "sharing_norm",
+      "sleep_schedule",
+      "noise",
+      "guests",
+      "payment_reliability",
+      "cost_split_preference",
+      "communication_style",
+      "diet",
+      "nonveg_cooking",
+      "smoking",
+      "alcohol",
+      "life_stage",
+      "daytime_presence",
+      "home_orientation",
+      "sociability"
+    ],
+    "scenarios": [
+      {
+        "key": "linear",
+        "label": "Linear, weights differ from expert",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.4166666666666667,
+            "p_learned_reliably_worse": 0.08333333333333333,
+            "mean_delta_log_loss": -0.013732068771443137,
+            "mean_delta_accuracy": 0.009127710527883803,
+            "mean_weight_corr_truth": 0.7870003510590554,
+            "mean_weight_l1_error": 0.49009533142719075,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 1.0
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.9166666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.023898379075370735,
+            "mean_delta_accuracy": 0.020991844230413143,
+            "mean_weight_corr_truth": 0.9124446501476715,
+            "mean_weight_l1_error": 0.34513464389576876,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 0.9166666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.030726474138503584,
+            "mean_delta_accuracy": 0.029023281475879764,
+            "mean_weight_corr_truth": 0.9383582392334415,
+            "mean_weight_l1_error": 0.30122884908761427,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.030887009386243225,
+            "mean_delta_accuracy": 0.030625931448594795,
+            "mean_weight_corr_truth": 0.9423230330153906,
+            "mean_weight_l1_error": 0.3004365497267687,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.03227138310215407,
+            "mean_delta_accuracy": 0.02029275612803418,
+            "mean_weight_corr_truth": 0.9584164751816721,
+            "mean_weight_l1_error": 0.2607442966762857,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.03218550043870779,
+            "mean_delta_accuracy": 0.029677797790511218,
+            "mean_weight_corr_truth": 0.9589042843087,
+            "mean_weight_l1_error": 0.2533161328627312,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          }
+        ]
+      },
+      {
+        "key": "expert_true",
+        "label": "Expert weights are the truth",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.16666666666666666,
+            "mean_delta_log_loss": 0.0021715210600716886,
+            "mean_delta_accuracy": -0.0005366974197490437,
+            "mean_weight_corr_truth": 0.9991597469760681,
+            "mean_weight_l1_error": 0.012370203702189234,
+            "expert_l1_error": 0.0,
+            "median_lambda": 100.0
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.08333333333333333,
+            "mean_delta_log_loss": 0.0007664905551268789,
+            "mean_delta_accuracy": 0.0018735302131735094,
+            "mean_weight_corr_truth": 0.9996914990923237,
+            "mean_weight_l1_error": 0.006334784500193089,
+            "expert_l1_error": 0.0,
+            "median_lambda": 100.0
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.3333333333333333,
+            "mean_delta_log_loss": 0.0011909515100944623,
+            "mean_delta_accuracy": -0.0011730406755389444,
+            "mean_weight_corr_truth": 0.9928769407388636,
+            "mean_weight_l1_error": 0.022662850277021834,
+            "expert_l1_error": 0.0,
+            "median_lambda": 100.0
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -2.2742208040475256e-06,
+            "mean_delta_accuracy": 0.0009409863322088948,
+            "mean_weight_corr_truth": 0.9916753429062227,
+            "mean_weight_l1_error": 0.03827856899611171,
+            "expert_l1_error": 0.0,
+            "median_lambda": 100.0
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.16666666666666666,
+            "mean_delta_log_loss": 0.00015687500108523453,
+            "mean_delta_accuracy": -0.0004053718419232318,
+            "mean_weight_corr_truth": 0.9999211567897816,
+            "mean_weight_l1_error": 0.003744346070544778,
+            "expert_l1_error": 0.0,
+            "median_lambda": 100.0
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.3333333333333333,
+            "mean_delta_log_loss": 0.00036610294743041893,
+            "mean_delta_accuracy": -0.0003341184944661753,
+            "mean_weight_corr_truth": 0.9999844586676611,
+            "mean_weight_l1_error": 0.0022641779234855992,
+            "expert_l1_error": 0.0,
+            "median_lambda": 100.0
+          }
+        ]
+      },
+      {
+        "key": "noisy",
+        "label": "Noisier choices (half the scale)",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.16666666666666666,
+            "p_learned_reliably_worse": 0.08333333333333333,
+            "mean_delta_log_loss": -0.004159526583835819,
+            "mean_delta_accuracy": 0.010296365289850526,
+            "mean_weight_corr_truth": 0.6463819206867434,
+            "mean_weight_l1_error": 0.6099284816638166,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 1.0
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.0,
+            "p_learned_reliably_worse": 0.08333333333333333,
+            "mean_delta_log_loss": -0.0020150211725279144,
+            "mean_delta_accuracy": -0.00025388993503902557,
+            "mean_weight_corr_truth": 0.7263248817454332,
+            "mean_weight_l1_error": 0.5531575669045831,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 1.0
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 0.5,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.004851990176208687,
+            "mean_delta_accuracy": 0.009535335222529898,
+            "mean_weight_corr_truth": 0.7838162488869774,
+            "mean_weight_l1_error": 0.48462614143554483,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 0.4166666666666667,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.0050543151839801586,
+            "mean_delta_accuracy": 0.010181945050814009,
+            "mean_weight_corr_truth": 0.8275347962730338,
+            "mean_weight_l1_error": 0.4652084763663045,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.007197751119188661,
+            "mean_delta_accuracy": 0.007870573157390351,
+            "mean_weight_corr_truth": 0.8756549717718666,
+            "mean_weight_l1_error": 0.4191205412623602,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.00734648364324661,
+            "mean_delta_accuracy": 0.010706234767689754,
+            "mean_weight_corr_truth": 0.8788881969628606,
+            "mean_weight_l1_error": 0.4117669349760719,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          }
+        ]
+      },
+      {
+        "key": "attend4",
+        "label": "Raters attend to only 4 attributes",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.16666666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.017966112184406635,
+            "mean_delta_accuracy": 0.019193311806282726,
+            "mean_weight_corr_truth": 0.8199552925029687,
+            "mean_weight_l1_error": 0.4939575562386543,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.4166666666666667,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.010560368972864886,
+            "mean_delta_accuracy": 0.01616540930029541,
+            "mean_weight_corr_truth": 0.8265728426181075,
+            "mean_weight_l1_error": 0.4426488743638946,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 0.8333333333333334,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.025095563514611452,
+            "mean_delta_accuracy": 0.03567147289034553,
+            "mean_weight_corr_truth": 0.9109737977469045,
+            "mean_weight_l1_error": 0.3412305941120745,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.02771338990490782,
+            "mean_delta_accuracy": 0.03190060149864435,
+            "mean_weight_corr_truth": 0.9336117450963021,
+            "mean_weight_l1_error": 0.32972552695329943,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.029415221341004282,
+            "mean_delta_accuracy": 0.028234159051375874,
+            "mean_weight_corr_truth": 0.9436781070512587,
+            "mean_weight_l1_error": 0.2996098758210464,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.029872320881468812,
+            "mean_delta_accuracy": 0.03731476560511785,
+            "mean_weight_corr_truth": 0.9553674233286465,
+            "mean_weight_l1_error": 0.27192341688115124,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          }
+        ]
+      },
+      {
+        "key": "heterogeneous",
+        "label": "Raters differ (Dirichlet 30)",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.5,
+            "p_learned_reliably_worse": 0.16666666666666666,
+            "mean_delta_log_loss": -0.018470045226802744,
+            "mean_delta_accuracy": 0.014497168854222003,
+            "mean_weight_corr_truth": 0.7816954379805386,
+            "mean_weight_l1_error": 0.5020448302621479,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 1.0
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.5833333333333334,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.015517243408150888,
+            "mean_delta_accuracy": 0.014575813509741057,
+            "mean_weight_corr_truth": 0.8942981043359365,
+            "mean_weight_l1_error": 0.3941826377452744,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.0271776463993831,
+            "mean_delta_accuracy": 0.025807208497175244,
+            "mean_weight_corr_truth": 0.9231539963807734,
+            "mean_weight_l1_error": 0.3255468461920917,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 0.9166666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.02397438444943875,
+            "mean_delta_accuracy": 0.02489703316890803,
+            "mean_weight_corr_truth": 0.9294533433782792,
+            "mean_weight_l1_error": 0.3301965487494661,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.028286700495442973,
+            "mean_delta_accuracy": 0.022254950692610315,
+            "mean_weight_corr_truth": 0.9521079772500111,
+            "mean_weight_l1_error": 0.27807736058917126,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.027130713930594824,
+            "mean_delta_accuracy": 0.025378930551897095,
+            "mean_weight_corr_truth": 0.9483432852361764,
+            "mean_weight_l1_error": 0.2749356307596135,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          }
+        ]
+      },
+      {
+        "key": "interaction",
+        "label": "Unmodelled cleanliness x guests interaction",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.5,
+            "p_learned_reliably_worse": 0.08333333333333333,
+            "mean_delta_log_loss": -0.016847445535053046,
+            "mean_delta_accuracy": 0.010430427743042536,
+            "mean_weight_corr_truth": 0.749164033474591,
+            "mean_weight_l1_error": 0.525933984479782,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 1.0
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.9166666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.028253906322718774,
+            "mean_delta_accuracy": 0.022604761746043128,
+            "mean_weight_corr_truth": 0.8637265819655836,
+            "mean_weight_l1_error": 0.40201915081499145,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 0.9166666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.032099922860953395,
+            "mean_delta_accuracy": 0.026003999731836314,
+            "mean_weight_corr_truth": 0.8846421004773486,
+            "mean_weight_l1_error": 0.36527729402606274,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.032955344831632954,
+            "mean_delta_accuracy": 0.025353012833902223,
+            "mean_weight_corr_truth": 0.8887308684949292,
+            "mean_weight_l1_error": 0.3611798283190022,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.03598545710081872,
+            "mean_delta_accuracy": 0.02159706922966319,
+            "mean_weight_corr_truth": 0.8993969811892777,
+            "mean_weight_l1_error": 0.3318202467083395,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.036686581242939796,
+            "mean_delta_accuracy": 0.03112289445280475,
+            "mean_weight_corr_truth": 0.8993919332291854,
+            "mean_weight_l1_error": 0.3312700858706283,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          }
+        ]
+      },
+      {
+        "key": "inattentive",
+        "label": "15% inattentive raters, exclusions applied",
+        "rows": [
+          {
+            "n_raters": 10,
+            "p_learned_reliably_better": 0.25,
+            "p_learned_reliably_worse": 0.08333333333333333,
+            "mean_delta_log_loss": -0.01103486720314024,
+            "mean_delta_accuracy": 0.006752138332756591,
+            "mean_weight_corr_truth": 0.7581268365561146,
+            "mean_weight_l1_error": 0.5128138071621385,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 1.0
+          },
+          {
+            "n_raters": 20,
+            "p_learned_reliably_better": 0.8333333333333334,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.02720392205757473,
+            "mean_delta_accuracy": 0.021138616185457492,
+            "mean_weight_corr_truth": 0.9124583243133725,
+            "mean_weight_l1_error": 0.34745967141641243,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 30,
+            "p_learned_reliably_better": 0.9166666666666666,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.0294670519097453,
+            "mean_delta_accuracy": 0.031249444627355034,
+            "mean_weight_corr_truth": 0.9207258196039886,
+            "mean_weight_l1_error": 0.32566621078528873,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 40,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.028172383802865936,
+            "mean_delta_accuracy": 0.02852990554331461,
+            "mean_weight_corr_truth": 0.9232793180988459,
+            "mean_weight_l1_error": 0.32734116480878955,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 60,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.0336399632619894,
+            "mean_delta_accuracy": 0.026793302094099997,
+            "mean_weight_corr_truth": 0.9521760781096319,
+            "mean_weight_l1_error": 0.27753262629249636,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          },
+          {
+            "n_raters": 80,
+            "p_learned_reliably_better": 1.0,
+            "p_learned_reliably_worse": 0.0,
+            "mean_delta_log_loss": -0.030425136939539466,
+            "mean_delta_accuracy": 0.028410367694493333,
+            "mean_weight_corr_truth": 0.9585068233512734,
+            "mean_weight_l1_error": 0.26820537076898326,
+            "expert_l1_error": 0.6678931731134821,
+            "median_lambda": 0.3
+          }
+        ]
+      }
+    ],
+    "minimum_raters_80pct": {
+      "linear": 20,
+      "expert_true": null,
+      "noisy": 60,
+      "attend4": 30,
+      "heterogeneous": 30,
+      "interaction": 20,
+      "inattentive": 20
+    }
+  }
+}

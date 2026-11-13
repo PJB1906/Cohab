@@ -28,7 +28,7 @@ export function ContactShare() {
   const { matchId } = useParams<{ matchId: string }>()
   const queryClient = useQueryClient()
 
-  const { data: match } = useQuery({
+  const { data: match, isError: matchFailed } = useQuery({
     queryKey: ['match', matchId],
     queryFn: () => matchesApi.explanation(matchId!),
     enabled: Boolean(matchId),
@@ -53,6 +53,20 @@ export function ContactShare() {
       queryClient.setQueryData(['chat', matchId, 'contact-status'], updated)
     },
   })
+
+  if (matchFailed) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto px-4 py-12 text-center">
+          <p className="text-[15px] font-medium mb-1.5">This match isn't available</p>
+          <p className="text-[13.5px] text-cohab-muted mb-5">The link may be old, or the match has ended.</p>
+          <Link to="/matches" className="text-cohab-primary font-medium text-[14px]">
+            Back to your matches
+          </Link>
+        </div>
+      </AppShell>
+    )
+  }
 
   if (isLoading || !match) {
     return (
@@ -84,6 +98,25 @@ export function ContactShare() {
   const otherConsented = Boolean(status?.other_consented)
   const bothShared = youConsented && otherConsented
   const firstName = match.candidate_name.split(' ')[0]
+
+  // Shown under the consent controls in both layouts. Before the v2 audit a
+  // failed opt-in or withdrawal did nothing visible at all.
+  const actionError = shareMutation.error ?? withdrawMutation.error
+  const actionErrorText = actionError
+    ? actionError instanceof ApiError
+      ? actionError.message
+      : 'That did not go through. Please try again.'
+    : null
+  const errorNote = actionErrorText && (
+    <p role="alert" className="text-[13px] text-cohab-accent mt-3">
+      {actionErrorText}{' '}
+      {/phone number/i.test(actionErrorText) && (
+        <Link to="/profile" className="underline font-medium">
+          Go to Profile
+        </Link>
+      )}
+    </p>
+  )
 
   function toggleConsent() {
     if (youConsented) withdrawMutation.mutate()
@@ -160,6 +193,7 @@ export function ContactShare() {
             </button>
           </div>
 
+          {errorNote && <div className="-mt-1 mb-3">{errorNote}</div>}
           <p className="text-[13px] font-medium text-cohab-primary mb-5">{consentStatusText}</p>
 
           {bothShared && (
@@ -315,6 +349,7 @@ export function ContactShare() {
             </Button>
           </Link>
         </div>
+        {errorNote}
         <p className="text-[12px] leading-[1.5] text-cohab-subtle mt-4 max-w-[600px]">{consentStatusText}</p>
       </div>
     </AppShell>

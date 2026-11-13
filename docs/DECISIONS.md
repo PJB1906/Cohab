@@ -3558,3 +3558,207 @@ beside it, so lifting the form repositions it without shortening the scroll.
 `frontend/src/components/ui/input.tsx`,
 `frontend/src/components/ui/select.tsx`,
 `frontend/src/components/ui/textarea.tsx`.
+
+---
+
+## Phase 14 — v2: evidence and learning (Cohab v2 trimester plan)
+
+The v2 plan's theme is that every v1 number came from synthetic data, so v2
+buys evidence rather than screens. Entries below record where the build
+departs from the deck (`Cohab_Viva_Presentation_v2.pptx`) and the revised plan
+document, and every value this phase proposes that no spec fixes.
+
+### D-14.1 One writer for `match_score.state`, and an append-only event log
+
+Every lifecycle change goes through `services/match_events.transition()`, which
+appends a `match_state_event` row in the same transaction. Nothing assigns
+`row.state` directly any more (chat, contact share and matches all call it), so
+the chain cannot drift from the column. Pre-existing rows got one backfilled
+event each, flagged `{"backfill": true}` so analyses can exclude them.
+**Code:** `services/match_events.py`, migration `a1c0e5d2f7b9`.
+
+### D-14.2 The read path writes only what changed (deviation from slide 23)
+
+Slide 23 said `GET /matches` "stops upserting scores". It cannot stop entirely:
+the explanation and interest endpoints need a stable `match_score` id for every
+listed candidate. v2 replaces v1's SELECT + flush per candidate with one
+`INSERT … ON CONFLICT DO UPDATE … WHERE state = 'suggested' AND (score or
+weight set changed)` per 500 rows. A repeat read of an unchanged pool updates
+no score row (tested: `updated_at` does not move). The one write that remains
+on every read is the exposure log, which is the point of the read.
+`recompute.py` passes `log_exposure=False`: a batch job's reads are not
+impressions anyone saw. **Code:** `services/matches.py::_bulk_upsert`.
+
+### D-14.3 Explicit read receipts
+
+`GET /chat/{id}/messages` no longer marks anything read (v1 did, on every poll,
+so a background tab "read" messages nobody saw). `POST /chat/{id}/read` is the
+receipt; the thread screen sends it only while the tab is visible and there is
+something unread from the other person. The v1 test asserting read-on-fetch was
+rewritten to assert the new behaviour.
+
+### D-14.4 Shrink toward the expert prior, not toward zero
+
+The Bradley–Terry fit's L2 penalty pulls β toward τ₀·w_expert (τ₀ fitted first),
+scaled by the number of comparisons. With little data the fit returns the
+expert weights; ridge-to-zero would instead return "nothing matters", worse
+than the prior it replaces. λ is chosen by grouped CV over
+{0.3, 1, 3, 10, 30, 100}; near-ties go to the larger λ. Verified in tests: when
+the planted truth is the expert vector, CV picks λ ≥ 30 and learned ≈ expert.
+
+### D-14.5 Designed conjoint pairs, not pairs sampled from the seed
+
+Seeded profiles have correlated attributes, so 17–20 weights fitted on sampled
+pairs would be confounded, and raters comparing cards that differ everywhere
+attend to three or four rows. Cards in a pair trial are identical except on 5
+fields, balanced so every field varies about equally often per rater. Cards
+show only the card person's *behaviour*; the features are the directional
+scores S_k(rater → card). Showing tolerances would invite the reverse question
+("would they put up with me?"), which the features do not encode.
+
+### D-14.6 Budget, interests and notes keep their expert weights
+
+The study holds these three out of the cards (it is about lifestyle). A fitted
+weight set scales the 17 learned weights to fill 1 − 0.11 and keeps
+budget_proximity 0.06, interests 0.02 and lifestyle_notes 0.03 as published in
+weight set v2. **Code:** `analysis/weights.py::full_weight_set`.
+
+### D-14.7 Primary metric: held-out pairwise accuracy and log loss
+
+The deck's NDCG@10 needs graded ranked lists the pairwise study never
+produces. The pre-registered comparison is learned minus expert log loss on
+held-out raters with a rater-bootstrap interval; accuracy is reported beside
+it, with random, uniform, best-single-attribute and expert baselines and the
+noise ceiling from repeated pairs. One six-card ranking task per rater gives a
+Kendall τ as the ranking metric.
+
+### D-14.8 Calibration target is "would message", and nothing else
+
+The study's would-message label is one-sided, so the only probability shown
+is P(rater would message | S(rater → card)). Mutual interest needs live match
+state and 90-day cohabitation needs outcomes; neither is shown. Confidence
+tiers appear only while a calibration model is active, and every response
+carries its version and data source. A dry-run calibration can be activated
+for demos (`--activate-dryrun-calibration`), and the card then reads "demo".
+
+### D-14.9 The "effectively tied" rule (proposed values)
+
+The top three are shown as effectively tied when, across plausible weight
+vectors, the same three people stay on top (mean top-3 Jaccard ≥ 0.8) but their
+order changes in at least half of the samples. Plausible weights are the
+fitted set's rater-bootstrap refits when they exist, otherwise 40 draws of
+Dirichlet(200 · w_active): a stated prior, labelled `dirichlet_prior` in the
+response, never presented as estimated.
+
+### D-14.10 Tier thresholds (proposed values)
+
+strong ≥ 0.60, good ≥ 0.35, else possible, on the calibrated probability.
+Proposed, not derived; revisit once real calibration data exists. Displayed
+probabilities are clamped to [0.03, 0.97]: isotonic maps saturate where data
+runs out, and no calibration supports a claim of certainty.
+
+### D-14.11 Study tokens never in a URL query, never in localStorage
+
+The study token travels in an `X-Study-Token` header. The page keeps it in
+sessionStorage and shows it as a resume code. It identifies only anonymous
+study answers, which is why sessionStorage is acceptable here when it is not
+for the product session (CLAUDE.md). The roommate invite link carries its
+token in the URL *fragment* (`#invite=…`), which browsers never send to the
+server, so it cannot reach access logs.
+
+### D-14.12 Study isolation, synthetic flag, withdrawal deletes
+
+`study_*` tables reference no product table and store only SHA-256 hashes of
+tokens. `is_synthetic` marks dry-run rows; every loader excludes them unless
+asked. Withdrawal deletes the rater's rows rather than flagging them.
+`python -m cohab.services.study.delete_data --synthetic-only | --all --yes`.
+
+### D-14.13 Exclusion rules, fixed before data
+
+Fail ≥ 2 of 3 attention checks; median pair-trial response time < 1.5 s; fewer
+than 20 answered pair trials; "no preference" on more than half. Written in
+`analysis/reliability.py` and the study protocol before any real rater.
+
+### D-14.14 Gate-2 tiers
+
+A: ≥ 40 kept raters and ≥ 30 complete pairs. B: ≥ 20 raters (6 attribute
+clusters fitted, expert within-cluster proportions, multiplier fixed at 1.5).
+C: ≥ 8 raters (pilot report; shrinkage keeps weights near expert). D: fewer
+(simulation, power, sensitivity and transfer results carry the report).
+`--publish` refuses anything but real data at tier A or B.
+
+### D-14.15 Simulation world model; Irving is simulation-only
+
+Stated in `analysis/simulation.py`'s docstring and stored with every result.
+Irving's stable roommates is run as an assignment reference point only: Cohab
+ranks and explains, it never assigns. The implementation is verified against
+brute force on random instances (it finds a stable matching exactly when one
+exists, and every matching it returns is stable).
+
+### D-14.16 No off-policy result without live traffic
+
+`match_exposure.propensity` is logged (1.0 for the deterministic ranker) so
+off-policy evaluation is possible later. No random-exposure slice ships and no
+IPS/SNIPS number is reported: there are no logged outcomes to reweight.
+
+### D-14.17 The playground uses a synthetic population
+
+Moving weights and watching a real member's shortlist reorder would show
+moderators other members' answers for a demo. The playground generates 400
+synthetic agents in memory and labels itself so. Its in-browser arithmetic is
+checked against the server matcher by a button on the page and by
+`tests/api/test_showcase.py`.
+
+### D-14.18 Hygiene
+
+pytest moved to `requirements-test.txt` (CI installs it; the Dockerfile
+does not). httpx stays a runtime pin: `services/otp.py` sends email with it
+(caught by booting the production image during the audit, D-14.21). numpy/scipy are now explicit runtime pins (they were transitive via
+scikit-learn). `/health` runs `SELECT 1` and returns 503 when the DB is
+unreachable. `/metrics` (Prometheus text) needs `Authorization: Bearer
+$METRICS_TOKEN` when set, else loopback only. JSON logs with a request ID per
+line when `LOG_FORMAT=json`; every response carries `X-Request-ID`.
+
+### D-14.19 Vectorised scorer, verified equal to the reference
+
+`services/matching/vectorised.py` computes Stage 1 reasons and Stage 2 scores
+for all N×N pairs from `matrices.py`'s own tables (1M pairs in about 0.4 s).
+Tests assert pair-by-pair equality with `CompatibilityMatcher` (to 1e-12),
+identical exclusion reasons, and identical `MatchRanker` order, including
+dropped answers and cached text vectors.
+
+### D-14.20 The speed-dating file is not committed
+
+The Columbia speed-dating CSV is widely redistributed but is not ours to
+re-license. `reproduce` reads `data/public/speed_dating.csv` if present and
+records "not available" otherwise; the transfer code is tested on a generated
+file in the same column format.
+
+### D-14.21 Pre-release audit (2026-11-12/13): what was broken, and the fix
+
+Prompted by a user report: "See my matches" on the priorities screen showed a
+block of JSON instead of saving. Every screen and flow was then walked in a
+browser as a member, a place-owner, a moderator, logged out, and a brand-new
+signup, at desktop and 375 px widths.
+
+| Found | Cause | Fix |
+| --- | --- | --- |
+| "See my matches" failed with raw JSON | Onboarding screens opened from Profile started from an empty draft; the last screen submitted a blank budget and date (pre-dates v2) | Draft is seeded from the saved profile (`OnboardingContext`); the save is refused with a sentence and a link if required details are missing; caches refresh after saving |
+| Raw JSON / "Failed to fetch" as error text anywhere | `ApiError` stringified FastAPI's 422 list; network errors were not caught | `client.ts` turns every error body into a sentence; offline and 5xx have their own wording |
+| Blank page on any render error | No error boundary | `components/ErrorBoundary.tsx` around the app |
+| Old or bad match/chat/report links stuck on "Loading…" | Loading was checked before failure; 4xx were retried for ~7 s | Failure checked first, with a way back; 4xx never retried; chat stops polling after an error |
+| "Edit listing" opened blank | Same draft problem as the profile | Form loads the saved listing; required fields checked before saving |
+| Disabled "Finish" with no reason; min budget above max accepted | — | The reason is shown; budget order validated |
+| Match list said "No matches yet" to people with no profile | — | "Finish your profile to see matches" with a link |
+| Consenting to share a phone number you never added | No check | API refuses with a sentence; the screen now shows share/withdraw errors (it showed none) |
+| App died at boot if Postgres was down | Startup query unguarded | Starts degraded (`/health` says so) and recovers; dropped DB mid-request answers 503 with a sentence |
+| Dialogs had no dialog semantics, no Escape, no desktop close | — | `role="dialog"`, `aria-modal`, labelled, Escape and backdrop close, focus in and back |
+| PII warning not announced | — | `role="alert"` |
+| Evidence page overflowed 163 px on a phone | Grid children grew to their widest table | `min-w-0` sections; tables scroll inside their card |
+| Public study endpoints could be scripted without limit | No rate limiting anywhere | `core/ratelimit.py`: 200 new sessions per address per hour, 3,000 a day overall (generous: a class shares one campus address) |
+| Production image crashed on boot: `No module named httpx` | W1 moved httpx to test-only, but `services/otp.py` imports it at runtime; tests passed because dev installs test packages | httpx back in `requirements.txt`; new CI job installs runtime requirements only and imports the app |
+| Place-owner demo account had no listing | Demo seed never created one | Seed creates one inside the account's budget band |
+
+Checked and not a bug: score count-up and dialog slide-in read mid-animation
+in automated checks; panels "stuck" at partial opacity only while the browser
+pane was hidden (zero animation frames delivered), not in a visible tab.

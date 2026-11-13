@@ -26,3 +26,10 @@ backend/uploads/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# local port override (machine-specific)
+docker-compose.override.yml
+
+# v2: public datasets are not ours to redistribute (D-14.20); quick-run scratch output
+data/public/
+docs/results-quick/

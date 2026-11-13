@@ -1,0 +1,30 @@
+{
+  "kind": "tier",
+  "data_source": "dryrun",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "tier": "B",
+    "raters_kept": 36,
+    "raters_total": 40,
+    "complete_pairs": 30,
+    "rules": {
+      "A": {
+        "raters": 40,
+        "pairs": 30
+      },
+      "B": {
+        "raters": 20
+      },
+      "C": {
+        "raters": 8
+      }
+    }
+  }
+}

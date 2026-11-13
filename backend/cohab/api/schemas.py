@@ -204,6 +204,11 @@ class MatchListItem(BaseModel):
     listing_room_type: str | None = None
     listing_available_from: date | None = None
     listing_locality: str | None = None
+    # v2: present only while a calibration model is active (insights.py).
+    would_message_probability: float | None = None
+    confidence_tier: str | None = None
+    calibration_version: int | None = None
+    calibration_source: str | None = None
 
 
 class ExplanationCard(BaseModel):
@@ -249,10 +254,30 @@ class MatchExplanationResponse(BaseModel):
     # makes that guarantee visible to the user rather than only true in the
     # database. Sourced from the active `WeightSet.version`.
     weight_set_version: int | None = None
+    would_message_probability: float | None = None
+    confidence_tier: str | None = None
+    calibration_version: int | None = None
+    calibration_source: str | None = None
 
 
 class ExpressInterestResponse(BaseModel):
     state: str
+
+
+class RejectRequest(BaseModel):
+    """v2 W1: optional, so v1 clients that POST with no body still work."""
+
+    reason: Literal[
+        "not_interested", "budget", "location", "lifestyle", "schedule", "found_elsewhere", "safety", "other"
+    ] | None = None
+
+
+class MarkReadRequest(BaseModel):
+    up_to: datetime | None = None
+
+
+class MarkReadResponse(BaseModel):
+    marked: int
 
 
 # --- saved matches -------------------------------------------------------
@@ -397,8 +422,62 @@ class ResolveReportRequest(BaseModel):
 
 # --- analytics ----------------------------------------------------------
 
+class FunnelStageOut(BaseModel):
+    stage: str
+    reached: int
+    conversion_from_previous: float | None
+    median_hours_from_suggested: float | None
+
+
+class FunnelOut(BaseModel):
+    total_matches: int
+    stages: list[FunnelStageOut]
+    rejected: int
+    rejection_reasons: dict[str, int]
+
+
 class AnalyticsSummaryOut(BaseModel):
     members_by_verification_status: dict[str, int]
     members_by_account_status: dict[str, int]
     matches_by_state: dict[str, int]
     reports_by_status: dict[str, int]
+
+
+class PoolReasonOut(BaseModel):
+    reason: str
+    label: str
+    count: int
+
+
+class PoolSuggestionOut(BaseModel):
+    kind: str
+    label: str
+    adds: int
+
+
+class PoolInsightsOut(BaseModel):
+    eligible: int
+    considered: int
+    excluded_by_reason: list[PoolReasonOut]
+    suggestions: list[PoolSuggestionOut]
+
+
+class TieHintOut(BaseModel):
+    tied: bool
+    set_overlap: float | None
+    order_change: float | None
+    method: str | None = None
+    top3_candidate_ids: list[str] = []
+
+
+class CalibrationStatusOut(BaseModel):
+    active: bool
+    version: int | None = None
+    data_source: str | None = None
+    target: str | None = None
+
+
+class MatchInsightsOut(BaseModel):
+    pool: PoolInsightsOut | None
+    tie_hint: TieHintOut | None
+    calibration: CalibrationStatusOut | None

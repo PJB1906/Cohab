@@ -35,6 +35,8 @@ export const chatApi = {
       throw err
     }
   },
+  /** v2: explicit read receipt. Polling the list no longer marks anything read. */
+  markRead: (matchId: string) => api.post<{ marked: number }>(`/chat/${matchId}/read`),
   contactStatus: (matchId: string) => api.get<ContactStatus>(`/chat/${matchId}/contact-status`),
   contactShare: (matchId: string) => api.post<ContactStatus>(`/chat/${matchId}/contact-share`),
   withdrawContactShare: (matchId: string) => api.delete<ContactStatus>(`/chat/${matchId}/contact-share`),

@@ -210,3 +210,24 @@ def test_contact_share_403_for_non_party(
     _onboard(client, institution, caplog, name="Chitra", email_local="chitra", phone_number="9876511111")
     resp = client.post(f"/chat/{match_id}/contact-share")
     assert resp.status_code == 403
+
+
+def test_opt_in_without_a_phone_number_is_refused(
+    client: TestClient, db_session, mutual_pair: tuple[str, str, str]
+) -> None:
+    """v2 audit: consenting to share a number you never added used to
+    succeed and release nothing to the other person."""
+    import uuid as _uuid
+
+    from cohab.models import User
+
+    asha_id, _, match_id = mutual_pair
+    client.get(f"/chat/{match_id}/messages")  # mutual -> chatting
+    db_session.get(User, _uuid.UUID(asha_id)).phone_number = None
+    db_session.flush()
+
+    resp = client.post(f"/chat/{match_id}/contact-share")
+    assert resp.status_code == 409
+    assert "phone number" in resp.json()["detail"]
+    status_ = client.get(f"/chat/{match_id}/contact-status").json()
+    assert status_["you_consented"] is False  # nothing was recorded

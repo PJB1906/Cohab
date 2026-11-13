@@ -132,15 +132,24 @@ def test_send_and_list_message_roundtrip(client: TestClient, mutual_pair: tuple[
     assert messages[0]["body"] == "hey, when works for a call?"
 
 
-def test_recipient_fetch_marks_message_read(
+def test_fetch_no_longer_marks_read_but_explicit_receipt_does(
     client: TestClient, institution: Institution, mutual_pair: tuple[str, str, str]
 ) -> None:
+    """v2 W1: polling is side-effect free; `POST /chat/{id}/read` is the
+    receipt. v1 marked everything read on every poll."""
     _, _, match_id = mutual_pair
     client.post(f"/chat/{match_id}/messages", json={"body": "you around this evening?"})
 
     _login(client, f"bala@{institution.email_domain}")
     messages = client.get(f"/chat/{match_id}/messages").json()
-    assert messages[0]["is_read"] is True
+    assert messages[0]["is_read"] is False
+
+    resp = client.post(f"/chat/{match_id}/read")
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"marked": 1}
+    assert client.get(f"/chat/{match_id}/messages").json()[0]["is_read"] is True
+    # Idempotent, and never marks the reader's own messages.
+    assert client.post(f"/chat/{match_id}/read").json() == {"marked": 0}
 
 
 def test_pii_message_is_interrupted_then_confirm_sends(

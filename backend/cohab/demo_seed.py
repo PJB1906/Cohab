@@ -193,6 +193,42 @@ def _ensure_role_logins(session: Session) -> None:
         is_moderator=True,
         with_profile=False,
     )
+    _ensure_has_place_listing(session)
+
+
+def _ensure_has_place_listing(session: Session) -> None:
+    """The has-place login needs a listing: without one its Profile shows an
+    empty listing panel, the listing screens can't be demonstrated, and a
+    "has a place" member with no place is not a coherent demo (v2 audit).
+    Rent sits at the middle of the account's own budget band, so Stage 1
+    eligibility against everyone it already matched is unchanged."""
+    from cohab.models import Listing, PreferenceProfile
+
+    user = session.scalar(select(User).where(User.email == HAS_PLACE_EMAIL))
+    if user is None:
+        return
+    if session.scalar(select(Listing).where(Listing.user_id == user.id)) is not None:
+        print("  has-place listing: already exists")
+        return
+    profile = session.scalar(select(PreferenceProfile).where(PreferenceProfile.user_id == user.id))
+    if profile is None:
+        return
+    rent = int(round((profile.budget_min + profile.budget_max) / 2, -2))
+    session.add(
+        Listing(
+            user_id=user.id,
+            locality="Koramangala",
+            rent_per_person=rent,
+            deposit=rent * 2,
+            room_type="private",
+            available_from=profile.move_in_date,
+            amenities=["Wi-Fi", "Washing machine", "Fridge"],
+            photos=[],
+            current_housemates=1,
+        )
+    )
+    session.commit()
+    print(f"  has-place listing: created (Koramangala, Rs {rent}/month)")
 
 
 def _pair_key(a: uuid.UUID, b: uuid.UUID) -> tuple[uuid.UUID, uuid.UUID]:

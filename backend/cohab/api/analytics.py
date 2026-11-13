@@ -10,9 +10,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from cohab.api.deps import get_db, require_moderator
-from cohab.api.schemas import AnalyticsSummaryOut
+from cohab.api.schemas import AnalyticsSummaryOut, FunnelOut, FunnelStageOut
 from cohab.models import User
 from cohab.services.analytics import summary
+from cohab.services.funnel import funnel
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -28,4 +29,20 @@ def get_summary(
         members_by_account_status=s.members_by_account_status,
         matches_by_state=s.matches_by_state,
         reports_by_status=s.reports_by_status,
+    )
+
+
+@router.get("/funnel", response_model=FunnelOut)
+def get_funnel(
+    _moderator: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+) -> FunnelOut:
+    """v2 W1: suggested -> cohabiting funnel with median stage durations,
+    built from the append-only `match_state_event` log. Aggregate only."""
+    f = funnel(db)
+    return FunnelOut(
+        total_matches=f.total_matches,
+        stages=[FunnelStageOut(**st.__dict__) for st in f.stages],
+        rejected=f.rejected,
+        rejection_reasons=f.rejection_reasons,
     )

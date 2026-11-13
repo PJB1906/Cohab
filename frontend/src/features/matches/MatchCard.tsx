@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Eyebrow } from '@/components/Eyebrow'
 import { CountUp } from '@/components/motion/CountUp'
 import { SaveToggle } from './SaveToggle'
+import { TierBadge } from './MatchInsightsPanel'
 import { scorePercent, scoreBand, BAND_COLOR, BAND_BAR_CLASS } from '@/lib/score'
 import type { MatchListItem } from '@/api/types'
 
@@ -46,6 +47,7 @@ export function MatchCard({ item }: { item: MatchListItem }) {
             <Badge variant="verified" className="rounded">
               Verified
             </Badge>
+            <TierBadge tier={item.confidence_tier} source={item.calibration_source} probability={item.would_message_probability} />
           </div>
           <p className="text-[13px] leading-[1.4] text-cohab-muted mb-2.5">
             {seekerLine} · {item.city}
@@ -95,6 +97,9 @@ export function MatchCard({ item }: { item: MatchListItem }) {
             <p className="text-[13px] text-cohab-muted-mobile mt-[3px]">
               {seekerLine} · {item.city}
             </p>
+            <div className="mt-1">
+              <TierBadge tier={item.confidence_tier} source={item.calibration_source} probability={item.would_message_probability} />
+            </div>
           </div>
           <div className="text-right flex-none flex flex-col items-end gap-1">
             <SaveToggle matchId={item.match_id} className="w-6 h-6" />

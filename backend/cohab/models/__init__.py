@@ -1,6 +1,9 @@
 from cohab.models.base import Base
 from cohab.models.chat import ContactShare, Message
 from cohab.models.consent import ConsentRecord
+from cohab.models.events import MatchExposure, MatchStateEvent
+from cohab.models.evidence import AnalysisRun, CalibrationModel, WeightSetUncertainty
+from cohab.models.study import StudyPair, StudyPairMember, StudyRater, StudyResponse, StudyTrial
 from cohab.models.feedback import Feedback
 from cohab.models.institution import Institution
 from cohab.models.listing import Listing
@@ -28,4 +31,14 @@ __all__ = [
     "UserBlock",
     "SavedMatch",
     "ConsentRecord",
+    "MatchExposure",
+    "MatchStateEvent",
+    "AnalysisRun",
+    "CalibrationModel",
+    "WeightSetUncertainty",
+    "StudyRater",
+    "StudyTrial",
+    "StudyResponse",
+    "StudyPair",
+    "StudyPairMember",
 ]

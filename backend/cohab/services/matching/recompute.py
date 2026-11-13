@@ -88,7 +88,7 @@ def recompute(session: Session) -> str:
     touched = 0
     for candidate in subjects:
         user = session.get(User, candidate.user_id)
-        entries = service.get_matches(user, limit=RECOMPUTE_LIMIT)
+        entries = service.get_matches(user, limit=RECOMPUTE_LIMIT, log_exposure=False)
         touched += len(entries)
 
     return (

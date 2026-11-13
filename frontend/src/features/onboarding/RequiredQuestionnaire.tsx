@@ -38,7 +38,9 @@ export function RequiredQuestionnaire() {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const total = REQUIRED_QUESTIONS.length
-  const preambleDone = Boolean(draft.budgetMin && draft.budgetMax && draft.moveInDate)
+  const budgetValid =
+    Number(draft.budgetMin) > 0 && Number(draft.budgetMax) > 0 && Number(draft.budgetMin) <= Number(draft.budgetMax)
+  const preambleDone = Boolean(budgetValid && draft.moveInDate)
 
   function isAnswered(q: Question) {
     return q.parts.every((p) => draft.answers[p.key])
@@ -58,6 +60,18 @@ export function RequiredQuestionnaire() {
   function finish() {
     navigate('/onboarding/optional')
   }
+
+  // Why Finish is disabled, in words: a greyed-out button with no reason
+  // reads as a broken one (v2 audit).
+  const blocker = allAnswered
+    ? null
+    : !budgetValid
+      ? draft.budgetMin && draft.budgetMax
+        ? 'Your minimum budget is above your maximum.'
+        : 'Add your monthly budget at the top.'
+      : !draft.moveInDate
+        ? 'Add your move-in date at the top.'
+        : `${total - doneCount} question${total - doneCount === 1 ? '' : 's'} still unanswered. Use Back to find ${total - doneCount === 1 ? 'it' : 'them'}.`
 
   const currentQuestion = REQUIRED_QUESTIONS[currentIndex]
   const pageStart = Math.floor(currentIndex / QUESTIONS_PER_PAGE) * QUESTIONS_PER_PAGE
@@ -331,12 +345,19 @@ export function RequiredQuestionnaire() {
               {isLastQuestion ? `Finish — ${total} of ${total}` : 'Next'}
             </Button>
             <div className="flex-1" />
-            <span className="text-xs text-cohab-subtle">{doneCount} of {total} answered</span>
+            <span className="text-xs text-cohab-subtle">
+              {isLastQuestion && blocker ? <span className="text-cohab-accent">{blocker}</span> : `${doneCount} of ${total} answered`}
+            </span>
           </div>
         </StepTransition>
       </div>
 
       {/* Mobile fixed footer */}
+      {isLastPage && blocker && (
+        <p className="cohab-desktop:hidden flex-none px-4 pt-2.5 text-[13px] text-cohab-accent bg-cohab-card border-t border-cohab-border-soft" role="status">
+          {blocker}
+        </p>
+      )}
       <div className="cohab-desktop:hidden flex-none px-4 py-3 border-t border-cohab-border-soft bg-cohab-card flex gap-2.5 sticky bottom-0">
         <Button
           variant="secondary"

@@ -122,6 +122,11 @@ export interface MatchListItem {
   listing_room_type?: string | null
   listing_available_from?: string | null
   listing_locality?: string | null
+  // v2: present only while a calibration model is active (services/insights.py).
+  would_message_probability?: number | null
+  confidence_tier?: 'strong' | 'good' | 'possible' | null
+  calibration_version?: number | null
+  calibration_source?: string | null
 }
 
 export interface ExplanationCard {

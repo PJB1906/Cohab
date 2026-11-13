@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { OnboardingHeader } from '@/components/OnboardingHeader'
 import { PageTransition } from '@/components/motion/PageTransition'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useOnboarding } from './OnboardingContext'
 import { WEIGHT_TILES } from '@/data/questionnaire'
 import { WeightTile } from '@/components/WeightTile'
@@ -14,6 +15,14 @@ import type { ProfileUpsertRequest } from '@/api/types'
 export function ImportanceWeights() {
   const navigate = useNavigate()
   const { draft, update, reset } = useOnboarding()
+  const queryClient = useQueryClient()
+  // The profile is saved in one call from this screen, so the required
+  // details from the earlier screen must be present before it can be sent.
+  const incomplete =
+    !(Number(draft.budgetMin) > 0) ||
+    !(Number(draft.budgetMax) > 0) ||
+    Number(draft.budgetMin) > Number(draft.budgetMax) ||
+    !draft.moveInDate
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -27,10 +36,15 @@ export function ImportanceWeights() {
   }
 
   async function save() {
+    if (incomplete) {
+      setError('Your budget and move-in date are missing. Fill in the required questions first.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
       const body: ProfileUpsertRequest = {
+        city: draft.city,
         budget_min: Number(draft.budgetMin),
         budget_max: Number(draft.budgetMax),
         move_in_date: draft.moveInDate,
@@ -49,6 +63,12 @@ export function ImportanceWeights() {
         important_attributes: draft.importantAttributes,
       }
       await profileApi.put(body)
+      // The ranking, the pool and the profile screen all depend on what was
+      // just saved; without this they kept showing the previous answers.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] }),
+      ])
       reset()
       navigate('/matches')
     } catch (err) {
@@ -119,7 +139,16 @@ export function ImportanceWeights() {
           data. Nothing breaks either way.
         </div>
 
-        {error && <p className="text-sm text-cohab-accent mt-4">{error}</p>}
+        {error && (
+          <p className="text-sm text-cohab-accent mt-4" role="alert">
+            {error}{' '}
+            {incomplete && (
+              <Link to="/onboarding/questionnaire" className="underline font-medium">
+                Go to required questions
+              </Link>
+            )}
+          </p>
+        )}
 
         <div className="hidden cohab-desktop:flex items-center gap-3.5 mt-7">
           <Button onClick={save} disabled={busy}>

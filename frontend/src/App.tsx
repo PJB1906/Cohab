@@ -16,6 +16,11 @@ import { ModerationQueue } from '@/features/moderation/ModerationQueue'
 import { ReportReview } from '@/features/moderation/ReportReview'
 import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
 import { BlockedUsers } from '@/features/safety/BlockedUsers'
+import { EvidencePage } from '@/features/evidence/EvidencePage'
+import { PlaygroundPage } from '@/features/evidence/Playground'
+import { StudyLanding } from '@/features/study/StudyLanding'
+import { LabFlow } from '@/features/study/LabFlow'
+import { PairFlow } from '@/features/study/PairFlow'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useSession } from '@/hooks/useSession'
 
@@ -70,6 +75,13 @@ export default function App() {
       <Route path="/moderation/reports/:reportId" element={<Moderation><ReportReview /></Moderation>} />
 
       <Route path="/analytics" element={<Moderation><AnalyticsDashboard /></Moderation>} />
+      <Route path="/evidence" element={<Moderation><EvidencePage /></Moderation>} />
+      <Route path="/evidence/playground" element={<Moderation><PlaygroundPage /></Moderation>} />
+
+      {/* v2 studies: public, anonymous, no product account (plan W2/W3). */}
+      <Route path="/study" element={<StudyLanding />} />
+      <Route path="/study/lab" element={<LabFlow />} />
+      <Route path="/study/pair" element={<PairFlow />} />
 
       <Route path="/blocked" element={<ProtectedRoute><BlockedUsers /></ProtectedRoute>} />
 

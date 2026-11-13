@@ -86,8 +86,14 @@ export function MatchDetail() {
   if (error || !data) {
     return (
       <AppShell>
-        <div className="max-w-2xl cohab-desktop:max-w-[1200px] mx-auto px-4 cohab-desktop:px-8 py-10 text-cohab-accent">
-          Couldn't load this match.
+        <div className="max-w-md mx-auto px-4 py-12 text-center">
+          <p className="text-[15px] font-medium mb-1.5">This match isn't available</p>
+          <p className="text-[13.5px] text-cohab-muted mb-5">
+            The link may be old, or the match has ended or been removed.
+          </p>
+          <Link to="/matches" className="text-cohab-primary font-medium text-[14px]">
+            Back to your matches
+          </Link>
         </div>
       </AppShell>
     )

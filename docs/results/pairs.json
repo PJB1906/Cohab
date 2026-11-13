@@ -1,0 +1,480 @@
+{
+  "kind": "pairs",
+  "data_source": "dryrun",
+  "provenance": {
+    "git_commit": "a329eee46b89a124279757a67f932e880d438c66",
+    "generated_at": "2026-11-11T17:53:48.866213+00:00",
+    "quick": false,
+    "source": "dryrun",
+    "python": "3.13.7",
+    "study_input_hash": "0428056fec3ecc7d"
+  },
+  "payload": {
+    "expert": {
+      "n_pairs": 30,
+      "status": "ok",
+      "known_groups": {
+        "n_satisfied": 5,
+        "n_dissatisfied": 25,
+        "mean_score_satisfied": 0.7664291661068507,
+        "mean_score_dissatisfied": 0.7351516313886555,
+        "difference": 0.03127753471819528,
+        "difference_ci": [
+          -0.03630308836516637,
+          0.08979864972267089
+        ],
+        "spearman_rho": 0.40511178980120627,
+        "spearman_ci": [
+          0.0627634366368224,
+          0.6847662256158007
+        ]
+      },
+      "permutation": {
+        "real_mean": 0.740364553841688,
+        "random_mean": 0.7447511893271163,
+        "random_95": [
+          0.729675306291181,
+          0.7605770946230486
+        ],
+        "p_value_one_sided": 0.713257348530294,
+        "satisfied_real_mean": 0.7664291661068507,
+        "satisfied_p_value_one_sided": 0.3147370525894821,
+        "histogram": [
+          8,
+          30,
+          52,
+          102,
+          223,
+          339,
+          444,
+          562,
+          705,
+          639,
+          596,
+          496,
+          359,
+          216,
+          102,
+          67,
+          32,
+          14,
+          10,
+          4
+        ],
+        "histogram_edges": [
+          0.7204820460441556,
+          0.7231494602415351,
+          0.7258168744389146,
+          0.7284842886362942,
+          0.7311517028336738,
+          0.7338191170310534,
+          0.736486531228433,
+          0.7391539454258125,
+          0.7418213596231921,
+          0.7444887738205717,
+          0.7471561880179511,
+          0.7498236022153307,
+          0.7524910164127103,
+          0.7551584306100899,
+          0.7578258448074695,
+          0.760493259004849,
+          0.7631606732022286,
+          0.7658280873996082,
+          0.7684955015969877,
+          0.7711629157943672,
+          0.7738303299917468
+        ]
+      },
+      "attribute_level": {
+        "cleanliness_conflict": {
+          "attributes": [
+            "cleanliness_level",
+            "chore_approach"
+          ],
+          "spearman_rho": 0.5105617830417584,
+          "n": 30
+        },
+        "noise_sleep_conflict": {
+          "attributes": [
+            "sleep_schedule",
+            "noise"
+          ],
+          "spearman_rho": 0.17859457378548277,
+          "n": 30
+        },
+        "guests_conflict": {
+          "attributes": [
+            "guests"
+          ],
+          "spearman_rho": 0.06087886462757423,
+          "n": 30
+        },
+        "sharing_conflict": {
+          "attributes": [
+            "sharing_norm"
+          ],
+          "spearman_rho": 0.07272341211141439,
+          "n": 30
+        },
+        "money_conflict": {
+          "attributes": [
+            "payment_reliability",
+            "cost_split_preference"
+          ],
+          "spearman_rho": -0.2215896536579378,
+          "n": 30
+        }
+      },
+      "self_report_inflation": {
+        "cleanliness_level": {
+          "agreement": 0.7666666666666667,
+          "n": 60,
+          "mean_inflation_steps": 0.23333333333333334,
+          "inflation_ci": [
+            0.13333333333333333,
+            0.35
+          ],
+          "share_self_more_flattering": 0.23333333333333334
+        },
+        "payment_reliability": {
+          "agreement": 0.8333333333333334,
+          "n": 60,
+          "mean_inflation_steps": 0.16666666666666666,
+          "inflation_ci": [
+            0.08333333333333333,
+            0.26666666666666666
+          ],
+          "share_self_more_flattering": 0.16666666666666666
+        },
+        "noise_behaviour": {
+          "agreement": 0.7333333333333333,
+          "n": 60,
+          "mean_inflation_steps": 0.26666666666666666,
+          "inflation_ci": [
+            0.16666666666666666,
+            0.38333333333333336
+          ],
+          "share_self_more_flattering": 0.26666666666666666
+        },
+        "guest_frequency": {
+          "agreement": 0.7833333333333333,
+          "n": 60,
+          "mean_inflation_steps": 0.21666666666666667,
+          "inflation_ci": [
+            0.11666666666666667,
+            0.3333333333333333
+          ],
+          "share_self_more_flattering": 0.21666666666666667
+        },
+        "chore_approach": {
+          "agreement": 1.0,
+          "n": 60
+        }
+      },
+      "months_together_median": 16.65,
+      "share_still_together": 0.8666666666666667,
+      "scores": [
+        0.7783959537572256,
+        0.7495901366211265,
+        0.6927036770007211,
+        0.6632491519035054,
+        0.7063199436222694,
+        0.8424973293768547,
+        0.7136551844119695,
+        0.7290308430431804,
+        0.8182163153070579,
+        0.7046394895427156,
+        0.6039139429044271,
+        0.7925447667087013,
+        0.6976401285255267,
+        0.8251898849182315,
+        0.7054202693125444,
+        0.7898734177215191,
+        0.8282524856884607,
+        0.7035857904085259,
+        0.6797560617193241,
+        0.812453177770955,
+        0.6782320441988952,
+        0.6744762787249814,
+        0.7949292452830191,
+        0.7607043363994747,
+        0.6574756653992396,
+        0.7536813660477455,
+        0.8250528700906344,
+        0.6816539440203564,
+        0.7732466063348418,
+        0.7745563084866087
+      ],
+      "satisfaction": [
+        4.0,
+        2.5,
+        3.0,
+        2.0,
+        1.0,
+        3.0,
+        3.0,
+        4.0,
+        3.5,
+        2.5,
+        3.0,
+        3.5,
+        3.0,
+        4.0,
+        3.5,
+        2.5,
+        3.0,
+        3.0,
+        2.5,
+        3.5,
+        2.0,
+        4.0,
+        3.0,
+        3.0,
+        3.0,
+        3.0,
+        4.0,
+        2.5,
+        2.5,
+        3.5
+      ],
+      "limitations": [
+        "Survivorship: pairs who separated quickly are less likely to take part.",
+        "Answers are given after living together and may be coloured by it.",
+        "Small sample; intervals are wide and no correction for multiple comparisons is applied."
+      ]
+    },
+    "learned": {
+      "n_pairs": 30,
+      "status": "ok",
+      "known_groups": {
+        "n_satisfied": 5,
+        "n_dissatisfied": 25,
+        "mean_score_satisfied": 0.7108578229281817,
+        "mean_score_dissatisfied": 0.7227939257096971,
+        "difference": -0.011936102781515467,
+        "difference_ci": [
+          -0.0868154584496166,
+          0.06059901762222265
+        ],
+        "spearman_rho": 0.22442272446373643,
+        "spearman_ci": [
+          -0.11240551635419448,
+          0.5677656897883463
+        ]
+      },
+      "permutation": {
+        "real_mean": 0.7208045752461111,
+        "random_mean": 0.7365721831052939,
+        "random_95": [
+          0.715664784930061,
+          0.7578095810558289
+        ],
+        "p_value_one_sided": 0.9294141171765646,
+        "satisfied_real_mean": 0.7108578229281817,
+        "satisfied_p_value_one_sided": 0.890621875624875,
+        "histogram": [
+          11,
+          27,
+          70,
+          141,
+          244,
+          363,
+          522,
+          656,
+          677,
+          676,
+          578,
+          411,
+          287,
+          180,
+          87,
+          41,
+          19,
+          7,
+          2,
+          1
+        ],
+        "histogram_edges": [
+          0.7038929481952074,
+          0.7076489016487241,
+          0.7114048551022407,
+          0.7151608085557574,
+          0.718916762009274,
+          0.7226727154627908,
+          0.7264286689163074,
+          0.7301846223698241,
+          0.7339405758233407,
+          0.7376965292768574,
+          0.741452482730374,
+          0.7452084361838907,
+          0.7489643896374073,
+          0.752720343090924,
+          0.7564762965444406,
+          0.7602322499979572,
+          0.763988203451474,
+          0.7677441569049906,
+          0.7715001103585073,
+          0.7752560638120239,
+          0.7790120172655406
+        ]
+      },
+      "attribute_level": {
+        "cleanliness_conflict": {
+          "attributes": [
+            "cleanliness_level",
+            "chore_approach"
+          ],
+          "spearman_rho": 0.5105617830417584,
+          "n": 30
+        },
+        "noise_sleep_conflict": {
+          "attributes": [
+            "sleep_schedule",
+            "noise"
+          ],
+          "spearman_rho": 0.17859457378548277,
+          "n": 30
+        },
+        "guests_conflict": {
+          "attributes": [
+            "guests"
+          ],
+          "spearman_rho": 0.06087886462757423,
+          "n": 30
+        },
+        "sharing_conflict": {
+          "attributes": [
+            "sharing_norm"
+          ],
+          "spearman_rho": 0.07272341211141439,
+          "n": 30
+        },
+        "money_conflict": {
+          "attributes": [
+            "payment_reliability",
+            "cost_split_preference"
+          ],
+          "spearman_rho": -0.2215896536579378,
+          "n": 30
+        }
+      },
+      "self_report_inflation": {
+        "cleanliness_level": {
+          "agreement": 0.7666666666666667,
+          "n": 60,
+          "mean_inflation_steps": 0.23333333333333334,
+          "inflation_ci": [
+            0.13333333333333333,
+            0.35
+          ],
+          "share_self_more_flattering": 0.23333333333333334
+        },
+        "payment_reliability": {
+          "agreement": 0.8333333333333334,
+          "n": 60,
+          "mean_inflation_steps": 0.16666666666666666,
+          "inflation_ci": [
+            0.08333333333333333,
+            0.26666666666666666
+          ],
+          "share_self_more_flattering": 0.16666666666666666
+        },
+        "noise_behaviour": {
+          "agreement": 0.7333333333333333,
+          "n": 60,
+          "mean_inflation_steps": 0.26666666666666666,
+          "inflation_ci": [
+            0.16666666666666666,
+            0.38333333333333336
+          ],
+          "share_self_more_flattering": 0.26666666666666666
+        },
+        "guest_frequency": {
+          "agreement": 0.7833333333333333,
+          "n": 60,
+          "mean_inflation_steps": 0.21666666666666667,
+          "inflation_ci": [
+            0.11666666666666667,
+            0.3333333333333333
+          ],
+          "share_self_more_flattering": 0.21666666666666667
+        },
+        "chore_approach": {
+          "agreement": 1.0,
+          "n": 60
+        }
+      },
+      "months_together_median": 16.65,
+      "share_still_together": 0.8666666666666667,
+      "scores": [
+        0.7194935740878662,
+        0.6789911746563924,
+        0.6934440803430327,
+        0.6011629314610057,
+        0.7262122176152225,
+        0.8193258603362255,
+        0.6396777576232415,
+        0.6235910116764218,
+        0.8474844785358709,
+        0.6101192964067632,
+        0.6035692363145567,
+        0.7590639648079395,
+        0.6897542097052964,
+        0.7948858815838326,
+        0.7112532006865611,
+        0.821832887400192,
+        0.837216012862329,
+        0.70954901408409,
+        0.6824264970108427,
+        0.7424411827426461,
+        0.6520918429557347,
+        0.649000725280625,
+        0.8157370541913532,
+        0.8218070778970787,
+        0.6292114634278619,
+        0.7599827338521884,
+        0.7673179220121626,
+        0.6526763857902702,
+        0.7750410940377153,
+        0.7897764879980205
+      ],
+      "satisfaction": [
+        4.0,
+        2.5,
+        3.0,
+        2.0,
+        1.0,
+        3.0,
+        3.0,
+        4.0,
+        3.5,
+        2.5,
+        3.0,
+        3.5,
+        3.0,
+        4.0,
+        3.5,
+        2.5,
+        3.0,
+        3.0,
+        2.5,
+        3.5,
+        2.0,
+        4.0,
+        3.0,
+        3.0,
+        3.0,
+        3.0,
+        4.0,
+        2.5,
+        2.5,
+        3.5
+      ],
+      "limitations": [
+        "Survivorship: pairs who separated quickly are less likely to take part.",
+        "Answers are given after living together and may be coloured by it.",
+        "Small sample; intervals are wide and no correction for multiple comparisons is applied."
+      ]
+    }
+  }
+}

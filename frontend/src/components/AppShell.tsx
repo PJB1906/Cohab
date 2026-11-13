@@ -89,6 +89,11 @@ export function AppShell({ children, hideBottomNav }: { children: React.ReactNod
                 Analytics
               </NavLink>
             )}
+            {user?.is_moderator && (
+              <NavLink to="/evidence" className={navLinkClass}>
+                Evidence
+              </NavLink>
+            )}
           </nav>
           <div className="flex-1" />
           {user && <AccountMenu user={user} />}

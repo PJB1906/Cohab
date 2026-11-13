@@ -21,7 +21,9 @@ from cohab.api.schemas import (
     ExpressInterestResponse,
     MatchExplanationResponse,
     MatchListingSummary,
+    MatchInsightsOut,
     MatchListItem,
+    RejectRequest,
 )
 from cohab.models import User, WeightSet
 from cohab.services.match_access import PairBlocked
@@ -31,6 +33,7 @@ from cohab.services.matches import (
     MatchNotFound,
     NotAParty,
 )
+from cohab.services.insights import active_calibration, calibrate, match_insights
 from cohab.services.matching.text import NeutralTextSimilarity
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -52,8 +55,10 @@ def get_matches(
     weight_set: WeightSet = Depends(get_active_weight_set),
 ) -> list[MatchListItem]:
     entries = _service(db, weight_set).get_matches(user, limit=limit)
+    cal = active_calibration(db, weight_set)
     return [
         MatchListItem(
+            **(calibrate(cal, e.breakdown) or {}) if e.breakdown else {},
             match_id=e.match_id,
             candidate_id=e.candidate.user_id,
             candidate_name=e.candidate.name,
@@ -76,6 +81,17 @@ def get_matches(
     ]
 
 
+@router.get("/insights", response_model=MatchInsightsOut)
+def get_insights(
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+    weight_set: WeightSet = Depends(get_active_weight_set),
+) -> MatchInsightsOut:
+    """v2: pool insights ("why so few people"), the top-3 tie hint and the
+    calibration status. Read-only: writes nothing."""
+    return MatchInsightsOut(**match_insights(db, user, weight_set))
+
+
 @router.get("/{match_id}/explanation", response_model=MatchExplanationResponse)
 def get_explanation(
     match_id: uuid.UUID,
@@ -92,7 +108,9 @@ def get_explanation(
     except PairBlocked:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "this match is not available")
 
+    cal = calibrate(active_calibration(db, weight_set), r.result.breakdown)
     return MatchExplanationResponse(
+        **(cal or {}),
         match_id=r.match_id,
         candidate_id=r.candidate.user_id,
         candidate_name=r.candidate.name,
@@ -179,12 +197,13 @@ def confirm_move_in(
 @router.post("/{match_id}/reject", response_model=ExpressInterestResponse)
 def reject(
     match_id: uuid.UUID,
+    body: RejectRequest | None = None,
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
     weight_set: WeightSet = Depends(get_active_weight_set),
 ) -> ExpressInterestResponse:
     try:
-        state = _service(db, weight_set).reject(user, match_id)
+        state = _service(db, weight_set).reject(user, match_id, reason=body.reason if body else None)
     except MatchNotFound:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such match")
     except NotAParty:

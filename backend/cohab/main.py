@@ -1,17 +1,20 @@
 import logging
 import os
 import socket
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Request, status
-from sqlalchemy import select
-from starlette.responses import FileResponse, Response
+from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from starlette.responses import FileResponse, JSONResponse, Response
 
 from cohab.api.analytics import router as analytics_router
 from cohab.api.auth import router as auth_router
 from cohab.api.chat import router as chat_router
+from cohab.api.evidence import router as evidence_router
 from cohab.api.feedback import router as feedback_router
 from cohab.api.listing import router as listing_router
 from cohab.api.matches import router as matches_router
@@ -19,8 +22,10 @@ from cohab.api.moderation import router as moderation_router
 from cohab.api.profile import router as profile_router
 from cohab.api.reports import router as reports_router
 from cohab.api.saved import router as saved_router
+from cohab.api.study import router as study_router
 from cohab.api.uploads import router as uploads_router
 from cohab.core.config import FRONTEND_DIST_DIR
+from cohab.core.observability import configure_logging, metrics, new_request_id, request_id_var
 from cohab.db import SessionLocal
 from cohab.models import PreferenceProfile
 from cohab.services.matching.text import TfidfSimilarity
@@ -34,7 +39,9 @@ from cohab.services.storage import get_image_storage, guess_content_type
 # silently unusable outside the test suite. `ConsoleOTPSender`'s own
 # docstring says it exists so the flow works without real SMTP; this is what
 # makes that true.
-logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
+JSON_LOGS = os.environ.get("LOG_FORMAT", "text").lower() == "json"
+configure_logging(json_logs=JSON_LOGS)
+_access_log = logging.getLogger("cohab.access")
 
 
 def _warn_if_port_already_serving() -> None:
@@ -92,12 +99,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     later with genuinely new vocabulary is out-of-vocabulary until the next
     restart, a documented limitation (D-4.x)."""
     _warn_if_port_already_serving()
+    # v2 audit: a database that is down at boot used to kill the process with
+    # a 200-line traceback. Start anyway with an unfitted encoder (text
+    # similarity then scores neutral, as it does for any empty note) so
+    # /health can report "degraded" and the app recovers when the DB returns.
+    notes: list = []
     session = SessionLocal()
     try:
         notes = [
             q.get("lifestyle_notes")
             for q in session.scalars(select(PreferenceProfile.questionnaire)).all()
         ]
+    except SQLAlchemyError as exc:
+        logging.getLogger("cohab.startup").error(
+            "Database unreachable at startup (%s). Serving in degraded mode; "
+            "start it with `docker compose up -d db` and restart.",
+            type(exc).__name__,
+        )
     finally:
         session.close()
     app.state.text_encoder = TfidfSimilarity().fit(notes)
@@ -116,6 +134,8 @@ app.include_router(reports_router)
 app.include_router(moderation_router)
 app.include_router(feedback_router)
 app.include_router(analytics_router)
+app.include_router(study_router)
+app.include_router(evidence_router)
 
 @app.get("/media/{name}")
 def get_media(name: str) -> Response:
@@ -184,7 +204,7 @@ async def serve_frontend(request: Request, call_next):
         request.scope["path"] = path[len("/api") :]
         return await call_next(request)
 
-    if path.startswith("/media/") or path == "/health" or not FRONTEND_DIST.is_dir():
+    if path.startswith("/media/") or path in ("/health", "/metrics") or not FRONTEND_DIST.is_dir():
         return await call_next(request)
 
     wants_page = request.method in ("GET", "HEAD") and "text/html" in request.headers.get("accept", "")
@@ -200,6 +220,68 @@ async def serve_frontend(request: Request, call_next):
     return response
 
 
+@app.exception_handler(OperationalError)
+async def database_unavailable(request: Request, exc: OperationalError) -> JSONResponse:
+    """v2 audit: a dropped database connection mid-request returned a bare
+    500. Answer 503 with a sentence the client can show."""
+    logging.getLogger("cohab.db").error("database error on %s: %s", request.url.path, type(exc).__name__)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Cohab is temporarily unavailable. Please try again in a moment."},
+    )
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    """v2 W1: a request ID on every log line and response, and per-route
+    counters for /metrics. Registered after `serve_frontend`, so it wraps it
+    and sees the final status of every request."""
+    rid = new_request_id(request.headers.get("x-request-id"))
+    token = request_id_var.set(rid)
+    started = time.perf_counter()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        response.headers["X-Request-ID"] = rid
+        return response
+    finally:
+        route = request.scope.get("route")
+        # No route: the frontend middleware answered (app page or built
+        # asset) when it succeeded, otherwise nothing matched at all.
+        template = getattr(route, "path", None) or ("frontend" if status_code < 400 else "unmatched")
+        elapsed = time.perf_counter() - started
+        metrics.observe(request.method, template, status_code, elapsed)
+        if JSON_LOGS:
+            # uvicorn's own access log is plain text whatever LOG_FORMAT says
+            # (D-14.21); this is the structured equivalent, carrying the
+            # request ID. The route template, never the raw path, so IDs in
+            # URLs do not land in logs.
+            _access_log.info("%s %s %s %.1fms", request.method, template, status_code, elapsed * 1000)
+        request_id_var.reset(token)
+
+
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health(response: Response) -> dict[str, str]:
+    """v2 W1: checks the database, not just that the process is up, so a
+    load balancer stops routing to an instance that lost its DB."""
+    try:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+    except Exception:  # noqa: BLE001 - any DB failure means unhealthy
+        response.status_code = 503
+        return {"status": "degraded", "database": "unreachable"}
+    return {"status": "ok", "database": "ok"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def get_metrics(request: Request) -> Response:
+    """Prometheus text format. Needs `Authorization: Bearer $METRICS_TOKEN`
+    when that variable is set; with it unset, only loopback callers."""
+    expected = os.environ.get("METRICS_TOKEN")
+    if expected:
+        if request.headers.get("authorization") != f"Bearer {expected}":
+            raise HTTPException(status.HTTP_404_NOT_FOUND)
+    elif request.client is None or request.client.host not in ("127.0.0.1", "::1", "testclient"):
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    return Response(metrics.render(), media_type="text/plain; version=0.0.4")

@@ -1,0 +1,3 @@
+# Test tooling (CI installs this). Never installed on the deployed server.
+-r requirements.txt
+pytest==8.3.4

@@ -3,6 +3,31 @@
  * httpOnly session cookie rides along. `/api` is proxied to the backend in
  * dev (vite.config.ts) and served same-origin in prod. */
 
+/** Turn any error body into a sentence a person can read. FastAPI's 422
+ * `detail` is a list of `{loc, msg}` objects; printing that raw is what put
+ * a block of JSON on screen in place of an error message. */
+function readableDetail(detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map((d) => {
+        if (!d || typeof d !== 'object') return null
+        const { loc, msg } = d as { loc?: unknown[]; msg?: string }
+        const field = Array.isArray(loc) ? loc.filter((x) => x !== 'body').join(' ').replace(/_/g, ' ') : ''
+        const text = (msg ?? '').replace(/^Value error, /, '')
+        return field ? `${field}: ${text}` : text
+      })
+      .filter(Boolean)
+    if (parts.length) return `Please check: ${parts.join('; ')}`
+  }
+  if (detail && typeof detail === 'object') {
+    const d = detail as { message?: unknown; problems?: unknown }
+    if (typeof d.message === 'string') return d.message
+    if (Array.isArray(d.problems)) return `Please check: ${d.problems.join('; ')}`
+  }
+  return 'Something went wrong. Please try again.'
+}
+
 export class ApiError extends Error {
   status: number
   /** The raw `detail` field from the response body, before string coercion.
@@ -14,29 +39,38 @@ export class ApiError extends Error {
    * instead of `message`. */
   detail: unknown
   constructor(status: number, detail: unknown) {
-    super(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    super(readableDetail(detail))
     this.status = status
     this.detail = detail
   }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    credentials: 'include',
-    ...init,
-    headers:
-      init?.body instanceof FormData
-        ? init.headers
-        : { 'Content-Type': 'application/json', ...init?.headers },
-  })
+  let res: Response
+  try {
+    res = await fetch(`/api${path}`, {
+      credentials: 'include',
+      ...init,
+      headers:
+        init?.body instanceof FormData
+          ? init.headers
+          : { 'Content-Type': 'application/json', ...init?.headers },
+    })
+  } catch {
+    // Offline or server down: fetch rejects with a bare TypeError
+    // ("Failed to fetch"), which is not something to show a person.
+    throw new ApiError(0, "Can't reach Cohab right now. Check your connection and try again.")
+  }
 
   if (!res.ok) {
-    let detail = res.statusText
+    // Never show a raw status line or an HTML error page as the message.
+    let detail: unknown =
+      res.status >= 500 ? 'Cohab is having trouble right now. Please try again in a moment.' : res.statusText || 'Request failed'
     try {
       const body = await res.json()
       detail = body.detail ?? detail
     } catch {
-      // no JSON body — keep statusText
+      // no JSON body: keep the fallback above
     }
     throw new ApiError(res.status, detail)
   }
