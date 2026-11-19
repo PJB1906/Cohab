@@ -246,7 +246,7 @@ export function RequiredQuestionnaire() {
           </span>
         </div>
         <div className="h-1 rounded-full bg-cohab-track overflow-hidden">
-          <div className="h-full bg-cohab-primary rounded-full" style={{ width: `${(doneCount / total) * 100}%` }} />
+          <div className="h-full bg-cohab-fill rounded-full" style={{ width: `${(doneCount / total) * 100}%` }} />
         </div>
         <p className="text-[12px] text-cohab-subtle-mobile mt-1.5">
           Required. About 3 minutes — answers save as you go.
@@ -261,7 +261,7 @@ export function RequiredQuestionnaire() {
             {doneCount} of {total} answered
           </p>
           <div className="h-1 rounded-full bg-cohab-border overflow-hidden mb-[22px]">
-            <div className="h-full bg-cohab-primary rounded-full" style={{ width: `${(doneCount / total) * 100}%` }} />
+            <div className="h-full bg-cohab-fill rounded-full" style={{ width: `${(doneCount / total) * 100}%` }} />
           </div>
           <div className="flex flex-col gap-0.5">
             {REQUIRED_QUESTIONS.map((q, i) => {
@@ -281,7 +281,7 @@ export function RequiredQuestionnaire() {
                   <span
                     className={cn(
                       'flex-none w-5 h-5 rounded-full flex items-center justify-center text-[10.5px] font-semibold',
-                      state === 'current' && 'bg-cohab-primary text-cohab-on-fill',
+                      state === 'current' && 'bg-cohab-fill text-cohab-on-fill',
                       state === 'done' && 'border border-cohab-primary text-cohab-primary',
                       state === 'upcoming' && 'border border-cohab-border text-cohab-subtle',
                     )}

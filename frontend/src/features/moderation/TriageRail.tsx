@@ -53,7 +53,7 @@ function ReasonBar({ label, count, total }: { label: string; count: number; tota
     <div className="flex items-center gap-3">
       <span className="w-[128px] flex-none text-[12.5px] text-cohab-muted truncate">{label}</span>
       <div className="flex-1 h-1.5 rounded-full bg-cohab-border-soft overflow-hidden">
-        <div className="h-full rounded-full bg-cohab-primary" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-cohab-fill" style={{ width: `${pct}%` }} />
       </div>
       <span className="w-7 flex-none text-right text-[12px] tabular-nums text-cohab-subtle">
         {count}

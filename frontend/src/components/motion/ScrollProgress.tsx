@@ -37,7 +37,7 @@ export function ScrollProgress() {
     <div
       ref={ref}
       aria-hidden="true"
-      className="absolute left-0 right-0 -bottom-px h-0.5 bg-cohab-primary opacity-0"
+      className="absolute left-0 right-0 -bottom-px h-0.5 bg-cohab-fill opacity-0"
     />
   )
 }

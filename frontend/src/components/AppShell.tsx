@@ -2,6 +2,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useSession } from '@/hooks/useSession'
 import { Logo } from '@/components/Logo'
 import { ThemeSwitch } from '@/components/ThemeSwitch'
+import { Roofline } from '@/components/Roofline'
 import { ChartColumn, FlaskConical, MessageCircle, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { BottomNav } from '@/components/BottomNav'
 import { BackButton } from '@/components/BackButton'
@@ -52,7 +53,8 @@ export function AppShell({ children, hideBottomNav }: { children: React.ReactNod
     // shell root would paint straight over the fixed canvas behind it. The
     // page's black comes from `body` (index.css), which sits below both.
     <div className="min-h-screen pb-20 cohab-desktop:pb-0">
-      <header className="sticky top-0 z-40 bg-cohab-card/90 backdrop-blur-md border-b border-cohab-border-soft">
+      <Roofline className="fixed inset-x-0 bottom-0 h-[130px] cohab-desktop:h-[170px] w-full -z-10" />
+      <header className="sticky top-0 z-40 bg-cohab-card/80 backdrop-blur-xl backdrop-saturate-150 border-b border-cohab-border-soft">
         <ScrollProgress />
         <div className="max-w-5xl cohab-desktop:max-w-[1800px] mx-auto px-4 cohab-desktop:px-6 h-14 cohab-desktop:h-[60px] flex items-center gap-3 cohab-desktop:gap-4">
           <BackButton pathname={pathname} />

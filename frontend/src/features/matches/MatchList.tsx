@@ -18,6 +18,7 @@ import { Reveal } from '@/components/motion/Reveal'
 import { RevealGroup } from '@/components/motion/RevealGroup'
 import { cn } from '@/lib/utils'
 import { Check, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { MatchListItem } from '@/api/types'
 
 type SortKey = 'best' | 'budget'
@@ -182,7 +183,7 @@ export function MatchList() {
 
   const profilePrompt = data && data.length === 0 && noProfile && (
     <EmptyState
-      photo="/photos/keys.webp"
+      art="moving"
       title="Finish your profile"
       action={
         <Link to="/onboarding/questionnaire" className={emptyActionClass}>
@@ -267,7 +268,7 @@ export function MatchList() {
                     selected ? 'bg-cohab-tint text-cohab-primary font-semibold' : 'bg-transparent hover:bg-cohab-row-tint',
                   )}
                 >
-                  <span className={cn('w-[18px] h-[18px] rounded-[6px] border-[1.5px] flex-none grid place-items-center transition-colors', selected ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill' : 'bg-cohab-card border-cohab-border')}>{selected && <Check className="size-3" strokeWidth={3.2} aria-hidden />}</span>
+                  <span className={cn('w-[18px] h-[18px] rounded-[6px] border-[1.5px] flex-none grid place-items-center transition-colors', selected ? 'bg-cohab-fill border-cohab-fill text-cohab-on-fill' : 'bg-cohab-card border-cohab-border')}>{selected && <Check className="size-3" strokeWidth={3.2} aria-hidden />}</span>
                   <span className="flex-1 text-cohab-ink">{city}</span>
                   <span className="text-[11px] font-bold tabular-nums text-cohab-subtle bg-cohab-row-tint rounded-full px-2 py-0.5">{count}</span>
                 </button>
@@ -297,7 +298,7 @@ export function MatchList() {
                         selected ? 'bg-cohab-tint text-cohab-primary font-semibold' : 'bg-transparent hover:bg-cohab-row-tint',
                       )}
                     >
-                      <span className={cn('w-[18px] h-[18px] rounded-[6px] border-[1.5px] flex-none grid place-items-center transition-colors', selected ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill' : 'bg-cohab-card border-cohab-border')}>{selected && <Check className="size-3" strokeWidth={3.2} aria-hidden />}</span>
+                      <span className={cn('w-[18px] h-[18px] rounded-[6px] border-[1.5px] flex-none grid place-items-center transition-colors', selected ? 'bg-cohab-fill border-cohab-fill text-cohab-on-fill' : 'bg-cohab-card border-cohab-border')}>{selected && <Check className="size-3" strokeWidth={3.2} aria-hidden />}</span>
                       <span className="flex-1 text-cohab-ink">{locality}</span>
                       <span className="text-[11px] font-bold tabular-nums text-cohab-subtle bg-cohab-row-tint rounded-full px-2 py-0.5">{count}</span>
                     </button>
@@ -350,17 +351,24 @@ export function MatchList() {
             title={countLine}
             className="mb-5"
             aside={
-              <div className="flex items-center gap-1.5 bg-white/12 backdrop-blur-sm rounded-full p-1">
+              <div className="flex items-center gap-1 bg-white/12 backdrop-blur-md ring-1 ring-inset ring-white/15 rounded-full p-1">
                 {(['best', 'budget'] as SortKey[]).map((k) => (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setSortBy(k)}
                     className={cn(
-                      'cohab-press h-9 px-4 rounded-full text-[13px] font-bold cursor-pointer transition-colors',
-                      sortBy === k ? 'bg-white text-cohab-on-sun' : 'text-white/85 hover:bg-white/15',
+                      'cohab-press relative isolate h-9 px-4 rounded-full text-[13px] font-bold cursor-pointer transition-colors duration-300',
+                      sortBy === k ? 'text-[#0d0f14]' : 'text-white/85 hover:text-white',
                     )}
                   >
+                    {sortBy === k && (
+                      <motion.span
+                        layoutId="sort-pill"
+                        transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+                        className="absolute inset-0 -z-10 rounded-full bg-white shadow-[0_4px_14px_-4px_rgb(0_0_0/0.45)]"
+                      />
+                    )}
                     {k === 'best' ? 'Best match' : 'Budget'}
                   </button>
                 ))}
@@ -387,7 +395,7 @@ export function MatchList() {
 
           {isLoading && <p className="text-cohab-muted">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your matches. Try again shortly.</p>}
-          {emptyMessage && <EmptyState photo="/photos/keys.webp" title="Nothing to show">{emptyMessage}</EmptyState>}
+          {emptyMessage && <EmptyState art="searching" title="Nothing to show">{emptyMessage}</EmptyState>}
           {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3.5" runKey={runKey}>
@@ -439,7 +447,7 @@ export function MatchList() {
 
           {isLoading && <p className="text-cohab-muted-mobile">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your matches. Try again shortly.</p>}
-          {emptyMessage && <EmptyState photo="/photos/keys.webp" title="Nothing to show">{emptyMessage}</EmptyState>}
+          {emptyMessage && <EmptyState art="searching" title="Nothing to show">{emptyMessage}</EmptyState>}
           {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3" runKey={runKey}>

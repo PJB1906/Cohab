@@ -21,7 +21,7 @@ export function Tab({
         // the rent Inputs which are already rounded-[10px].
         'cohab-press rounded-full cursor-pointer px-3.5 py-[7px] text-[12.5px] font-semibold transition-colors border-[1.5px]',
         selected
-          ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill'
+          ? 'bg-cohab-fill border-cohab-fill text-cohab-on-fill'
           : 'bg-transparent border-cohab-border text-cohab-ink hover:border-cohab-ink',
         className,
       )}

@@ -36,7 +36,7 @@ export function MobileStepHeader({
       </div>
       <div className="px-6 pb-3">
         <div className="h-[3px] bg-cohab-track rounded-full overflow-hidden">
-          <div className="h-full bg-cohab-primary" style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }} />
+          <div className="h-full bg-cohab-fill" style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }} />
         </div>
       </div>
     </div>

@@ -164,7 +164,7 @@ export function ContactShare() {
                 </div>
               </div>
               {otherConsented && (
-                <div className="w-[22px] h-[22px] rounded-full bg-cohab-primary text-cohab-on-fill text-[12px] font-semibold flex items-center justify-center flex-none">
+                <div className="w-[22px] h-[22px] rounded-full bg-cohab-fill text-cohab-on-fill text-[12px] font-semibold flex items-center justify-center flex-none">
                   ✓
                 </div>
               )}
@@ -185,7 +185,7 @@ export function ContactShare() {
               <div
                 className={cn(
                   'w-6 h-6 rounded-xl flex-none flex items-center justify-center',
-                  youConsented ? 'bg-cohab-primary border border-cohab-primary' : 'bg-transparent border border-cohab-border',
+                  youConsented ? 'bg-cohab-fill border border-cohab-primary' : 'bg-transparent border border-cohab-border',
                 )}
               >
                 {youConsented && <span className="text-cohab-on-fill text-[13px] font-semibold">✓</span>}
@@ -220,7 +220,7 @@ export function ContactShare() {
                   <div
                     className={cn(
                       'w-1.5 h-1.5 rounded-full mt-[7px] flex-none',
-                      tip.danger ? 'bg-cohab-accent' : 'bg-cohab-primary',
+                      tip.danger ? 'bg-cohab-accent' : 'bg-cohab-fill',
                     )}
                   />
                   <p className="text-[14px] leading-[1.5] text-cohab-ink">
@@ -304,7 +304,7 @@ export function ContactShare() {
                 <span
                   className={cn(
                     'w-[5px] h-[5px] rounded-full mt-2 flex-none',
-                    tip.danger ? 'bg-cohab-accent' : 'bg-cohab-primary',
+                    tip.danger ? 'bg-cohab-accent' : 'bg-cohab-fill',
                   )}
                 />
                 <p className="text-[14px] leading-[1.5] text-cohab-ink/85">

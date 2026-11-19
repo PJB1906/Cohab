@@ -94,7 +94,7 @@ export function OptionalQuestionnaire() {
           </div>
           <div className="h-1 rounded-full bg-cohab-bubble-mint overflow-hidden">
             <div
-              className="h-full bg-cohab-primary rounded-full"
+              className="h-full bg-cohab-fill rounded-full"
               style={{ width: `${(doneOptional / TOTAL_OPTIONAL) * 100}%` }}
             />
           </div>

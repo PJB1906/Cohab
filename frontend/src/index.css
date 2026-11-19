@@ -1,31 +1,22 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/archivo/wdth.css';
 
-/* Daylight identity (docs/DECISIONS.md D-14.24, supersedes the colour half of
-   D-14.23).
+/* Studio identity (docs/DECISIONS.md D-14.26; colour history D-14.23/24).
    ---------------------------------------------------------------------------
-   Why it changed: black + neon on grey read as a generic "brutalist" template
-   once it sat behind real product screens. The product is about finding a
-   home with a person, so the system is now warm in intent but clean in
-   execution: a cool white canvas, deep navy ink, one confident cobalt, and a
-   single sunshine accent kept for the moments that matter.
+   Neutral surfaces, one confident cobalt, one sunshine accent. Colour is spent
+   on meaning, never on backgrounds: pages are near-white or graphite, photos
+   keep their own colour under a neutral shade, and blue appears only where it
+   says "act here" or "strong fit".
 
-   Reference lock
-     Preserve: condensed poster type for titles and numerals; photography as
-               the carrier of feeling (photo banners at every page head);
-               navy ink instead of black; one brand colour.
-     Roles:    cobalt  = brand, actions, links, strength of fit.
-               sun     = match moments only (mutual, "for you", the big
-                         score), always a fill behind navy text.
-               coral   = warnings and weak sides only.
-               mint    = verified and positive confirmation only.
-               identity colours = avatar tiles only (decorative, keyed by id).
-     Depth:    soft layered shadows and 1px tinted borders. No hard black
-               outlines, no glass, no particle fields.
-     Reject:   indigo/violet, cream canvases, serif word swaps, neon on grey.
-
-   The `--color-cohab-*` names are kept so every screen re-themes through its
-   utilities; each value states its role. */
+   Roles
+     cobalt  primary = text links, rings, focus, strength (lifted in dark)
+             fill    = filled controls with white text (deeper in dark)
+     sun     match moments only, a fill behind ink text
+     coral   warnings and weak sides only
+     mint    verified / positive only
+     identity colours: avatar tiles only, keyed by name
+   Reject: navy-tinted dark surfaces, blue washes over photos, glow blobs,
+   indigo/violet, cream canvases. */
 @theme {
   --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
@@ -34,103 +25,111 @@
   --breakpoint-cohab-desktop: 1220px;
 
   /* Source palette */
-  --color-poster-navy: #0b1033;
+  --color-poster-ink: #0d0f14;
   --color-poster-cobalt: #2a4bff;
   --color-poster-sun: #ffc933;
   --color-poster-coral: #ff5c4a;
   --color-poster-mint: #12b886;
 
   /* Semantic tokens: light (default) */
-  --color-cohab-primary: #2a4bff;       /* filled CTAs, links, focus, strength */
-  --color-cohab-primary-dark: #1b34d1;
-  --color-cohab-sky: #8fa6ff;           /* middle strength on bars */
-  --color-cohab-sun: #ffc933;           /* match moments only, as a fill */
-  --color-cohab-on-sun: #0b1033;
-  --color-cohab-accent: #d23a2c;        /* warnings / weak side (AA on white) */
-  --color-cohab-accent-tint: #ffecea;
-  --color-cohab-good: #0a8f6a;          /* verified / positive text */
-  --color-cohab-good-tint: #dcf6ee;
-  --color-cohab-bg: #f2f4fb;            /* page */
-  --color-cohab-card: #ffffff;          /* interactive containers */
-  --color-cohab-border: #d9dfef;
-  --color-cohab-border-soft: #e8ecf6;
-  --color-cohab-ink: #0b1033;
-  --color-cohab-muted: #353c61;
-  --color-cohab-subtle: #646b8f;
-  --color-cohab-placeholder: #959cba;
-  --color-cohab-tint: #e8ecfb;          /* selected rows, chips */
-  --color-cohab-row-tint: #f6f8fd;
-  --color-cohab-muted-mobile: #353c61;
-  --color-cohab-subtle-mobile: #646b8f;
-  --color-cohab-dark-bg: #0b1033;       /* the navy bands */
-  --color-cohab-dark-border: #232c6b;
-  --color-cohab-dark-border-soft: #1a2257;
+  --color-cohab-primary: #2a4bff;       /* links, rings, focus, strength */
+  --color-cohab-primary-dark: #1d3be6;
+  --color-cohab-fill: #2a4bff;          /* filled controls (white text) */
+  --color-cohab-sky: #9fb0ff;           /* middle strength on bars */
+  --color-cohab-sun: #ffc933;
+  --color-cohab-on-sun: #0d0f14;
+  --color-cohab-accent: #d23a2c;
+  --color-cohab-accent-tint: #fdeeec;
+  --color-cohab-good: #0a8f6a;
+  --color-cohab-good-tint: #e2f6ef;
+  --color-cohab-bg: #f5f6f8;
+  --color-cohab-card: #ffffff;
+  --color-cohab-border: #e1e3e9;
+  --color-cohab-border-soft: #ebedf1;
+  --color-cohab-ink: #0d0f14;
+  --color-cohab-muted: #464b57;
+  --color-cohab-subtle: #6b707d;
+  --color-cohab-placeholder: #a0a4ae;
+  --color-cohab-tint: #eef1ff;
+  --color-cohab-row-tint: #f8f9fb;
+  --color-cohab-muted-mobile: #464b57;
+  --color-cohab-subtle-mobile: #6b707d;
+  --color-cohab-dark-bg: #0d0f14;       /* ink panels */
+  --color-cohab-dark-border: #23262e;
+  --color-cohab-dark-border-soft: #1a1c22;
   --color-cohab-dark-text: #ffffff;
-  --color-cohab-dark-text-muted: #c5ccec;
-  --color-cohab-dark-text-subtle: #8e97c8;
+  --color-cohab-dark-text-muted: #c4c6ce;
+  --color-cohab-dark-text-subtle: #8b8e99;
   --color-cohab-bubble-mint: #2a4bff;   /* your chat bubble (name kept) */
-  --color-cohab-thread-bg: #eef1fa;
+  --color-cohab-thread-bg: #f5f6f8;
   --color-cohab-on-fill: #ffffff;
   --color-cohab-avatar-bg: #2a4bff;
   --color-cohab-avatar-ink: #ffffff;
   --color-cohab-score: #2a4bff;
   --color-cohab-warn: #d23a2c;
-  --color-cohab-warn-border: #ffc4bd;
-  --color-cohab-track: #e1e6f5;
+  --color-cohab-warn-border: #f7c9c3;
+  --color-cohab-track: #e7e9ef;
   --color-cohab-bar-mid: #2a4bff;
 
-  /* Identity tiles: decorative, picked by hashing the member id */
+  /* Identity tiles: decorative, picked by hashing the member's name */
   --color-id-1: #2a4bff;
   --color-id-2: #ffc933;
-  --color-id-3: #ff5c4a;
-  --color-id-4: #12b886;
-  --color-id-5: #5cc8ff;
-  --color-id-6: #ff8fb8;
+  --color-id-3: #ff7a66;
+  --color-id-4: #3ccf9b;
+  --color-id-5: #74ccff;
+  --color-id-6: #ff9cc2;
 
-  --radius-poster: 24px;                /* photo frames */
+  --radius-poster: 24px;
 
-  --shadow-soft: 0 1px 2px rgb(11 16 51 / 0.05), 0 10px 28px -10px rgb(11 16 51 / 0.12);
-  --shadow-lift: 0 2px 4px rgb(11 16 51 / 0.06), 0 22px 44px -14px rgb(42 75 255 / 0.32);
+  --shadow-soft: 0 1px 2px rgb(13 15 20 / 0.04), 0 8px 24px -12px rgb(13 15 20 / 0.12);
+  --shadow-lift: 0 2px 6px rgb(13 15 20 / 0.06), 0 24px 48px -18px rgb(13 15 20 / 0.22);
   --btn-highlight: rgb(255 255 255 / 0.9);
+  --spot: rgb(42 75 255 / 0.09);
+  --roofline: rgb(13 15 20 / 0.07);
 }
 
-/* Dark: the same system on deep navy. Cobalt lifts to a lighter tone so it
-   keeps contrast; sun keeps its role. Selected by lib/theme.ts. */
+/* Dark: graphite, not navy. Neutral surfaces stepped by lightness; cobalt is
+   lifted for text and deepened for fills so white labels keep contrast. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-cohab-primary: #7c93ff;
-  --color-cohab-primary-dark: #a5b5ff;
-  --color-cohab-sky: #4a5fd0;
-  --color-cohab-accent: #ff7a6b;
-  --color-cohab-accent-tint: #3a1520;
-  --color-cohab-good: #34d3a4;
-  --color-cohab-good-tint: #0f3a33;
-  --color-cohab-bg: #070a1d;
-  --color-cohab-card: #0f1433;
-  --color-cohab-border: #232b5c;
-  --color-cohab-border-soft: #181f47;
-  --color-cohab-ink: #f4f6ff;
-  --color-cohab-muted: #c5ccec;
-  --color-cohab-subtle: #8e97c8;
-  --color-cohab-placeholder: #5e668f;
-  --color-cohab-tint: #19214f;
-  --color-cohab-row-tint: #0c1130;
-  --color-cohab-muted-mobile: #c5ccec;
-  --color-cohab-subtle-mobile: #8e97c8;
-  --color-cohab-dark-bg: #050719;
-  --color-cohab-bubble-mint: #4b63f0;
-  --color-cohab-thread-bg: #070a1d;
-  --color-cohab-on-fill: #070a1d;
-  --color-cohab-avatar-bg: #7c93ff;
-  --color-cohab-avatar-ink: #070a1d;
-  --color-cohab-score: #9db0ff;
-  --color-cohab-warn: #ff7a6b;
-  --color-cohab-warn-border: #5a2430;
-  --color-cohab-track: #232c66;
-  --color-cohab-bar-mid: #7c93ff;
-  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -10px rgb(0 0 0 / 0.5);
-  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 22px 44px -14px rgb(124 147 255 / 0.35);
+  --color-cohab-primary: #8197ff;
+  --color-cohab-primary-dark: #a3b2ff;
+  --color-cohab-fill: #3b5bff;
+  --color-cohab-sky: #5065c4;
+  --color-cohab-accent: #ff7d6e;
+  --color-cohab-accent-tint: #2a1714;
+  --color-cohab-good: #3ad19f;
+  --color-cohab-good-tint: #10261f;
+  --color-cohab-bg: #0a0a0c;
+  --color-cohab-card: #131316;
+  --color-cohab-border: #27272d;
+  --color-cohab-border-soft: #1d1d22;
+  --color-cohab-ink: #f3f3f5;
+  --color-cohab-muted: #b5b7bf;
+  --color-cohab-subtle: #858893;
+  --color-cohab-placeholder: #5c5f69;
+  --color-cohab-tint: #1a1d2c;
+  --color-cohab-row-tint: #0f0f12;
+  --color-cohab-muted-mobile: #b5b7bf;
+  --color-cohab-subtle-mobile: #858893;
+  --color-cohab-dark-bg: #050506;
+  --color-cohab-dark-border: #232328;
+  --color-cohab-dark-border-soft: #19191d;
+  --color-cohab-bubble-mint: #3b5bff;
+  --color-cohab-thread-bg: #0a0a0c;
+  --color-cohab-on-fill: #ffffff;
+  --color-cohab-avatar-bg: #3b5bff;
+  --color-cohab-avatar-ink: #ffffff;
+  --color-cohab-score: #93a6ff;
+  --color-cohab-warn: #ff7d6e;
+  --color-cohab-warn-border: #4a2520;
+  --color-cohab-track: #24242a;
+  --color-cohab-bar-mid: #3b5bff;
+  --shadow-soft: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -14px rgb(0 0 0 / 0.8);
+  --shadow-lift: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 2px 6px rgb(0 0 0 / 0.5), 0 28px 56px -20px rgb(0 0 0 / 0.9);
   --btn-highlight: rgb(255 255 255 / 0.06);
+  --spot: rgb(129 151 255 / 0.10);
+  --roofline: rgb(255 255 255 / 0.06);
 }
 
 :root,
@@ -144,10 +143,6 @@
 body {
   margin: 0;
   background-color: var(--color-cohab-bg);
-  background-image:
-    radial-gradient(1100px 520px at 90% -8%, rgb(42 75 255 / 0.10), transparent 70%),
-    radial-gradient(800px 420px at -6% 2%, rgb(255 201 51 / 0.13), transparent 70%);
-  background-repeat: no-repeat;
   color: var(--color-cohab-muted);
   font-family: var(--font-sans);
   font-stretch: 100%;
@@ -217,7 +212,7 @@ textarea::placeholder {
 /* Raised buttons (D-14.25): a top highlight, a hairline shade at the bottom,
    and a glow in the button's own colour. */
 .btn-raised {
-  --glow: var(--color-cohab-primary);
+  --glow: var(--color-cohab-fill);
   background-image: linear-gradient(180deg, rgb(255 255 255 / 0.22) 0%, rgb(255 255 255 / 0) 55%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.35),
@@ -226,7 +221,7 @@ textarea::placeholder {
     0 12px 26px -12px color-mix(in oklab, var(--glow) 90%, transparent);
 }
 .btn-raised:hover {
-  transform: translateY(-1px);
+  translate: 0 -1px;
   filter: brightness(1.05);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.4),
@@ -235,7 +230,8 @@ textarea::placeholder {
     0 18px 32px -12px color-mix(in oklab, var(--glow) 100%, transparent);
 }
 .btn-raised:active {
-  transform: translateY(0) scale(0.98);
+  translate: 0 0;
+  scale: 0.97;
   filter: brightness(0.98);
   box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.2);
 }
@@ -434,4 +430,77 @@ html {
   to {
     transform: translateX(-50%);
   }
+}
+
+:root[data-theme='dark'] body {
+  background-image: radial-gradient(1400px 520px at 50% -260px, rgb(129 151 255 / 0.07), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+/* ---------------------------------------------------------------------------
+   Studio effects (D-14.26). All additive; reduced motion turns them off.
+   --------------------------------------------------------------------------- */
+
+/* Button sheen: a light streak crosses raised buttons on hover. */
+.btn-raised { overflow: hidden; isolation: isolate; }
+.btn-raised::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.38) 50%, transparent 70%);
+  transform: translateX(-130%);
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-raised:hover::after { transform: translateX(130%); }
+
+/* Cursor spotlight on interactive cards (vars set by useSpotlight). */
+.spotlight { position: relative; }
+.spotlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(560px circle at var(--mx, 50%) var(--my, 50%), var(--spot), transparent 42%);
+  z-index: 0;
+}
+.spotlight:hover::before { opacity: 1; }
+.spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--color-cohab-primary) 70%, transparent), transparent 65%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.spotlight:hover::after { opacity: 1; }
+
+/* Slow push-in on banner photographs. */
+@keyframes cohab-kenburns { from { transform: scale(1.1); } to { transform: scale(1); } }
+.kenburns { animation: cohab-kenburns 14s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: 60% 40%; }
+
+/* Lit windows in the roofline illustration. */
+@keyframes cohab-window { 0%, 100% { opacity: 0.25; } 45%, 60% { opacity: 1; } }
+.roof-window { animation: cohab-window 6s ease-in-out infinite; }
+
+/* Illustrations ship in a light and a dark version. */
+.ill-dark { display: none !important; }
+:root[data-theme='dark'] .ill-light { display: none !important; }
+:root[data-theme='dark'] .ill-dark { display: block !important; }
+
+/* Theme switch: circular reveal from the button (View Transitions API). */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-raised::after, .kenburns, .roof-window { animation: none !important; transition: none !important; }
 }

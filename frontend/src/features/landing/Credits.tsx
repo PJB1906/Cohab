@@ -17,6 +17,10 @@ export function Credits() {
     queryKey: ['photo-credits'],
     queryFn: async () => (await fetch('/photos/CREDITS.json')).json() as Promise<Credit[]>,
   })
+  const { data: illustrations } = useQuery({
+    queryKey: ['illustration-credits'],
+    queryFn: async () => (await fetch('/illustrations/CREDITS.json')).json() as Promise<{ file: string; title: string; source: string }[]>,
+  })
   return (
     <div className="min-h-screen bg-cohab-bg">
       <header className="max-w-[1100px] mx-auto px-5 h-[72px] flex items-center">
@@ -36,6 +40,22 @@ export function Credits() {
               <p className="text-[14px] font-semibold text-cohab-ink mt-2">{c.photographer}</p>
               <a href={c.source} target="_blank" rel="noreferrer noopener" className="text-[13px] text-cohab-subtle underline underline-offset-2">
                 View on Unsplash
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <h2 className="poster text-[44px] cohab-desktop:text-[64px] mt-20">Illustrations</h2>
+        <p className="text-[16px] text-cohab-muted mt-4 max-w-[60ch]">
+          Illustrations are from unDraw by Katerina Limpitsouni, used under the unDraw License (free for commercial
+          use, no attribution required), recoloured to Cohab's palette. The rooftop drawing is our own.
+        </p>
+        <ul className="grid grid-cols-2 sm:grid-cols-3 cohab-desktop:grid-cols-4 gap-5 mt-10">
+          {(illustrations ?? []).map((c) => (
+            <li key={c.file} className="surface rounded-[18px] p-4">
+              <img src={`/${c.file}`} alt="" loading="lazy" className="w-full h-[120px] object-contain" />
+              <a href={c.source} target="_blank" rel="noreferrer noopener" className="block text-[13px] text-cohab-subtle underline underline-offset-2 mt-3 capitalize">
+                {c.title}
               </a>
             </li>
           ))}

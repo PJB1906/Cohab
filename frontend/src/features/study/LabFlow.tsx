@@ -343,7 +343,7 @@ function RankTrial({ token, trial }: { token: string; trial: StudyTrial }) {
           return (
             <div key={c.id} className="relative">
               {pos >= 0 && (
-                <span className="absolute -top-2 -left-2 z-10 w-7 h-7 rounded-full bg-cohab-primary text-cohab-on-fill text-[13px] font-semibold flex items-center justify-center">
+                <span className="absolute -top-2 -left-2 z-10 w-7 h-7 rounded-full bg-cohab-fill text-cohab-on-fill text-[13px] font-semibold flex items-center justify-center">
                   {pos + 1}
                 </span>
               )}

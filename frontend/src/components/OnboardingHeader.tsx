@@ -127,8 +127,8 @@ export function OnboardingHeader({
     </header>
     <div className={`mx-auto px-4 cohab-desktop:px-6 pt-4 ${pathname.includes('weights') ? 'max-w-[1160px]' : pathname.includes('listing') ? 'max-w-[1300px]' : 'max-w-[1500px]'}`} aria-hidden>
       <div className="relative isolate grain overflow-hidden rounded-[26px] h-[92px] cohab-desktop:h-[124px] shadow-[var(--shadow-soft)]">
-        <img src={STEP_PHOTO(pathname)} alt="" className="absolute inset-0 -z-20 w-full h-full object-cover" />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(105deg,rgb(8_12_46/0.94)_0%,rgb(27_52_209/0.8)_55%,rgb(42_75_255/0.3)_100%)]" />
+        <img src={STEP_PHOTO(pathname)} alt="" className="kenburns absolute inset-0 -z-20 w-full h-full object-cover" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgb(10_11_15/0.85)_0%,rgb(10_11_15/0.45)_50%,rgb(10_11_15/0.05)_100%)]" />
         <div className="h-full px-5 cohab-desktop:px-8 flex items-center">
           <span className="label text-[10px] bg-cohab-sun text-cohab-on-sun rounded-full px-2.5 py-1">Setting up your profile</span>
         </div>

@@ -87,7 +87,7 @@ export function LoginForm({
         <span
           className={
             'w-5 h-5 rounded-[7px] flex-none flex items-center justify-center border-[1.5px] transition-colors ' +
-            (keepLoggedIn ? 'bg-cohab-primary border-cohab-primary' : 'bg-cohab-card border-cohab-border')
+            (keepLoggedIn ? 'bg-cohab-fill border-cohab-primary' : 'bg-cohab-card border-cohab-border')
           }
         >
           {keepLoggedIn && (

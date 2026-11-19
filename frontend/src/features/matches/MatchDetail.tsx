@@ -155,9 +155,9 @@ export function MatchDetail() {
         )}
 
         {/* Poster header (D-14.23): the person, the number, the decision. */}
-        <section className="relative isolate grain overflow-hidden mt-3 cohab-desktop:mt-0 text-white rounded-[30px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end shadow-[var(--shadow-soft)]">
-          <img src="/photos/room-sunlight.webp" alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
-          <div className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgb(8_12_46/0.96)_0%,rgb(27_52_209/0.86)_55%,rgb(42_75_255/0.45)_100%)]" />
+        <section className="relative isolate grain overflow-hidden bg-[#0d0f14] mt-3 cohab-desktop:mt-0 text-white rounded-[30px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end shadow-[var(--shadow-soft)]">
+          <img src="/photos/room-sunlight.webp" alt="" aria-hidden className="kenburns absolute inset-0 -z-20 w-full h-full object-cover" />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgb(10_11_15/0.9)_0%,rgb(10_11_15/0.72)_45%,rgb(10_11_15/0.55)_100%),linear-gradient(0deg,rgb(10_11_15/0.5)_0%,rgb(10_11_15/0)_60%)]" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-5">
               <span className="label text-[10px] bg-white text-cohab-on-sun rounded-full px-2.5 py-1">Verified student</span>

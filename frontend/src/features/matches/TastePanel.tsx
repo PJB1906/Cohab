@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { tasteApi, type Taste } from '@/api/v2'
 import { cn } from '@/lib/utils'
+import { motion } from 'motion/react'
+import { Illustration } from '@/components/Illustration'
+import { Roofline } from '@/components/Roofline'
 
 /** "Your list is learning" (D-14.22). Shows, in plain terms, what the taste
  * model has learned from your interest/pass decisions, how far it is from
@@ -19,7 +22,11 @@ export function TastePanel({ className, compact = false }: { className?: string;
   if (!data) return null
 
   return (
-    <section className={cn('relative isolate grain overflow-hidden bg-[linear-gradient(135deg,#0b1033_0%,#1b2a9a_100%)] text-white rounded-[26px] p-6 shadow-[var(--shadow-soft)]', className)} aria-label="What your list has learned">
+    <section className={cn('relative isolate grain overflow-hidden bg-cohab-dark-bg text-white rounded-[26px] p-6 pb-10 shadow-[var(--shadow-soft)] ring-1 ring-inset ring-white/[0.06]', !compact && 'cohab-desktop:pr-[300px]', className)} aria-label="What your list has learned">
+      <Roofline tone="panel" seed={5} className="absolute inset-x-0 bottom-0 h-[90px] w-full -z-10" />
+      {!compact && (
+        <Illustration forceDark name="neighbors" className="hidden cohab-desktop:block absolute right-6 bottom-4 w-[250px] h-[170px] -z-[1]" />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <span className="label text-[10px] text-cohab-sun">{data.active && data.enabled ? 'Learning from you' : 'Learns from you'}</span>
@@ -148,11 +155,10 @@ function Switch({
         checked ? 'bg-cohab-sun' : 'bg-white/25',
       )}
     >
-      <span
-        className={cn(
-          'absolute top-1 w-5 h-5 rounded-full bg-cohab-dark-bg transition-[left] duration-200',
-          checked ? 'left-6' : 'left-1',
-        )}
+      <motion.span
+        layout
+        transition={{ type: 'spring', stiffness: 600, damping: 34 }}
+        className={cn('absolute top-1 w-5 h-5 rounded-full bg-cohab-dark-bg shadow-[0_1px_3px_rgb(0_0_0/0.4)]', checked ? 'right-1' : 'left-1')}
       />
     </button>
   )

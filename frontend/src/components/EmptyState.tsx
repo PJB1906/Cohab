@@ -1,29 +1,28 @@
+import { Illustration, type IllustrationName } from '@/components/Illustration'
 import { cn } from '@/lib/utils'
 
-/** An empty screen that still has a point of view: a photograph, a plain
- * sentence about why it is empty, and what to do next. The photo is scenery,
- * never a claim about a person or a room. */
+/** An empty screen with a point of view: an illustration, a plain sentence
+ * about why it is empty, and what to do next. */
 export function EmptyState({
-  photo,
+  art,
   title,
   children,
   action,
   className,
 }: {
-  photo: string
+  art: IllustrationName
   title: string
   children?: React.ReactNode
   action?: React.ReactNode
   className?: string
 }) {
   return (
-    <div className={cn('surface rounded-[28px] overflow-hidden grid sm:grid-cols-[minmax(0,240px)_1fr]', className)}>
-      <div className="relative isolate grain min-h-[130px]">
-        <img src={photo} alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgb(8_12_46/0.55),rgb(42_75_255/0.35))]" />
+    <div className={cn('surface rounded-[28px] overflow-hidden grid sm:grid-cols-[minmax(0,280px)_1fr] items-stretch', className)}>
+      <div className="relative bg-cohab-row-tint grid place-items-center p-6 border-b sm:border-b-0 sm:border-r border-cohab-border-soft min-h-[180px]">
+        <Illustration name={art} className="w-full max-w-[220px] h-[150px]" />
       </div>
-      <div className="p-6 cohab-desktop:p-7 flex flex-col justify-center gap-2.5">
-        <h2 className="poster text-[34px] cohab-desktop:text-[40px]">{title}</h2>
+      <div className="p-6 cohab-desktop:p-8 flex flex-col justify-center gap-2.5">
+        <h2 className="poster text-[34px] cohab-desktop:text-[42px]">{title}</h2>
         {children && <p className="text-[14px] leading-[1.55] text-cohab-muted max-w-[52ch]">{children}</p>}
         {action}
       </div>
@@ -32,4 +31,4 @@ export function EmptyState({
 }
 
 export const emptyActionClass =
-  'cohab-press btn-raised self-start mt-1 h-11 px-6 rounded-full bg-cohab-primary text-cohab-on-fill text-[14px] font-bold inline-flex items-center gap-2'
+  'cohab-press btn-raised self-start mt-2 h-11 px-6 rounded-full bg-cohab-fill text-cohab-on-fill text-[14px] font-bold inline-flex items-center gap-2'

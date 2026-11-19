@@ -3937,3 +3937,52 @@ guidance.
 **Checked.** All 15 member routes at 375 px (no overflow, no console errors);
 desktop and phone in light and dark, including clicking the switch both ways
 (theme, saved choice and favicon all update).
+
+### D-14.26 Studio: neutral palette, natural photos, illustrations, motion
+
+**Why.** The navy dark mode and the cobalt wash over every photo read as
+generated ("vibe coded"). Professional dark interfaces are neutral and spend
+colour on meaning; photos keep their own colour.
+
+**Palette.** Light: page #f5f6f8, white cards, ink #0d0f14, hairlines #e1e3e9.
+Dark: graphite, not navy: page #0a0a0c, cards #131316, hairlines #27272d, ink
+#f3f3f5, depth from an inner top highlight plus deep shadows. A new `fill` token
+splits filled controls from text colour: in dark mode links and rings use a
+lifted cobalt (#8197ff, AA on graphite) while buttons and selected chips use a
+deeper cobalt (#3b5bff) with white text, instead of the earlier pale lavender
+with dark text. Sun, coral, mint and identity colours keep their roles. The
+coloured glow blobs on the page background were removed; dark mode keeps one
+faint light at the top.
+
+**Photos.** Natural colour under a neutral shade that darkens only behind the
+words (left-to-right and bottom), with a slow push-in. No blue wash anywhere.
+
+**Illustrations.** Seven unDraw illustrations (unDraw License: free for
+commercial use, no attribution required), recoloured from unDraw's default violet
+to cobalt, each with a generated dark version; CSS shows the one for the current
+theme. Used for empty states (saved, chats, no matches, finish profile), the
+empty chat thread, the "pick a conversation" pane and the taste panel. Credited
+on `/credits` from `public/illustrations/CREDITS.json`.
+`Roofline` is our own illustration, drawn in code from the mark's roof shape: a
+deterministic street of rooftops with a few windows lit in sun that slowly come
+and go. It sits faintly behind every app page, on the sign-in panel, the taste
+panel and above the landing footer.
+
+**Motion (Motion + GSAP).**
+- Raised buttons: a light streak sweeps across on hover; they lean toward the
+  pointer and spring back (GSAP `quickTo`, one delegated listener, fine
+  pointers only). Hover lift and press use the individual `translate`/`scale`
+  properties so they compose with GSAP's transform.
+- Match cards: a cursor-following spotlight and a glowing border that tracks the
+  pointer.
+- Score rings draw themselves in when scrolled into view.
+- Page banners: title, label and copy rise in with a stagger and blur-in.
+- Sort control: a sliding pill (`layoutId`); the taste switch knob springs.
+- Theme switch: the new theme grows out of the button as a circle (View
+  Transitions API), with an instant fallback.
+All of it is off under `prefers-reduced-motion`.
+
+**Checked.** 22 page loads at 375 px (all 15 member routes in dark, 7 in light):
+no overflow, correct theme, no console errors. Desktop light and dark: matches,
+match detail, chat, chats, saved, sign-in, credits. The sort pill and the theme
+switch were exercised by clicking.

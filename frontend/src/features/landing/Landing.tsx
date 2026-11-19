@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Chemistry, type ChemistryRow } from '@/components/Chemistry'
 import { Logo } from '@/components/Logo'
+import { Roofline } from '@/components/Roofline'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { cn } from '@/lib/utils'
 
@@ -87,7 +88,7 @@ export function Landing() {
         </Link>
         <Link
           to="/login?mode=signup"
-          className="cohab-press h-11 px-5 rounded-full btn-raised bg-cohab-primary text-cohab-on-fill text-[14px] font-bold inline-flex items-center"
+          className="cohab-press h-11 px-5 rounded-full btn-raised bg-cohab-fill text-cohab-on-fill text-[14px] font-bold inline-flex items-center"
         >
           Join free
         </Link>
@@ -106,7 +107,7 @@ export function Landing() {
           <div className="flex flex-wrap items-center gap-3 mt-8">
             <Link
               to="/login?mode=signup"
-              className="cohab-press h-14 px-8 rounded-full btn-raised bg-cohab-primary text-cohab-on-fill text-[16px] font-bold inline-flex items-center gap-2"
+              className="cohab-press h-14 px-8 rounded-full btn-raised bg-cohab-fill text-cohab-on-fill text-[16px] font-bold inline-flex items-center gap-2"
             >
               Start in four minutes <span aria-hidden>→</span>
             </Link>
@@ -287,13 +288,14 @@ export function Landing() {
           </h2>
           <Link
             to="/login?mode=signup"
-            className="cohab-press mt-10 h-16 px-10 rounded-full btn-raised bg-cohab-primary text-cohab-on-fill text-[18px] font-bold inline-flex items-center gap-2"
+            className="cohab-press mt-10 h-16 px-10 rounded-full btn-raised bg-cohab-fill text-cohab-on-fill text-[18px] font-bold inline-flex items-center gap-2"
           >
             Find my roommate <span aria-hidden>→</span>
           </Link>
         </div>
       </section>
 
+      <Roofline seed={3} className="block w-full h-[120px] cohab-desktop:h-[170px] -mb-px" />
       <footer className="border-t border-cohab-border">
         <div className="max-w-[1400px] mx-auto px-5 cohab-desktop:px-10 py-8 flex flex-wrap gap-x-6 gap-y-2 items-center text-[13px] text-cohab-subtle">
           <Logo pilot={false} />

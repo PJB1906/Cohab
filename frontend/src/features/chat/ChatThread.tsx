@@ -9,6 +9,7 @@ import { AppShell } from '@/components/AppShell'
 import { Avatar } from '@/components/ui/avatar'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ArrowLeft, Eye, Phone, SendHorizontal } from 'lucide-react'
+import { Illustration } from '@/components/Illustration'
 import { SafetyActions } from '@/features/safety/SafetyActions'
 import { ThreadRail } from '@/features/chat/ThreadList'
 import { MessageEnter } from '@/components/motion/MessageEnter'
@@ -209,9 +210,11 @@ export function ChatThread() {
 
           <div className="flex flex-col gap-[7px] cohab-desktop:gap-3">
             {messages && messages.length === 0 && (
-              <p className="text-[13px] text-cohab-subtle text-center py-8">
-                Say hi — talk here before sharing any contact details.
-              </p>
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <Illustration name="say-hi" className="w-[220px] h-[150px]" />
+                <p className="text-[14px] font-semibold text-cohab-ink">Say hi</p>
+                <p className="text-[13px] text-cohab-subtle max-w-[36ch]">Talk here first. Contact details stay hidden until you both agree to share them.</p>
+              </div>
             )}
             {messages?.map((m) => {
               const mine = m.sender_id === me?.id
@@ -332,7 +335,7 @@ export function ChatThread() {
               disabled={sendMutation.isPending || !draft.trim()}
               className={cn(
                 'cohab-press btn-raised cohab-desktop:hidden w-[46px] h-[46px] rounded-full border-none text-cohab-on-fill flex-none flex items-center justify-center disabled:opacity-50 cursor-pointer',
-                warning ? 'btn-coral bg-cohab-accent' : 'bg-cohab-primary',
+                warning ? 'btn-coral bg-cohab-accent' : 'bg-cohab-fill',
               )}
               aria-label="Send"
             >

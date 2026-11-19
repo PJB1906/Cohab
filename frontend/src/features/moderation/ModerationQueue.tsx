@@ -107,7 +107,7 @@ export function ModerationQueue() {
             name={me?.full_name ?? '?'}
             src={me?.avatar_url}
             size={26}
-            className="bg-cohab-primary text-cohab-on-fill border-none text-[11px]"
+            className="bg-cohab-fill text-cohab-on-fill border-none text-[11px]"
           />
         </div>
       </header>

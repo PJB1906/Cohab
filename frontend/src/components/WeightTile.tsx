@@ -30,14 +30,14 @@ export function WeightTile({
         className={cn(
           'flex-none w-[26px] h-[26px] rounded-full flex items-center justify-center text-[13px] font-semibold',
           'cohab-desktop:hidden',
-          selected ? 'bg-cohab-primary text-cohab-on-fill' : 'bg-cohab-row-tint text-cohab-subtle',
+          selected ? 'bg-cohab-fill text-cohab-on-fill' : 'bg-cohab-row-tint text-cohab-subtle',
         )}
       >
         {rank ?? ''}
       </span>
       {/* Desktop: rank shown as an absolute badge on the tile (desktop s6). */}
       {selected && (
-        <span className="hidden cohab-desktop:flex absolute top-[18px] right-[18px] w-5 h-5 rounded-full bg-cohab-primary text-cohab-on-fill text-[11px] font-semibold items-center justify-center">
+        <span className="hidden cohab-desktop:flex absolute top-[18px] right-[18px] w-5 h-5 rounded-full bg-cohab-fill text-cohab-on-fill text-[11px] font-semibold items-center justify-center">
           {rank}
         </span>
       )}

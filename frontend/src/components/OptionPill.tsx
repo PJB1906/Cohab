@@ -49,7 +49,7 @@ export function ChipPill({
       className={cn(
         'cohab-press min-h-10 px-4 rounded-full text-[13.5px] font-semibold cursor-pointer transition-colors border-[1.5px] whitespace-nowrap',
         selected
-          ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill'
+          ? 'bg-cohab-fill border-cohab-fill text-cohab-on-fill'
           : 'bg-cohab-card border-cohab-border-soft text-cohab-ink hover:border-cohab-ink',
       )}
     >

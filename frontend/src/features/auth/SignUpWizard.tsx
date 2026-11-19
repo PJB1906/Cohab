@@ -436,7 +436,7 @@ export function SignUpWizard({
                         : 'border border-cohab-border')
                   }
                 >
-                  {ch ?? (isCaret && <span className="w-[1.5px] h-6 bg-cohab-primary" />)}
+                  {ch ?? (isCaret && <span className="w-[1.5px] h-6 bg-cohab-fill" />)}
                 </div>
               )
             })}

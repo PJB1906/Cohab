@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.tsx'
 import { ApiError } from '@/api/client'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { installMagnetic } from '@/lib/magnetic'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,7 @@ const queryClient = new QueryClient({
 // baked into every Button — silently never fires on iOS. A known WebKit
 // quirk, not a CSS bug; `passive: true` keeps this from affecting scroll.
 document.addEventListener('touchstart', () => {}, { passive: true })
+installMagnetic()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -4,6 +4,7 @@ import { ThreadRail, ThreadRow, useThreads } from '@/features/chat/ThreadList'
 import { cn } from '@/lib/utils'
 import { PageBanner } from '@/components/PageBanner'
 import { EmptyState } from '@/components/EmptyState'
+import { Illustration } from '@/components/Illustration'
 
 /** Chat thread list — the desktop mockup's screen 9 left panel
  * (`grid-template-columns:320px 1fr`). Mounted at `/chats` (`AppShell`'s
@@ -25,11 +26,10 @@ export function ChatList() {
           style={{ height: 'calc(100vh - 170px)', minHeight: 560 }}
         >
           <ThreadRail />
-          <div className="relative isolate grain flex flex-col items-center justify-center gap-2 text-center text-white px-8">
-            <img src="/photos/friends-couch.webp" alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
-            <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgb(8_12_46/0.94),rgb(27_52_209/0.8))]" />
-            <h2 className="poster text-white text-[56px]">Pick a conversation</h2>
-            <p className="text-[14px] text-white/80 max-w-[40ch]">Chat opens once you both say yes. Choose a thread on the left to read it.</p>
+          <div className="flex flex-col items-center justify-center gap-3 text-center px-8 bg-cohab-row-tint">
+            <Illustration name="breakfast" className="w-[300px] h-[220px] mb-2" />
+            <h2 className="poster text-[56px]">Pick a conversation</h2>
+            <p className="text-[14px] text-cohab-muted max-w-[40ch]">Chat opens once you both say yes. Choose a thread on the left to read it.</p>
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@ export function ChatList() {
         {isLoading && <p className="text-cohab-muted">Loading…</p>}
         {error && <p className="text-cohab-accent">Couldn't load your chats. Try again shortly.</p>}
         {!isLoading && threads.length === 0 && (
-          <EmptyState photo="/photos/friends-laughing.webp" title="No chats yet">
+          <EmptyState art="chat" title="No chats yet">
             Chat unlocks once a match says yes back. Express interest on a few people to get started.
           </EmptyState>
         )}

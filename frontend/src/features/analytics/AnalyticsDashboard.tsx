@@ -66,7 +66,7 @@ function StatTile({
           row-mates' rather than several times theirs. */}
       <div className={`mt-auto flex items-center gap-2 ${barWidth}`}>
         <div className="flex-1 h-1 rounded-full bg-cohab-border-soft overflow-hidden">
-          <div className="h-full rounded-full bg-cohab-primary" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-cohab-fill" style={{ width: `${pct}%` }} />
         </div>
         <span className="text-[11px] tabular-nums text-cohab-subtle w-8 text-right">{pct}%</span>
       </div>

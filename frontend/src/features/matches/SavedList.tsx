@@ -84,7 +84,7 @@ export function SavedList() {
         {error && <p className="text-cohab-accent">Couldn't load your saved matches. Try again shortly.</p>}
         {emptyMessage && (
           <EmptyState
-            photo="/photos/room-plants.webp"
+            art="saved"
             title="Nothing saved yet"
             action={<Link to="/matches" className={emptyActionClass}>Browse your matches</Link>}
           >
@@ -113,7 +113,7 @@ export function SavedList() {
           {error && <p className="text-cohab-accent">Couldn't load your saved matches. Try again shortly.</p>}
           {emptyMessage && (
             <EmptyState
-              photo="/photos/room-plants.webp"
+              art="saved"
               title="Nothing saved yet"
               action={<Link to="/matches" className={emptyActionClass}>Browse your matches</Link>}
             >

@@ -6,6 +6,7 @@ import { SaveToggle } from './SaveToggle'
 import { TierBadge } from './MatchInsightsPanel'
 import { scorePercent, scoreBand, BAND_COLOR } from '@/lib/score'
 import { identity } from '@/lib/identity'
+import { spotlightMove } from '@/lib/spotlight'
 import { cn } from '@/lib/utils'
 import type { MatchListItem } from '@/api/types'
 
@@ -59,7 +60,7 @@ export function MatchCard({ item, rank = 1 }: { item: MatchListItem; rank?: numb
 
   return (
     <Link to={`/matches/${item.match_id}`} className="block group" data-reveal-item="">
-      <article className="cohab-lift surface relative rounded-[28px] p-4 sm:p-5 flex gap-4 sm:gap-5">
+      <article onPointerMove={spotlightMove} className="cohab-lift surface spotlight relative rounded-[28px] p-4 sm:p-5 flex gap-4 sm:gap-5">
         <Portrait item={item} rank={rank} />
 
         <div className="min-w-0 flex-1 flex flex-col">

@@ -25,7 +25,7 @@ export const BAND_COLOR: Record<ScoreBandName, string> = {
 
 // Static literal classes so Tailwind's scanner can see them at build time.
 export const BAND_BAR_CLASS: Record<ScoreBandName, string> = {
-  Strong: 'bg-cohab-primary',
+  Strong: 'bg-cohab-fill',
   Good: 'bg-cohab-sky',
   Fair: 'bg-cohab-accent',
 }

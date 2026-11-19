@@ -22,7 +22,7 @@ export function Progress({
     <div className={cn('h-1 rounded-full bg-cohab-border-soft overflow-hidden', className)}>
       <div
         ref={animate ? barRef : undefined}
-        className={cn('h-full bg-cohab-primary rounded-full', barClassName)}
+        className={cn('h-full bg-cohab-fill rounded-full', barClassName)}
         style={{ width: `${pct}%` }}
       />
     </div>

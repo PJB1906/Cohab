@@ -21,7 +21,7 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'btn-raised bg-cohab-primary text-cohab-on-fill',
+        primary: 'btn-raised bg-cohab-fill text-cohab-on-fill',
         sun: 'btn-raised btn-sun bg-cohab-sun text-cohab-on-sun',
         light: 'btn-raised btn-light bg-white text-[#0b1033]',
         secondary: 'btn-quiet bg-cohab-card text-cohab-ink border border-cohab-border hover:border-cohab-primary/55 hover:text-cohab-primary',

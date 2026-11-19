@@ -162,7 +162,7 @@ export function ProfilePage() {
 
         {isVerified && (
           <div className="flex items-center gap-2.5 px-1 py-3.5 mb-1 cohab-desktop:bg-cohab-tint cohab-desktop:border cohab-desktop:border-cohab-border cohab-desktop:rounded-2xl cohab-desktop:px-4 cohab-desktop:mb-5">
-            <div className="w-5 h-5 rounded-full bg-cohab-primary text-cohab-on-fill text-[11px] font-semibold flex items-center justify-center flex-none">
+            <div className="w-5 h-5 rounded-full bg-cohab-fill text-cohab-on-fill text-[11px] font-semibold flex items-center justify-center flex-none">
               &#10003;
             </div>
             <span className="text-[13.5px] font-medium text-cohab-primary">
