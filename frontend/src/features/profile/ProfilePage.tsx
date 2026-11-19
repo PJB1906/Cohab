@@ -5,6 +5,7 @@ import { profileApi } from '@/api/profile'
 import { listingApi } from '@/api/listing'
 import { ApiError } from '@/api/client'
 import { AppShell } from '@/components/AppShell'
+import { PageBanner } from '@/components/PageBanner'
 import { ProfileSummaryRail } from './ProfileSummaryRail'
 import { AccountPanel } from './AccountPanel'
 import { ListingPanel } from './ListingPanel'
@@ -154,10 +155,10 @@ export function ProfilePage() {
         <div className="min-w-0">
         {/* Editable account details + avatar (D-13.9) — replaces the static
             header, which showed the same fields with no way to change any. */}
+        <PageBanner photo="/photos/bedroom-warm.webp" label="Your profile" title={user.full_name?.split(" ")[0] || "You"} size="sm" className="mb-4">
+          <p className="text-[14px] text-white/85">{seekerLine}</p>
+        </PageBanner>
         <AccountPanel user={user} />
-        <p className="text-[13px] text-cohab-muted -mt-1 mb-4 cohab-desktop:-mt-3 cohab-desktop:mb-5">
-          {seekerLine}
-        </p>
 
         {isVerified && (
           <div className="flex items-center gap-2.5 px-1 py-3.5 mb-1 cohab-desktop:bg-cohab-tint cohab-desktop:border cohab-desktop:border-cohab-border cohab-desktop:rounded-2xl cohab-desktop:px-4 cohab-desktop:mb-5">

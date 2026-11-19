@@ -20,7 +20,7 @@ export function SafetyActions({ userId, userName }: { userId: string; userName: 
       </button>
 
       {open === 'menu' && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-[#0b1033]/55 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-4 z-50">
           <div className="bg-cohab-card rounded-2xl p-6 max-w-sm w-full">
             <h2 className="text-base font-semibold mb-4">{userName}</h2>
             <div className="flex flex-col gap-2">

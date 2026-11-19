@@ -20,9 +20,9 @@ export function OptionPill({
       type="button"
       onClick={onClick}
       className={cn(
-        'cohab-press min-h-12 w-full text-left px-4 py-3 rounded-[14px] text-[15px] leading-tight cursor-pointer transition-colors border-2',
+        'cohab-press min-h-12 w-full text-left px-4 py-3 rounded-[14px] text-[15px] leading-tight cursor-pointer transition-colors border-[1.5px]',
         selected
-          ? 'bg-cohab-ink border-cohab-ink text-cohab-card font-semibold'
+          ? 'bg-cohab-tint border-cohab-primary text-cohab-primary font-bold'
           : 'bg-cohab-card border-cohab-border-soft text-cohab-ink hover:border-cohab-ink',
         className,
       )}
@@ -47,9 +47,9 @@ export function ChipPill({
       type="button"
       onClick={onClick}
       className={cn(
-        'cohab-press min-h-10 px-4 rounded-full text-[13.5px] font-semibold cursor-pointer transition-colors border-2 whitespace-nowrap',
+        'cohab-press min-h-10 px-4 rounded-full text-[13.5px] font-semibold cursor-pointer transition-colors border-[1.5px] whitespace-nowrap',
         selected
-          ? 'bg-cohab-ink border-cohab-ink text-cohab-card'
+          ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill'
           : 'bg-cohab-card border-cohab-border-soft text-cohab-ink hover:border-cohab-ink',
       )}
     >

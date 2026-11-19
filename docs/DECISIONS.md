@@ -3847,3 +3847,52 @@ simulation, safety, rooms); logged-in members still go straight to matches.
 **Checked.** Every route at 1440 px and 375 px (no horizontal overflow),
 light and dark, as a member, a place-owner and a moderator; lint and build
 clean apart from fast-refresh warnings.
+
+### D-14.24 Daylight: the in-product colour system and photo-led pages
+
+**Why.** The first poster build (D-14.23) was black, neon and grey. On the
+landing page it worked; behind real product screens it read as a generic
+template and the in-product screens were flat. The user rated the inside 2/10
+and asked for a consistent, richer system. This supersedes the colour half of
+D-14.23; the type, the chemistry chart and the media rules stay.
+
+**Reference lock.** Research tools were not available in this session, so the
+direction comes from the bundled craft guides (colour, anti-slop) and known
+product patterns: Airbnb's photo-led pages and soft layered depth, Partiful's
+poster type, The Pudding's mirrored bars. Dominant direction: a cool white
+canvas, deep navy ink, one confident cobalt, one sunshine accent.
+
+| Token | Value (light) | Role, and only this role |
+| --- | --- | --- |
+| ink | #0b1033 | Text and navy bands; replaces pure black |
+| cobalt (primary) | #2a4bff | Brand, buttons, links, focus, strength of fit |
+| sky | #8fa6ff | Middle strength on bars |
+| sun | #ffc933 | Match moments only (big score, "up N for you", taste toggle), always a fill behind navy text |
+| coral (accent) | #d23a2c | Warnings and weak sides only |
+| mint (good) | #0a8f6a | Verified and positive confirmation |
+| identity 1-6 | cobalt, sun, coral, mint, sky, pink | Avatar tiles only, keyed by a hash of the name; carry no meaning |
+
+Cobalt is a blue (hue ~250), not indigo or violet. Contrast: ink on white
+about 17:1, cobalt on white 5.9:1, coral text 4.8:1; sun is never text on white.
+Dark mode lifts cobalt to #7c93ff and keeps sun's role.
+
+**Depth and shape.** Hard 2px black borders and offset shadows became 1px tinted
+borders plus two soft shadow tokens (`--shadow-soft`, `--shadow-lift`); cards
+lift with a cobalt-tinted shadow. Buttons: cobalt pill with a soft glow;
+secondary is white with a hairline. Selected options are cobalt-tinted or
+filled cobalt. Inputs use a cobalt focus ring.
+
+**Photo-led pages.** `PageBanner` puts a photograph under a navy-to-cobalt wash
+at the head of Matches, Saved, Chats, Profile, Blocked and every onboarding step;
+`EmptyState` pairs a photo with a plain reason and a next action. All of it is
+scenery from the 16 credited photos (D-14.23), never a claim about a member or a
+room. Match cards use identity-colour tiles for people; match detail has a
+photo hero with the score in sun; the chemistry chart is a cobalt ramp (strong,
+fine, weak coral).
+
+**Also fixed.** A dead "Compare these two" button on mobile Saved (wired to
+nothing) was removed. Agreement chips on phones show two lines of reasoning
+instead of three wrapped pills.
+
+**Checked.** Every route at 375 px (no horizontal overflow) and desktop, light
+and dark; lint and build clean apart from fast-refresh warnings.

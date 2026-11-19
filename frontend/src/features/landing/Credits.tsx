@@ -32,7 +32,7 @@ export function Credits() {
         <ul className="grid sm:grid-cols-2 cohab-desktop:grid-cols-3 gap-5 mt-10">
           {(data ?? []).map((c) => (
             <li key={c.file}>
-              <img src={`/${c.file}`} alt="" loading="lazy" className="w-full h-[200px] object-cover rounded-[18px] border-2 border-cohab-ink" />
+              <img src={`/${c.file}`} alt="" loading="lazy" className="w-full h-[200px] object-cover rounded-[18px] border border-cohab-border" />
               <p className="text-[14px] font-semibold text-cohab-ink mt-2">{c.photographer}</p>
               <a href={c.source} target="_blank" rel="noreferrer noopener" className="text-[13px] text-cohab-subtle underline underline-offset-2">
                 View on Unsplash

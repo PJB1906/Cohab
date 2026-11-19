@@ -9,6 +9,9 @@ import { MatchInsightsPanel } from './MatchInsightsPanel'
 import { TastePanel } from './TastePanel'
 import { AppShell } from '@/components/AppShell'
 import { Tab } from '@/components/Tab'
+import { PageBanner } from '@/components/PageBanner'
+import { EmptyState, emptyActionClass } from '@/components/EmptyState'
+import { scorePercent } from '@/lib/score'
 import { ChipPill } from '@/components/OptionPill'
 import { Input } from '@/components/ui/input'
 import { Reveal } from '@/components/motion/Reveal'
@@ -163,6 +166,8 @@ export function MatchList() {
   const runKey = useMemo(() => filtered.map((m) => m.match_id).join(','), [filtered])
 
   const excludedCount = (data?.length ?? 0) - filtered.length
+  const strongCount = filtered.filter((m) => scorePercent(m.combined_score) >= 80).length
+  const topScore = filtered.reduce((t, m) => Math.max(t, scorePercent(m.combined_score)), 0)
   const countLine = data ? `${filtered.length} ${filtered.length === 1 ? 'match' : 'matches'}` : 'Your matches'
 
   const emptyMessage =
@@ -175,19 +180,21 @@ export function MatchList() {
         : null
 
   const profilePrompt = data && data.length === 0 && noProfile && (
-    <div className="bg-cohab-card border border-cohab-border rounded-2xl p-5 max-w-[560px]">
-      <p className="text-[15px] font-medium mb-1">Finish your profile to see matches</p>
-      <p className="text-[13.5px] text-cohab-muted mb-3">
-        Matches are worked out from your budget, move-in date and lifestyle answers. It takes about four minutes.
-      </p>
-      <Link to="/onboarding/questionnaire" className="text-cohab-primary font-medium text-[14px]">
-        Answer the questions →
-      </Link>
-    </div>
+    <EmptyState
+      photo="/photos/keys.webp"
+      title="Finish your profile"
+      action={
+        <Link to="/onboarding/questionnaire" className={emptyActionClass}>
+          Answer the questions
+        </Link>
+      }
+    >
+      Matches are worked out from your budget, move-in date and lifestyle answers. It takes about four minutes.
+    </EmptyState>
   )
 
   const pendingBanner = pending && pending.length > 0 && (
-    <div className="bg-cohab-tint border border-cohab-primary rounded-2xl p-4 mb-5">
+    <div className="bg-cohab-tint border border-cohab-primary/30 rounded-[22px] p-4 mb-5">
       <p className="text-[13.5px] font-medium text-cohab-ink mb-2">
         {pending.length === 1 ? 'One match is' : `${pending.length} matches are`} waiting on your feedback.
       </p>
@@ -210,7 +217,7 @@ export function MatchList() {
         <Reveal
           as="aside"
           y={0}
-          className="sticky top-[88px] bg-cohab-card border border-cohab-border rounded-2xl px-5 pt-5 pb-[22px]"
+          className="sticky top-[88px] surface rounded-[22px] px-5 pt-5 pb-[22px]"
         >
           <div className="flex items-baseline justify-between mb-[18px]">
             <h2 className="text-[17px] font-semibold">Filters</h2>
@@ -342,31 +349,50 @@ export function MatchList() {
         </Reveal>
 
         <div>
-          <div className="flex items-end justify-between gap-5 mb-1.5">
-            <h1 className="poster text-[64px]">{countLine}</h1>
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] text-cohab-muted">Sort</span>
-              <Tab selected={sortBy === 'best'} onClick={() => setSortBy('best')}>
-                Best match
-              </Tab>
-              <Tab selected={sortBy === 'budget'} onClick={() => setSortBy('budget')}>
-                Budget
-              </Tab>
-            </div>
-          </div>
-          <p className="text-[13.5px] leading-[1.5] text-cohab-muted mb-5 max-w-[720px]">
-            Ranked by compatibility computed in both directions. Every card shows the three strongest agreements and
-            the single largest difference. A score is not a recommendation to move in — it is a shortlist.
-          </p>
+          <PageBanner
+            photo="/photos/living-bright.webp"
+            label="Your shortlist"
+            title={countLine}
+            className="mb-5"
+            aside={
+              <div className="flex items-center gap-1.5 bg-white/12 backdrop-blur-sm rounded-full p-1">
+                {(['best', 'budget'] as SortKey[]).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setSortBy(k)}
+                    className={cn(
+                      'cohab-press h-9 px-4 rounded-full text-[13px] font-bold cursor-pointer transition-colors',
+                      sortBy === k ? 'bg-white text-cohab-on-sun' : 'text-white/85 hover:bg-white/15',
+                    )}
+                  >
+                    {k === 'best' ? 'Best match' : 'Budget'}
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            <p className="text-[14px] leading-[1.5] text-white/85 max-w-[52ch]">
+              Ranked by compatibility computed in both directions. A score is not a recommendation to move in; it is a shortlist.
+            </p>
+            {filtered.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-1">
+                <span className="sun rounded-full px-3 py-1 text-[12.5px] font-bold">Top match {topScore}%</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-bold">
+                  {strongCount} strong {strongCount === 1 ? 'fit' : 'fits'}
+                </span>
+              </div>
+            )}
+          </PageBanner>
 
           {pendingBanner}
 
-          {data && <TastePanel className="mb-5 max-w-[720px]" />}
-          {data && <MatchInsightsPanel className="mb-5 max-w-[720px]" listSize={data.length} />}
+          {data && <TastePanel className="mb-5" />}
+          {data && <MatchInsightsPanel className="mb-5" listSize={data.length} />}
 
           {isLoading && <p className="text-cohab-muted">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your matches. Try again shortly.</p>}
-          {emptyMessage && <p className="text-cohab-muted">{emptyMessage}</p>}
+          {emptyMessage && <EmptyState photo="/photos/keys.webp" title="Nothing to show">{emptyMessage}</EmptyState>}
           {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3.5" runKey={runKey}>
@@ -379,22 +405,28 @@ export function MatchList() {
 
       {/* Mobile — s7: header + horizontally-scrolling filter chips + card stack */}
       <div className="cohab-desktop:hidden">
-        <div className="px-5 pt-2 pb-2.5 border-b border-cohab-border-soft">
-          <div className="flex items-baseline justify-between mb-0.5">
-            <h2 className="poster text-[44px]">Matches</h2>
-            <button
-              type="button"
-              onClick={() => setSortBy((s) => (s === 'best' ? 'budget' : 'best'))}
-              className="text-[13.5px] font-medium text-cohab-primary"
-            >
-              Sort: {sortBy === 'best' ? 'Best' : 'Budget'}
-            </button>
-          </div>
-          <p className="text-[13px] leading-[1.4] text-cohab-muted-mobile mb-2.5">
-            {data
-              ? `${filtered.length} verified ${filtered.length === 1 ? 'person fits' : 'people fit'} your budget and area.`
-              : 'Loading your matches…'}
-          </p>
+        <div className="px-4 pt-3 pb-3">
+          <PageBanner
+            photo="/photos/living-bright.webp"
+            title="Matches"
+            size="sm"
+            className="mb-3"
+            aside={
+              <button
+                type="button"
+                onClick={() => setSortBy((s) => (s === 'best' ? 'budget' : 'best'))}
+                className="cohab-press h-9 px-4 rounded-full bg-white text-cohab-on-sun text-[13px] font-bold"
+              >
+                Sort: {sortBy === 'best' ? 'Best' : 'Budget'}
+              </button>
+            }
+          >
+            <p className="text-[13px] leading-[1.4] text-white/85">
+              {data
+                ? `${filtered.length} verified ${filtered.length === 1 ? 'person fits' : 'people fit'} your budget and area.`
+                : 'Loading your matches…'}
+            </p>
+          </PageBanner>
           <div className="flex gap-[7px] overflow-x-auto">
             {SEEKER_OPTIONS.map(([value, label]) => (
               <ChipPill key={value} selected={seekerFilter === value} onClick={() => setSeekerFilter(value)}>
@@ -412,7 +444,7 @@ export function MatchList() {
 
           {isLoading && <p className="text-cohab-muted-mobile">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your matches. Try again shortly.</p>}
-          {emptyMessage && <p className="text-cohab-muted-mobile">{emptyMessage}</p>}
+          {emptyMessage && <EmptyState photo="/photos/keys.webp" title="Nothing to show">{emptyMessage}</EmptyState>}
           {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3" runKey={runKey}>

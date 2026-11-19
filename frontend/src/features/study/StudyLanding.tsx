@@ -13,12 +13,12 @@ export function StudyLanding() {
         no name, email, phone or account.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Link to="/study/lab" className="block bg-cohab-card border border-cohab-border rounded-2xl p-5 hover:border-cohab-primary transition-colors cohab-lift">
+        <Link to="/study/lab" className="block surface rounded-[22px] p-5 hover:border-cohab-primary transition-colors cohab-lift">
           <p className="text-[12px] uppercase tracking-wide text-cohab-subtle mb-1">About 20 minutes · anyone</p>
           <h2 className="text-lg font-semibold mb-1.5">Cohab Lab</h2>
           <p className="text-[14px] text-cohab-muted">Compare pairs of made-up roommates and pick who you'd rather live with.</p>
         </Link>
-        <Link to="/study/pair" className="block bg-cohab-card border border-cohab-border rounded-2xl p-5 hover:border-cohab-primary transition-colors cohab-lift">
+        <Link to="/study/pair" className="block surface rounded-[22px] p-5 hover:border-cohab-primary transition-colors cohab-lift">
           <p className="text-[12px] uppercase tracking-wide text-cohab-subtle mb-1">About 10 minutes each · two roommates</p>
           <h2 className="text-lg font-semibold mb-1.5">Roommate pairs</h2>
           <p className="text-[14px] text-cohab-muted">You and someone you live with each answer separately about home life.</p>

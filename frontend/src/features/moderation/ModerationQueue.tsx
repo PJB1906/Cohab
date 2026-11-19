@@ -119,7 +119,7 @@ export function ModerationQueue() {
           for, derived from the same payload the table renders. Collapses to a
           single column below the desktop breakpoint. */}
       <div className="max-w-[1800px] mx-auto px-6 py-[22px] pb-[60px] grid gap-6 items-start grid-cols-1 cohab-desktop:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl overflow-hidden">
+        <div className="surface rounded-[22px] overflow-hidden">
           <div className="px-5 py-4 border-b border-cohab-border flex items-center gap-2.5 flex-wrap">
             <h1 className="poster text-[44px] mr-2">Report queue</h1>
             {FILTERS.map((f) => (

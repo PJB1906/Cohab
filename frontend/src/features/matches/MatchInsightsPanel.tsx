@@ -28,7 +28,7 @@ export function MatchInsightsPanel({ className, listSize }: { className?: string
         </div>
       )}
 
-      <div className="bg-cohab-card border border-cohab-border rounded-2xl">
+      <div className="surface rounded-[22px]">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}

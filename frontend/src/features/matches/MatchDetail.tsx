@@ -154,12 +154,14 @@ export function MatchDetail() {
         )}
 
         {/* Poster header (D-14.23): the person, the number, the decision. */}
-        <section className="mt-3 cohab-desktop:mt-0 bg-[#0b0b0b] text-white rounded-[26px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end">
+        <section className="relative isolate overflow-hidden mt-3 cohab-desktop:mt-0 text-white rounded-[30px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end shadow-[var(--shadow-soft)]">
+          <img src="/photos/room-sunlight.webp" alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgb(8_12_46/0.96)_0%,rgb(27_52_209/0.86)_55%,rgb(42_75_255/0.45)_100%)]" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-5">
-              <span className="label text-[10px] bg-white text-[#0b0b0b] rounded-full px-2.5 py-1">Verified student</span>
+              <span className="label text-[10px] bg-white text-cohab-on-sun rounded-full px-2.5 py-1">Verified student</span>
               {data.candidate_course && <span className="text-[13px] text-white/65">{data.candidate_course}</span>}
-              <SaveToggle matchId={matchId!} className="ml-auto w-9 h-9 bg-white text-[#0b0b0b] rounded-full" />
+              <SaveToggle matchId={matchId!} className="ml-auto w-9 h-9 bg-white text-cohab-on-sun rounded-full" />
             </div>
             <h1 className="poster text-white text-[60px] cohab-desktop:text-[104px] break-words">{data.candidate_name}</h1>
             {(data.agreements.length > 0 || data.divergence) && (
@@ -170,7 +172,7 @@ export function MatchDetail() {
                   </span>
                 ))}
                 {data.divergence && (
-                  <span className="rounded-full border-2 border-[#ff6a43] text-[#ff8a68] text-[13px] font-semibold px-3 py-1">
+                  <span className="rounded-full bg-[#ff8a7a] text-cohab-on-sun text-[13px] font-bold px-3 py-1.5">
                     Talk about: {data.divergence.text}
                   </span>
                 )}
@@ -180,8 +182,8 @@ export function MatchDetail() {
 
           <div className="cohab-desktop:text-right">
             <span className="label text-[10px] text-white/55">Compatibility</span>
-            <CountUp value={pct} className="poster-num block text-[112px] cohab-desktop:text-[150px] text-cohab-volt mt-1" />
-            <span className="label text-[11px] text-cohab-volt">{band} match</span>
+            <CountUp value={pct} className="poster-num block text-[112px] cohab-desktop:text-[150px] text-cohab-sun mt-1" />
+            <span className="label text-[11px] text-cohab-sun">{band} match</span>
             <p className="text-[12.5px] leading-[1.45] text-white/60 mt-3">
               They suit you {towards}. You suit them {from}. The lower side counts more.
             </p>
@@ -191,7 +193,7 @@ export function MatchDetail() {
                   type="button"
                   onClick={() => confirmMoveInMutation.mutate()}
                   disabled={confirmMoveInMutation.isPending}
-                  className="cohab-press h-12 rounded-full bg-cohab-volt text-[#0b0b0b] font-bold disabled:opacity-40"
+                  className="cohab-press h-12 rounded-full bg-cohab-sun text-cohab-on-sun font-bold disabled:opacity-40"
                 >
                   Confirm move-in
                 </button>
@@ -199,7 +201,7 @@ export function MatchDetail() {
               {canChat ? (
                 <Link
                   to={`/matches/${matchId}/chat`}
-                  className="cohab-press h-12 rounded-full bg-white text-[#0b0b0b] font-bold inline-flex items-center justify-center"
+                  className="cohab-press h-12 rounded-full bg-white text-cohab-on-sun font-bold inline-flex items-center justify-center"
                 >
                   Open chat
                 </Link>
@@ -208,7 +210,7 @@ export function MatchDetail() {
                   type="button"
                   onClick={() => interestMutation.mutate()}
                   disabled={alreadyInterested || interestMutation.isPending}
-                  className="cohab-press h-12 rounded-full bg-white text-[#0b0b0b] font-bold disabled:bg-white/20 disabled:text-white/70"
+                  className="cohab-press h-12 rounded-full bg-white text-cohab-on-sun font-bold disabled:bg-white/20 disabled:text-white/70"
                 >
                   {alreadyInterested ? 'Interest sent' : "I'm interested"}
                 </button>
@@ -217,7 +219,7 @@ export function MatchDetail() {
                 <button
                   type="button"
                   onClick={() => setShowReject(true)}
-                  className="cohab-press h-11 rounded-full border-2 border-white/25 text-white/85 text-[14px] font-semibold hover:border-white"
+                  className="cohab-press h-11 rounded-full border border-white/35 text-white/90 text-[14px] font-semibold hover:bg-white/10"
                 >
                   Not for me
                 </button>
@@ -229,7 +231,7 @@ export function MatchDetail() {
 
         {/* Listing card */}
         {data.listing && (
-          <Reveal className="bg-cohab-card border-2 border-cohab-ink rounded-[22px] p-5 cohab-desktop:p-8 mt-4">
+          <Reveal className="surface rounded-[28px] p-5 cohab-desktop:p-8 mt-4">
             <div className="flex items-baseline justify-between mb-1 gap-3">
               <h2 className="poster text-[36px] cohab-desktop:text-[44px]">Their place</h2>
               <span className="text-[13px] text-cohab-muted flex-none">{data.listing.locality}</span>
@@ -300,7 +302,7 @@ export function MatchDetail() {
 
         {/* Chemistry (D-14.23): the same per-attribute scores the ranking is
             made of, drawn both ways. Nothing here is computed in the browser. */}
-        <Reveal className="bg-cohab-card border-2 border-cohab-ink rounded-[22px] p-5 cohab-desktop:p-8 mt-4">
+        <Reveal className="surface rounded-[28px] p-5 cohab-desktop:p-8 mt-4">
           <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
             <div>
               <span className="label text-[10px] text-cohab-subtle">Habit by habit</span>
@@ -317,7 +319,7 @@ export function MatchDetail() {
             themLabel={`You for ${firstName}`}
           />
           {data.divergence && (
-            <div className="mt-6 border-2 border-cohab-accent rounded-[16px] px-4 py-3.5 flex gap-3 items-start">
+            <div className="mt-6 bg-cohab-accent-tint rounded-[16px] px-4 py-3.5 flex gap-3 items-start">
               <span className="label text-[10px] text-cohab-accent mt-[3px] shrink-0">Talk about</span>
               <p className="text-[14px] leading-[1.5] text-cohab-ink">{data.divergence.text}</p>
             </div>

@@ -35,7 +35,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <Reveal className="min-w-0 bg-cohab-card border border-cohab-border rounded-2xl p-5 cohab-desktop:p-6">
+    <Reveal className="min-w-0 surface rounded-[22px] p-5 cohab-desktop:p-6">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-1.5">
         <h2 className="text-[17px] font-semibold">{title}</h2>
         {record && <SourceBadge source={record.data_source} />}

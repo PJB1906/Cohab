@@ -47,7 +47,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-end cohab-desktop:items-center justify-center z-50 cohab-desktop:p-4"
+      className="fixed inset-0 bg-[#0b1033]/55 backdrop-blur-[2px] flex items-end cohab-desktop:items-center justify-center z-50 cohab-desktop:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}

@@ -47,7 +47,7 @@ export function OwnAnswers({
         const parts = q.parts.filter((p) => fields.includes(p.key))
         if (parts.length === 0) return null
         return (
-          <fieldset key={q.id} className="bg-cohab-card border border-cohab-border rounded-2xl p-4">
+          <fieldset key={q.id} className="surface rounded-[22px] p-4">
             <legend className="sr-only">{q.title}</legend>
             <p className="text-[11px] uppercase tracking-wide text-cohab-subtle mb-1">{q.theme}</p>
             <h3 className="text-[15.5px] font-semibold mb-3">{q.title}</h3>

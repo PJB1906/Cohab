@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 const VARIANTS = {
   agreement: 'bg-cohab-tint text-cohab-ink',
   divergence: 'border border-cohab-accent text-cohab-accent bg-transparent',
-  verified: 'bg-cohab-ink text-cohab-card',
+  verified: 'bg-cohab-good-tint text-cohab-good',
   neutral: 'border border-cohab-border bg-cohab-card text-cohab-ink',
 }
 

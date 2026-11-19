@@ -168,7 +168,7 @@ function PairForm({
         {ROOMMATE_RATING_FIELDS.map((f) => {
           const row = CARD_ROWS.find((r) => r.field === f)!
           return (
-            <div key={f} className="bg-cohab-card border border-cohab-border rounded-2xl p-4">
+            <div key={f} className="surface rounded-[22px] p-4">
               <p className="text-[14px] font-semibold mb-2.5">{row.heading}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {Object.entries(row.text).map(([value, label]) => (
@@ -186,7 +186,7 @@ function PairForm({
       <p className="text-[14px] text-cohab-muted mb-4">1 = not at all, 5 = completely.</p>
       <div className="flex flex-col gap-3">
         {Object.entries(outcomeItems).map(([key, q]) => (
-          <div key={key} className="bg-cohab-card border border-cohab-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div key={key} className="surface rounded-[22px] p-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <p className="text-[14px] flex-1">{q}</p>
             <div className="flex gap-2">
               {SCALE.map((n) => (
@@ -202,7 +202,7 @@ function PairForm({
             </div>
           </div>
         ))}
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl p-4 grid gap-3 sm:grid-cols-2">
+        <div className="surface rounded-[22px] p-4 grid gap-3 sm:grid-cols-2">
           <label className="text-[14px]">
             Months you have lived together
             <Input className="mt-2" inputMode="decimal" value={months} onChange={(e) => setMonths(e.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 8" />

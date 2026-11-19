@@ -11,8 +11,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-cohab-primary text-cohab-on-fill hover:bg-cohab-primary-dark',
-        secondary: 'bg-transparent text-cohab-ink border-2 border-cohab-ink hover:bg-cohab-ink hover:text-cohab-card',
+        primary:
+          'bg-cohab-primary text-cohab-on-fill hover:bg-cohab-primary-dark shadow-[0_10px_22px_-10px_rgb(42_75_255/0.75)] hover:shadow-[0_14px_26px_-10px_rgb(42_75_255/0.85)]',
+        secondary:
+          'bg-cohab-card text-cohab-ink border border-cohab-border shadow-[0_1px_2px_rgb(11_16_51/0.05)] hover:border-cohab-primary hover:text-cohab-primary',
         ghost: 'bg-transparent text-cohab-ink underline-offset-4 hover:underline',
         danger: 'bg-transparent text-cohab-accent hover:underline',
         destructive: 'bg-cohab-accent text-cohab-on-fill hover:brightness-110',

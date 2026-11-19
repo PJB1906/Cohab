@@ -48,12 +48,12 @@ const STEPS = [
 function Marquee() {
   const words = [...MARQUEE, ...MARQUEE]
   return (
-    <div className="bg-[#0b0b0b] text-white overflow-hidden border-y-2 border-[#0b0b0b]" aria-hidden>
+    <div className="bg-cohab-dark-bg text-white overflow-hidden" aria-hidden>
       <div className="flex w-max animate-[cohab-marquee_38s_linear_infinite] motion-reduce:animate-none py-5">
         {words.map((w, i) => (
           <span key={i} className="poster text-[46px] cohab-desktop:text-[64px] px-6 flex items-center gap-6">
             {w}
-            <span className="inline-block w-3 h-3 rounded-[3px] bg-cohab-volt" />
+            <span className="inline-block w-3 h-3 rounded-[3px] bg-cohab-sun" />
           </span>
         ))}
       </div>
@@ -112,7 +112,7 @@ export function Landing() {
             </Link>
             <Link
               to="/study"
-              className="cohab-press h-14 px-6 rounded-full border-2 border-cohab-ink text-[15px] font-bold inline-flex items-center"
+              className="cohab-press h-14 px-6 rounded-full border border-cohab-border bg-cohab-card shadow-[var(--shadow-soft)] text-[15px] font-bold inline-flex items-center"
             >
               Help with the research
             </Link>
@@ -124,25 +124,25 @@ export function Landing() {
           <img
             src="/photos/friends-couch.webp"
             alt="A group of friends on a sofa in a shared flat"
-            className="absolute right-0 top-0 w-[78%] h-[62%] object-cover rounded-[22px] border-[3px] border-cohab-ink"
+            className="absolute right-0 top-0 w-[78%] h-[62%] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)]"
           />
           <img
             src="/photos/cooking-together.webp"
             alt="Two flatmates cooking together"
-            className="absolute left-0 bottom-0 w-[64%] h-[54%] object-cover rounded-[22px] border-[3px] border-cohab-ink -rotate-2"
+            className="absolute left-0 bottom-0 w-[64%] h-[54%] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)] -rotate-2"
           />
           <img
             src="/photos/room-plants.webp"
             alt="A bright room with plants"
-            className="absolute right-[4%] bottom-[2%] w-[30%] h-[30%] object-cover rounded-[18px] border-[3px] border-cohab-ink rotate-3"
+            className="absolute right-[4%] bottom-[2%] w-[30%] h-[30%] object-cover rounded-[18px] border-[5px] border-white shadow-[var(--shadow-lift)] rotate-3"
           />
-          <div className="absolute left-[6%] top-[8%] bg-[#0b0b0b] text-white rounded-[20px] px-5 pt-3 pb-3 rotate-[-4deg] shadow-[0_14px_40px_-14px_rgba(0,0,0,.6)]">
+          <div className="absolute left-[6%] top-[8%] bg-cohab-dark-bg text-white rounded-[20px] px-5 pt-3 pb-3 rotate-[-4deg] shadow-[0_14px_40px_-14px_rgba(0,0,0,.6)]">
             <span className="label text-[10px] text-white/60 block">Compatibility</span>
-            <span className="poster-num text-[76px] text-cohab-volt block">92</span>
-            <span className="label text-[10px] text-cohab-volt">Strong both ways</span>
+            <span className="poster-num text-[76px] text-cohab-sun block">92</span>
+            <span className="label text-[10px] text-cohab-sun">Strong both ways</span>
           </div>
-          <Sticker className="left-[38%] top-[56%] bg-white text-[#0b0b0b] rounded-bl-[4px]">you’re up before 7?</Sticker>
-          <Sticker className="left-[46%] top-[66%] bg-cohab-volt text-[#0b0b0b] rounded-bl-[4px]">6:30. coffee’s on me</Sticker>
+          <Sticker className="left-[38%] top-[56%] bg-white text-cohab-on-sun rounded-bl-[4px]">you’re up before 7?</Sticker>
+          <Sticker className="left-[46%] top-[66%] bg-cohab-sun text-cohab-on-sun rounded-bl-[4px]">6:30. coffee’s on me</Sticker>
         </div>
       </section>
 
@@ -151,12 +151,12 @@ export function Landing() {
       {/* How it works: three big rows, not a card grid */}
       <section className="max-w-[1400px] mx-auto px-5 cohab-desktop:px-10 py-16 cohab-desktop:py-24">
         <h2 className="poster text-[clamp(48px,7vw,104px)] max-w-[20ch]">Four minutes now. A year that works.</h2>
-        <ol className="mt-12 border-t-2 border-cohab-ink">
+        <ol className="mt-12 border-t border-cohab-border">
           {STEPS.map((s, i) => (
             <li
               key={s.n}
               className={cn(
-                'grid gap-6 cohab-desktop:gap-10 py-8 cohab-desktop:py-10 border-b-2 border-cohab-ink items-center',
+                'grid gap-6 cohab-desktop:gap-10 py-8 cohab-desktop:py-10 border-b border-cohab-border items-center',
                 'cohab-desktop:grid-cols-[140px_1fr_380px]',
               )}
             >
@@ -168,7 +168,7 @@ export function Landing() {
               <img
                 src={s.img}
                 alt={s.alt}
-                className={cn('w-full h-[220px] object-cover rounded-[22px] border-[3px] border-cohab-ink', i % 2 ? 'rotate-1' : '-rotate-1')}
+                className={cn('w-full h-[220px] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)]', i % 2 ? 'rotate-1' : '-rotate-1')}
                 loading="lazy"
               />
             </li>
@@ -177,10 +177,10 @@ export function Landing() {
       </section>
 
       {/* The proof: chemistry chart */}
-      <section className="bg-[#0b0b0b] text-white">
+      <section className="bg-cohab-dark-bg text-white">
         <div className="max-w-[1400px] mx-auto px-5 cohab-desktop:px-10 py-16 cohab-desktop:py-24 grid cohab-desktop:grid-cols-[1fr_1.1fr] gap-12 items-center">
           <div>
-            <span className="label text-cohab-volt">Every match, explained</span>
+            <span className="label text-cohab-sun">Every match, explained</span>
             <h2 className="poster text-white text-[clamp(48px,6.5vw,96px)] mt-4">Not a vibe. A reason.</h2>
             <p className="text-[17px] leading-[1.55] text-white/75 mt-6 max-w-[42ch]">
               Each habit is scored twice: how they suit you, and how you suit them. A match that only works for one of
@@ -194,7 +194,7 @@ export function Landing() {
                 <span className="label text-white/50 text-[10px]">Example</span>
                 <p className="poster text-white text-[40px] mt-1">You × Asha</p>
               </div>
-              <span className="poster-num text-[64px] text-cohab-volt">86</span>
+              <span className="poster-num text-[64px] text-cohab-sun">86</span>
             </div>
             <Chemistry rows={DEMO} dark />
             <p className="mt-5 text-[14px] text-white/80 border-t border-white/10 pt-4">
@@ -211,10 +211,10 @@ export function Landing() {
           <img
             src="/photos/students-table.webp"
             alt="A group of students working together around a laptop"
-            className="w-full h-[420px] object-cover rounded-[22px] border-[3px] border-cohab-ink"
+            className="w-full h-[420px] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)]"
             loading="lazy"
           />
-          <div className="absolute -bottom-5 right-5 cohab-desktop:-right-6 bg-cohab-card border-2 border-cohab-ink rounded-[18px] px-5 py-4 max-w-[300px] shadow-[0_14px_40px_-16px_rgba(0,0,0,.45)]">
+          <div className="absolute -bottom-5 right-5 cohab-desktop:-right-6 surface rounded-[18px] px-5 py-4 max-w-[300px] shadow-[0_14px_40px_-16px_rgba(0,0,0,.45)]">
             <span className="label text-[10px] text-cohab-subtle">Learned from your choices</span>
             <p className="text-[14.5px] font-semibold leading-[1.35] mt-1.5">
               “You keep choosing people who fit you on tidiness, more than your answers said.”
@@ -234,7 +234,7 @@ export function Landing() {
               53<span className="text-[44px]">%</span>
             </span>
             <span className="poster text-[40px]">→</span>
-            <span className="poster-num text-[88px] volt px-2 rounded-[10px]">
+            <span className="poster-num text-[88px] sun px-2 rounded-[10px]">
               67<span className="text-[44px]">%</span>
             </span>
           </div>
@@ -246,7 +246,7 @@ export function Landing() {
       </section>
 
       {/* Safety on black */}
-      <section className="bg-[#0b0b0b] text-white">
+      <section className="bg-cohab-dark-bg text-white">
         <div className="max-w-[1400px] mx-auto px-5 cohab-desktop:px-10 py-16 cohab-desktop:py-24">
           <h2 className="poster text-white text-[clamp(52px,8vw,128px)] max-w-[16ch]">Your number stays yours.</h2>
           <div className="grid cohab-desktop:grid-cols-3 gap-px bg-white/15 mt-12 rounded-[22px] overflow-hidden">
@@ -255,8 +255,8 @@ export function Landing() {
               ['Two yeses', 'Phone numbers are released only after you both agree, separately. Typing one into chat gets stopped.'],
               ['One tap out', 'Report or block from any match or chat. Reports are reviewed by a person before anything happens.'],
             ].map(([t, b]) => (
-              <div key={t} className="bg-[#0b0b0b] p-7 cohab-desktop:p-9">
-                <span className="inline-block w-4 h-4 rounded-[4px] bg-cohab-volt mb-6" />
+              <div key={t} className="bg-cohab-dark-bg p-7 cohab-desktop:p-9">
+                <span className="inline-block w-4 h-4 rounded-[4px] bg-cohab-sun mb-6" />
                 <h3 className="poster text-white text-[36px]">{t}</h3>
                 <p className="text-[15.5px] leading-[1.55] text-white/70 mt-3">{b}</p>
               </div>
@@ -275,7 +275,7 @@ export function Landing() {
               alt=""
               loading="lazy"
               className={cn(
-                'snap-start shrink-0 w-[240px] h-[300px] cohab-desktop:w-[300px] cohab-desktop:h-[380px] object-cover rounded-[22px] border-[3px] border-cohab-ink',
+                'snap-start shrink-0 w-[240px] h-[300px] cohab-desktop:w-[300px] cohab-desktop:h-[380px] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)]',
                 i % 2 ? 'translate-y-6' : '',
               )}
             />
@@ -294,7 +294,7 @@ export function Landing() {
         </div>
       </section>
 
-      <footer className="border-t-2 border-cohab-ink">
+      <footer className="border-t border-cohab-border">
         <div className="max-w-[1400px] mx-auto px-5 cohab-desktop:px-10 py-8 flex flex-wrap gap-x-6 gap-y-2 items-center text-[13px] text-cohab-subtle">
           <Logo pilot={false} />
           <span>A CHRIST University M.Sc. Data Science project.</span>

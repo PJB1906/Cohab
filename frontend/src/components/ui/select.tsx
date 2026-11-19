@@ -9,8 +9,8 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
           // appearance-none drops the native arrow, which the browser plants
           // hard against the far edge with no way to reposition it — the
           // custom chevron below sits at a normal, consistent inset instead.
-          'w-full box-border appearance-none rounded-[14px] border-2 border-cohab-border-soft bg-cohab-card pl-4 pr-10 py-3.5 text-[15px] leading-[1.2] text-cohab-ink font-medium',
-          'focus:outline-none focus:border-cohab-ink',
+          'w-full box-border appearance-none rounded-[14px] border-[1.5px] border-cohab-border bg-cohab-card pl-4 pr-10 py-3.5 text-[15px] leading-[1.2] text-cohab-ink font-medium',
+          'focus:outline-none focus:border-cohab-primary focus:ring-4 focus:ring-cohab-primary/15',
           'disabled:bg-cohab-bg disabled:text-cohab-muted',
         )}
         {...props}

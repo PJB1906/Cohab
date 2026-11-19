@@ -90,7 +90,7 @@ export function TriageRail({ reports }: { reports: ReportSummaryOut[] }) {
 
   return (
     <aside className="flex flex-col gap-4">
-      <section className="bg-cohab-card border border-cohab-border rounded-2xl p-5">
+      <section className="surface rounded-[22px] p-5">
         <h2 className="text-[15px] font-semibold mb-1">Triage</h2>
         <p className="text-[12.5px] leading-[1.45] text-cohab-subtle mb-4">
           Counts cover open, under-review and escalated cases. Closed cases are excluded.
@@ -115,7 +115,7 @@ export function TriageRail({ reports }: { reports: ReportSummaryOut[] }) {
         </div>
       </section>
 
-      <section className="bg-cohab-card border border-cohab-border rounded-2xl p-5">
+      <section className="surface rounded-[22px] p-5">
         <h2 className="text-[15px] font-semibold mb-1">Why people are reporting</h2>
         <p className="text-[12.5px] leading-[1.45] text-cohab-subtle mb-4">
           {live.length === 0
@@ -134,7 +134,7 @@ export function TriageRail({ reports }: { reports: ReportSummaryOut[] }) {
         </div>
       </section>
 
-      <section className="bg-cohab-card border border-cohab-border rounded-2xl p-5">
+      <section className="surface rounded-[22px] p-5">
         <h2 className="text-[15px] font-semibold mb-2.5">House rules</h2>
         <ul className="flex flex-col gap-2 text-[12.5px] leading-[1.5] text-cohab-muted">
           <li>Threats and harassment escalate immediately — they do not wait in the queue.</li>

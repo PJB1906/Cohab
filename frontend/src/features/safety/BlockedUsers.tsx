@@ -5,6 +5,7 @@ import { RevealGroup } from '@/components/motion/RevealGroup'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import type { BlockedUserOut } from '@/api/types'
+import { PageBanner } from '@/components/PageBanner'
 
 /** PRD §10: blocking "cannot be undone by the blocked party" — which implies
  * the blocker can. Nothing in the PRD's §9 screen table specs this page;
@@ -34,10 +35,11 @@ export function BlockedUsers() {
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto px-4 py-7">
-        <h1 className="poster text-[56px] mb-2">Blocked</h1>
-        <p className="text-[13.5px] text-cohab-muted mb-6">
-          Unblocking someone lets you match with each other again. They're never notified either way.
-        </p>
+        <PageBanner photo="/photos/keys.webp" title="Blocked" size="sm" className="mb-5">
+          <p className="text-[13px] leading-[1.4] text-white/85">
+            Unblocking someone lets you match with each other again. They're never notified either way.
+          </p>
+        </PageBanner>
 
         {isLoading && <p className="text-cohab-muted">Loading…</p>}
         {error && <p className="text-cohab-accent">Couldn't load your blocked users.</p>}
@@ -47,7 +49,7 @@ export function BlockedUsers() {
           {data?.map((u) => (
             <div
               key={u.id}
-              className="flex items-center gap-3 bg-cohab-card border border-cohab-border rounded-2xl p-4"
+              className="flex items-center gap-3 surface rounded-[22px] p-4"
             >
               <Avatar name={u.full_name} src={u.avatar_url} size={44} />
               <span className="flex-1 text-[14.5px] font-medium text-cohab-ink truncate">{u.full_name}</span>

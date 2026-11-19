@@ -68,7 +68,7 @@ function Intro({ onBegin }: { onBegin: (token: string) => void }) {
         </Button>
       </div>
       {create.isError && <p className="text-cohab-accent text-sm mb-4">{errorText(create.error)}</p>}
-      <div className="bg-cohab-card border border-cohab-border rounded-2xl p-4 max-w-[520px]">
+      <div className="surface rounded-[22px] p-4 max-w-[520px]">
         <p className="text-[13px] font-medium mb-2">Continuing from before?</p>
         <div className="flex gap-2">
           <Input value={resume} onChange={(e) => setResume(e.target.value.trim())} placeholder="Paste your resume code" />
@@ -198,7 +198,7 @@ function Setup({
       </p>
       <OwnAnswers answers={answers} onChange={(k, v) => setAnswers((a) => ({ ...a, [k]: v }))} fields={raterFields} />
 
-      <section className="mt-6 bg-cohab-card border border-cohab-border rounded-2xl p-4">
+      <section className="mt-6 surface rounded-[22px] p-4">
         <h3 className="text-[15.5px] font-semibold mb-1">What matters most to you? (up to three, optional)</h3>
         <p className="text-[13px] text-cohab-muted mb-3">The app boosts these by 1.5×. This study checks whether that number is right.</p>
         <div className="grid gap-2 sm:grid-cols-2">

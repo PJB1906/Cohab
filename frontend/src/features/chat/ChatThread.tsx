@@ -229,12 +229,12 @@ export function ChatThread() {
                 >
                   <div
                     className={cn(
-                      // Sticker bubbles (D-14.23): yours volt, theirs white with an
-                      // ink outline; volt keeps black text in both themes.
+                      // Sticker bubbles (D-14.23): yours cobalt, theirs white with a soft
+                      // shadow.
                       'text-[15px] font-medium leading-[1.4] px-4 py-2.5',
                       mine
-                        ? 'bg-cohab-volt text-[#0b0b0b] rounded-[20px] rounded-br-[5px]'
-                        : 'bg-cohab-card text-cohab-ink border-2 border-cohab-ink rounded-[20px] rounded-bl-[5px]',
+                        ? 'bg-cohab-bubble-mint text-white shadow-[0_8px_18px_-10px_rgb(42_75_255/0.8)] rounded-[20px] rounded-br-[5px]'
+                        : 'bg-cohab-card text-cohab-ink border border-cohab-border-soft shadow-[var(--shadow-soft)] rounded-[20px] rounded-bl-[5px]',
                     )}
                   >
                     {m.body}

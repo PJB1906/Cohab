@@ -158,7 +158,7 @@ export function ReportReview() {
           ← Queue
         </Link>
 
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl p-[22px_24px] mt-4">
+        <div className="surface rounded-[22px] p-[22px_24px] mt-4">
           <div className="flex items-start gap-3.5 mb-4">
             <div className="flex-1">
               <div className="flex items-center gap-2.5 mb-1">
@@ -208,7 +208,7 @@ export function ReportReview() {
           />
         </div>
 
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl p-[22px_24px] mt-4">
+        <div className="surface rounded-[22px] p-[22px_24px] mt-4">
           <h3 className="text-[17px] font-semibold m-0 mb-1">Evidence</h3>
           <p className="text-[13px] text-cohab-muted m-0 mb-4">
             Only {data.reported_user_name}'s messages that were auto-flagged — not the full thread.
@@ -235,7 +235,7 @@ export function ReportReview() {
         </div>
 
         {canResolve && (
-          <div className="bg-cohab-card border border-cohab-border rounded-2xl p-[22px_24px] mt-4">
+          <div className="surface rounded-[22px] p-[22px_24px] mt-4">
             <h3 className="text-[17px] font-semibold m-0 mb-1">Decision</h3>
             <p className="text-[13px] text-cohab-muted m-0 mb-4">
               Finding and sanction are recorded separately. Both are written to the audit log with your
@@ -286,7 +286,7 @@ export function ReportReview() {
         )}
 
         {isResolved && (
-          <div className="bg-cohab-card border border-cohab-border rounded-2xl p-[22px_24px] mt-4">
+          <div className="surface rounded-[22px] p-[22px_24px] mt-4">
             <h3 className="text-[17px] font-semibold m-0 mb-3">Decision</h3>
             {data.sanction && (
               <p className="text-[13.5px] text-cohab-ink mb-2">
@@ -306,7 +306,7 @@ export function ReportReview() {
           </div>
         )}
 
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl p-[22px_24px] mt-4">
+        <div className="surface rounded-[22px] p-[22px_24px] mt-4">
           <h3 className="text-[17px] font-semibold m-0 mb-3.5">Action log</h3>
           <div className="flex flex-col">
             {actionLog.map((l, i) => (

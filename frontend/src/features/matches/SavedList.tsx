@@ -6,6 +6,8 @@ import { RevealGroup } from '@/components/motion/RevealGroup'
 import { Avatar } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
 import { MatchCard } from './MatchCard'
+import { PageBanner } from '@/components/PageBanner'
+import { EmptyState, emptyActionClass } from '@/components/EmptyState'
 import { SaveToggle } from './SaveToggle'
 import { scorePercent, scoreBand, BAND_COLOR, BAND_BAR_CLASS } from '@/lib/score'
 import type { SavedMatchOut } from '@/api/types'
@@ -24,7 +26,7 @@ function CondensedCard({ entry }: { entry: SavedMatchOut }) {
     <Link
       to={`/matches/${item.match_id}`}
       data-reveal-item=""
-      className="block cohab-lift bg-cohab-card border border-cohab-border rounded-[18px] p-[15px]"
+      className="block cohab-lift surface rounded-[22px] p-[15px]"
     >
       <div className="flex gap-3 items-start">
         <Avatar name={item.candidate_name} src={item.avatar_url} size={44} />
@@ -72,14 +74,23 @@ export function SavedList() {
           since Saved has nothing to filter) for token/layout consistency —
           a judgment call, not a mockup-sourced layout. */}
       <div className="hidden cohab-desktop:block max-w-[1800px] mx-auto px-6 py-7">
-        <h1 className="poster text-[72px] mb-2">Saved</h1>
-        <p className="text-[13.5px] leading-[1.5] text-cohab-muted mb-5 max-w-[720px]">
-          People you kept to compare later. Saving is private — they won't know.
-        </p>
+        <PageBanner photo="/photos/balcony-plants.webp" label="Private to you" title="Saved" className="mb-5">
+          <p className="text-[14px] leading-[1.5] text-white/85 max-w-[52ch]">
+            People you kept to compare later. Saving is private; they won't know.
+          </p>
+        </PageBanner>
 
         {isLoading && <p className="text-cohab-muted">Loading…</p>}
         {error && <p className="text-cohab-accent">Couldn't load your saved matches. Try again shortly.</p>}
-        {emptyMessage && <p className="text-cohab-muted">{emptyMessage}</p>}
+        {emptyMessage && (
+          <EmptyState
+            photo="/photos/room-plants.webp"
+            title="Nothing saved yet"
+            action={<Link to="/matches" className={emptyActionClass}>Browse your matches</Link>}
+          >
+            Tap the bookmark on any match to keep them here and compare later.
+          </EmptyState>
+        )}
 
         <RevealGroup className="flex flex-col gap-3.5" runKey={data?.length}>
           {data?.map((entry) => (
@@ -91,33 +102,28 @@ export function SavedList() {
       {/* Mobile — mockup's #sSaved: header + condensed card stack + inert
           "compare" stub + drop-off caption */}
       <div className="cohab-desktop:hidden">
-        <div className="px-5 pt-2 pb-3 border-b border-cohab-border-soft">
-          <h2 className="poster text-[44px] mb-1">Saved</h2>
-          <p className="text-[13px] leading-[1.4] text-cohab-muted-mobile">
-            Two people you kept to compare. Saving is private.
-          </p>
+        <div className="px-4 pt-3">
+          <PageBanner photo="/photos/balcony-plants.webp" title="Saved" size="sm">
+            <p className="text-[13px] leading-[1.4] text-white/85">People you kept to compare. Saving is private.</p>
+          </PageBanner>
         </div>
 
         <RevealGroup className="px-5 py-3.5 flex flex-col gap-2.5" runKey={data?.length}>
           {isLoading && <p className="text-cohab-muted-mobile">Loading…</p>}
           {error && <p className="text-cohab-accent">Couldn't load your saved matches. Try again shortly.</p>}
-          {emptyMessage && <p className="text-cohab-muted-mobile">{emptyMessage}</p>}
+          {emptyMessage && (
+            <EmptyState
+              photo="/photos/room-plants.webp"
+              title="Nothing saved yet"
+              action={<Link to="/matches" className={emptyActionClass}>Browse your matches</Link>}
+            >
+              Tap the bookmark on any match to keep them here.
+            </EmptyState>
+          )}
 
           {data?.map((entry) => (
             <CondensedCard key={entry.match.match_id} entry={entry} />
           ))}
-
-          {data && data.length >= 2 && (
-            // The mockup's own comparison target is a dead stub (no real
-            // comparison screen exists) — kept visually present per the
-            // mockup, deliberately wired to nothing rather than a fake nav.
-            <button
-              type="button"
-              className="block text-center border border-cohab-border rounded-[30px] h-[46px] text-[14.5px] font-semibold text-cohab-ink bg-cohab-card mt-0.5 cursor-default"
-            >
-              Compare these two side by side
-            </button>
-          )}
 
           {data && data.length > 0 && (
             <p className="text-[12.5px] leading-[1.5] text-cohab-subtle-mobile text-center px-3 pt-1">

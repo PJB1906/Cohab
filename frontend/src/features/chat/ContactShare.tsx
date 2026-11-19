@@ -270,7 +270,7 @@ export function ContactShare() {
               Phone number and preferred contact time. Your address is never shared by Cohab.
             </p>
           </div>
-          <div className="bg-cohab-card border border-cohab-border rounded-2xl px-[22px] py-5">
+          <div className="surface rounded-[22px] px-[22px] py-5">
             <span className="font-mono text-[10px] tracking-[.06em] uppercase text-cohab-subtle">{firstName}</span>
             <p className="text-[15px] font-semibold text-cohab-ink my-[11px] mb-1.5">
               {otherConsented ? `${firstName} has agreed` : 'Has not agreed yet'}
@@ -284,7 +284,7 @@ export function ContactShare() {
         </div>
 
         {bothShared && (
-          <div className="bg-cohab-card border border-cohab-border rounded-2xl p-5 mb-5 text-center">
+          <div className="surface rounded-[22px] p-5 mb-5 text-center">
             <p className="text-xs uppercase tracking-wide text-cohab-subtle font-mono mb-1">Their number</p>
             {status?.other_phone ? (
               <p className="text-lg font-semibold tabular-nums">{status.other_phone}</p>
@@ -296,7 +296,7 @@ export function ContactShare() {
           </div>
         )}
 
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl px-[26px] py-6 mb-5">
+        <div className="surface rounded-[22px] px-[26px] py-6 mb-5">
           <h2 className="text-[17px] font-semibold text-cohab-ink mb-3.5">Before you meet in person</h2>
           <div className="flex flex-col gap-[11px]">
             {SAFETY_TIPS.map((tip) => (

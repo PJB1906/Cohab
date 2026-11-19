@@ -12,7 +12,7 @@ export const C = {
   muted: 'var(--color-cohab-muted)',
   subtle: 'var(--color-cohab-subtle)',
   grid: 'var(--color-cohab-border-soft)',
-  primary: 'var(--color-cohab-ink)',
+  primary: 'var(--color-cohab-primary)',
   accent: 'var(--color-cohab-accent)',
   expert: 'var(--color-cohab-placeholder)',
 }
@@ -299,4 +299,4 @@ export function NullHistogram({ counts, edges, observed }: { counts: number[]; e
   )
 }
 
-export const SERIES_COLORS = ['var(--color-cohab-ink)', 'var(--color-cohab-accent)', '#2563eb', '#0d9488', '#c99a1a', '#8a8f98', '#9a5b2e']
+export const SERIES_COLORS = ['var(--color-cohab-primary)', 'var(--color-cohab-accent)', '#0d9488', '#c99a1a', '#5cc8ff', '#8a8f98', '#9a5b2e']

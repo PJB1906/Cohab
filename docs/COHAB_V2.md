@@ -16,10 +16,10 @@ answer that honestly, including what to report if real data does not arrive.
 | W4 | Bradley–Terry fit shrunk toward the expert prior, grouped CV, baselines, noise ceiling, bootstrap, tier-B cluster fit, isotonic calibration, rank stability | `analysis/fitting.py`, `calibration.py`, `stability.py`, `reliability.py` |
 | W5 | Policy simulation (random, expert, learned, oracle, Irving), misreporting stress test, power study, fairness audit, public-data transfer test | `analysis/simulation.py`, `irving.py`, `power.py`, `fairness.py`, `transfer.py` |
 | W7 | Taste learning: per-member Bayesian logistic regression that reorders your list from your yes/no decisions, with an off switch; simulation in `reproduce` | `services/taste.py`, `api/taste.py`, `analysis/taste_sim.py`, migration `c4e2a8b1d9f3`, `frontend/src/features/matches/TastePanel.tsx` |
-| W8 | "Loud poster" redesign, landing page, chemistry chart, credited stock photos | `frontend/src/index.css`, `components/Chemistry.tsx`, `features/landing/`, `public/photos/` |
+| W8 | "Loud poster" redesign, then the "Daylight" colour system (cobalt, navy, sun), photo banners, landing page, chemistry chart, credited stock photos | `frontend/src/index.css`, `components/Chemistry.tsx`, `features/landing/`, `public/photos/` |
 | W6 | "Why so few people", top-3 tie hint, calibrated confidence tiers, evidence page, policy playground, `make reproduce`, protocol, datasheet, model card | `services/insights.py`, `api/evidence.py`, `frontend/src/features/evidence/`, `analysis/reproduce.py` |
 
-Design decisions and every proposed value: `docs/DECISIONS.md` D-14.1 to D-14.23.
+Design decisions and every proposed value: `docs/DECISIONS.md` D-14.1 to D-14.24.
 
 ## Running it
 

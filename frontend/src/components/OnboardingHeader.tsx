@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { profileApi } from '@/api/profile'
 import { Logo } from '@/components/Logo'
@@ -19,6 +19,16 @@ import { cn } from '@/lib/utils'
  * from Profile rather than from signup. Someone genuinely mid-signup still
  * sees the original uninterrupted flow.
  */
+/** Scenery for each onboarding step (decorative; never a claim about a person). */
+const STEP_PHOTO = (pathname: string): string =>
+  pathname.includes('weights')
+    ? '/photos/friends-outdoors.webp'
+    : pathname.includes('optional')
+      ? '/photos/kitchen-prep.webp'
+      : pathname.includes('listing')
+        ? '/photos/bedroom-lights.webp'
+        : '/photos/cooking-together.webp'
+
 export function OnboardingHeader({
   /** Where "back" goes when there is no history to pop — landing on Profile
    * is friendlier than the match list, since that is the screen these are
@@ -32,6 +42,7 @@ export function OnboardingHeader({
   hasOwnMobileBack?: boolean
 }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   // An existing preference profile is the signal that this is an *edit*
   // visit rather than a first run: `GET /profile` 404s until onboarding has
@@ -112,6 +123,15 @@ export function OnboardingHeader({
         </Link>
       </div>
     </header>
+    <div className={`mx-auto px-4 cohab-desktop:px-6 pt-4 ${pathname.includes('weights') ? 'max-w-[1160px]' : pathname.includes('listing') ? 'max-w-[1300px]' : 'max-w-[1500px]'}`} aria-hidden>
+      <div className="relative isolate overflow-hidden rounded-[26px] h-[92px] cohab-desktop:h-[124px] shadow-[var(--shadow-soft)]">
+        <img src={STEP_PHOTO(pathname)} alt="" className="absolute inset-0 -z-20 w-full h-full object-cover" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(105deg,rgb(8_12_46/0.94)_0%,rgb(27_52_209/0.8)_55%,rgb(42_75_255/0.3)_100%)]" />
+        <div className="h-full px-5 cohab-desktop:px-8 flex items-center">
+          <span className="label text-[10px] bg-cohab-sun text-cohab-on-sun rounded-full px-2.5 py-1">Setting up your profile</span>
+        </div>
+      </div>
+    </div>
     </>
   )
 }

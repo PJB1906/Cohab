@@ -14,19 +14,18 @@ export function scoreBand(pct: number): ScoreBandName {
   return 'Fair'
 }
 
-// Poster identity (D-14.23): a strong match earns the volt fill on its bar
-// (volt's one role is "match moment"); the label text stays ink, because
-// volt is never text on white. Good is plain ink, Fair is the warning tomato,
-// so a weak match differs by hue and not only by bar length.
+// Daylight (D-14.24): strength of fit is a cobalt ramp (strong solid, good a
+// lighter blue), and a weak match is coral, so Fair differs by hue and not only
+// by bar length. Sun is reserved for the big score moment, never a bar.
 export const BAND_COLOR: Record<ScoreBandName, string> = {
-  Strong: 'var(--color-cohab-ink)',
+  Strong: 'var(--color-cohab-primary)',
   Good: 'var(--color-cohab-subtle)',
   Fair: 'var(--color-cohab-accent)',
 }
 
 // Static literal classes so Tailwind's scanner can see them at build time.
 export const BAND_BAR_CLASS: Record<ScoreBandName, string> = {
-  Strong: 'bg-cohab-volt ring-1 ring-inset ring-cohab-ink',
-  Good: 'bg-cohab-ink',
+  Strong: 'bg-cohab-primary',
+  Good: 'bg-cohab-sky',
   Fair: 'bg-cohab-accent',
 }

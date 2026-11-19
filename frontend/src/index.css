@@ -1,30 +1,31 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/archivo/wdth.css';
 
-/* Poster identity (docs/DECISIONS.md D-14.23).
+/* Daylight identity (docs/DECISIONS.md D-14.24, supersedes the colour half of
+   D-14.23).
    ---------------------------------------------------------------------------
-   Research: Partiful (primary: stark black/white, huge condensed caps,
-   photography in bold frames, sticker chat bubbles, black pill CTAs), Airbnb
-   (photo-first rooms), The Pudding (data stories). Direction chosen by the
-   user from three options: "Loud poster".
+   Why it changed: black + neon on grey read as a generic "brutalist" template
+   once it sat behind real product screens. The product is about finding a
+   home with a person, so the system is now warm in intent but clean in
+   execution: a cool white canvas, deep navy ink, one confident cobalt, and a
+   single sunshine accent kept for the moments that matter.
 
    Reference lock
-     Preserve: black/white canvas; one condensed ultra-black display face in
-               caps; real photography as the media carrier; black CTAs; bold
-               numerals for scores.
-     Borrow:   The Pudding's mirrored-bar data story, for match pages only.
-     Roles:    volt = match/compatibility moments only (score highlight,
-               mutual, "for you"), always as a fill behind black text, never
-               as text on white. Tomato = warnings and divergence only.
-     Reject:   particle/network backgrounds, gradients, glass, cream canvases,
-               serif headline swaps, indigo.
+     Preserve: condensed poster type for titles and numerals; photography as
+               the carrier of feeling (photo banners at every page head);
+               navy ink instead of black; one brand colour.
+     Roles:    cobalt  = brand, actions, links, strength of fit.
+               sun     = match moments only (mutual, "for you", the big
+                         score), always a fill behind navy text.
+               coral   = warnings and weak sides only.
+               mint    = verified and positive confirmation only.
+               identity colours = avatar tiles only (decorative, keyed by id).
+     Depth:    soft layered shadows and 1px tinted borders. No hard black
+               outlines, no glass, no particle fields.
+     Reject:   indigo/violet, cream canvases, serif word swaps, neon on grey.
 
-   One family does all the work: Archivo's width axis runs 62-125%, so
-   display type is the same face squeezed to 62% at weight 900, and body
-   copy is it at 100%. Self-hosted (no request to Google at runtime).
-
-   The `--color-cohab-*` names are kept so every existing screen re-themes
-   through its utilities; each value below states its new role. */
+   The `--color-cohab-*` names are kept so every screen re-themes through its
+   utilities; each value states its role. */
 @theme {
   --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
@@ -33,81 +34,101 @@
   --breakpoint-cohab-desktop: 1220px;
 
   /* Source palette */
-  --color-poster-black: #0b0b0b;
-  --color-poster-white: #ffffff;
-  --color-poster-paper: #f3f3f0;
-  --color-poster-volt: #d4ff3a;
-  --color-poster-tomato: #ff4a1c;
+  --color-poster-navy: #0b1033;
+  --color-poster-cobalt: #2a4bff;
+  --color-poster-sun: #ffc933;
+  --color-poster-coral: #ff5c4a;
+  --color-poster-mint: #12b886;
 
   /* Semantic tokens: light (default) */
-  --color-cohab-primary: #0b0b0b;       /* filled CTAs, links, focus: black */
-  --color-cohab-primary-dark: #2a2a2a;
-  --color-cohab-volt: #d4ff3a;          /* match moments only, as a fill */
-  --color-cohab-on-volt: #0b0b0b;
-  --color-cohab-accent: #e63a10;        /* warnings / divergence text (AA on white) */
-  --color-cohab-accent-tint: #ffece5;
-  --color-cohab-bg: #f3f3f0;            /* page */
+  --color-cohab-primary: #2a4bff;       /* filled CTAs, links, focus, strength */
+  --color-cohab-primary-dark: #1b34d1;
+  --color-cohab-sky: #8fa6ff;           /* middle strength on bars */
+  --color-cohab-sun: #ffc933;           /* match moments only, as a fill */
+  --color-cohab-on-sun: #0b1033;
+  --color-cohab-accent: #d23a2c;        /* warnings / weak side (AA on white) */
+  --color-cohab-accent-tint: #ffecea;
+  --color-cohab-good: #0a8f6a;          /* verified / positive text */
+  --color-cohab-good-tint: #dcf6ee;
+  --color-cohab-bg: #f2f4fb;            /* page */
   --color-cohab-card: #ffffff;          /* interactive containers */
-  --color-cohab-border: #dcdcd6;
-  --color-cohab-border-soft: #ebebe6;
-  --color-cohab-ink: #0b0b0b;
-  --color-cohab-muted: #3c3c38;
-  --color-cohab-subtle: #6d6d67;
-  --color-cohab-placeholder: #9a9a93;
-  --color-cohab-tint: #ecece7;          /* selected rows, chips */
-  --color-cohab-row-tint: #f6f6f3;
-  --color-cohab-muted-mobile: #3c3c38;
-  --color-cohab-subtle-mobile: #6d6d67;
-  --color-cohab-dark-bg: #0b0b0b;       /* the black poster bands */
-  --color-cohab-dark-border: #2a2a2a;
-  --color-cohab-dark-border-soft: #1c1c1c;
+  --color-cohab-border: #d9dfef;
+  --color-cohab-border-soft: #e8ecf6;
+  --color-cohab-ink: #0b1033;
+  --color-cohab-muted: #353c61;
+  --color-cohab-subtle: #646b8f;
+  --color-cohab-placeholder: #959cba;
+  --color-cohab-tint: #e8ecfb;          /* selected rows, chips */
+  --color-cohab-row-tint: #f6f8fd;
+  --color-cohab-muted-mobile: #353c61;
+  --color-cohab-subtle-mobile: #646b8f;
+  --color-cohab-dark-bg: #0b1033;       /* the navy bands */
+  --color-cohab-dark-border: #232c6b;
+  --color-cohab-dark-border-soft: #1a2257;
   --color-cohab-dark-text: #ffffff;
-  --color-cohab-dark-text-muted: #c9c9c2;
-  --color-cohab-dark-text-subtle: #8d8d86;
-  --color-cohab-bubble-mint: #d4ff3a;   /* your chat bubble: volt sticker */
-  --color-cohab-thread-bg: #f3f3f0;
+  --color-cohab-dark-text-muted: #c5ccec;
+  --color-cohab-dark-text-subtle: #8e97c8;
+  --color-cohab-bubble-mint: #2a4bff;   /* your chat bubble (name kept) */
+  --color-cohab-thread-bg: #eef1fa;
   --color-cohab-on-fill: #ffffff;
-  --color-cohab-avatar-bg: #0b0b0b;
-  --color-cohab-avatar-ink: #d4ff3a;
-  --color-cohab-score: #0b0b0b;
-  --color-cohab-warn: #e63a10;
-  --color-cohab-warn-border: #ffc9b8;
-  --color-cohab-track: #e2e2dc;
-  --color-cohab-bar-mid: #0b0b0b;
+  --color-cohab-avatar-bg: #2a4bff;
+  --color-cohab-avatar-ink: #ffffff;
+  --color-cohab-score: #2a4bff;
+  --color-cohab-warn: #d23a2c;
+  --color-cohab-warn-border: #ffc4bd;
+  --color-cohab-track: #e1e6f5;
+  --color-cohab-bar-mid: #2a4bff;
 
-  --radius-poster: 22px;                /* photo frames */
+  /* Identity tiles: decorative, picked by hashing the member id */
+  --color-id-1: #2a4bff;
+  --color-id-2: #ffc933;
+  --color-id-3: #ff5c4a;
+  --color-id-4: #12b886;
+  --color-id-5: #5cc8ff;
+  --color-id-6: #ff8fb8;
+
+  --radius-poster: 24px;                /* photo frames */
+
+  --shadow-soft: 0 1px 2px rgb(11 16 51 / 0.05), 0 10px 28px -10px rgb(11 16 51 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(11 16 51 / 0.06), 0 22px 44px -14px rgb(42 75 255 / 0.32);
 }
 
-/* Dark: the same poster, inverted. White becomes the CTA, volt keeps its
-   role. Selected by the theme toggle (lib/theme.ts). */
+/* Dark: the same system on deep navy. Cobalt lifts to a lighter tone so it
+   keeps contrast; sun keeps its role. Selected by lib/theme.ts. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-cohab-primary: #ffffff;
-  --color-cohab-primary-dark: #dcdcd6;
-  --color-cohab-accent: #ff6a43;
-  --color-cohab-accent-tint: #2a1610;
-  --color-cohab-bg: #0b0b0b;
-  --color-cohab-card: #161616;
-  --color-cohab-border: #2e2e2b;
-  --color-cohab-border-soft: #1f1f1d;
-  --color-cohab-ink: #ffffff;
-  --color-cohab-muted: #cfcfc8;
-  --color-cohab-subtle: #8d8d86;
-  --color-cohab-placeholder: #6b6b65;
-  --color-cohab-tint: #232321;
-  --color-cohab-row-tint: #121212;
-  --color-cohab-muted-mobile: #cfcfc8;
-  --color-cohab-subtle-mobile: #8d8d86;
-  --color-cohab-dark-bg: #000000;
-  --color-cohab-thread-bg: #0b0b0b;
-  --color-cohab-on-fill: #0b0b0b;
-  --color-cohab-avatar-bg: #d4ff3a;
-  --color-cohab-avatar-ink: #0b0b0b;
-  --color-cohab-score: #ffffff;
-  --color-cohab-warn: #ff6a43;
-  --color-cohab-warn-border: #4a2318;
-  --color-cohab-track: #2a2a27;
-  --color-cohab-bar-mid: #ffffff;
+  --color-cohab-primary: #7c93ff;
+  --color-cohab-primary-dark: #a5b5ff;
+  --color-cohab-sky: #4a5fd0;
+  --color-cohab-accent: #ff7a6b;
+  --color-cohab-accent-tint: #3a1520;
+  --color-cohab-good: #34d3a4;
+  --color-cohab-good-tint: #0f3a33;
+  --color-cohab-bg: #080b24;
+  --color-cohab-card: #121842;
+  --color-cohab-border: #262f6e;
+  --color-cohab-border-soft: #1b2255;
+  --color-cohab-ink: #f4f6ff;
+  --color-cohab-muted: #c5ccec;
+  --color-cohab-subtle: #8e97c8;
+  --color-cohab-placeholder: #5e668f;
+  --color-cohab-tint: #1a2158;
+  --color-cohab-row-tint: #0f1438;
+  --color-cohab-muted-mobile: #c5ccec;
+  --color-cohab-subtle-mobile: #8e97c8;
+  --color-cohab-dark-bg: #050719;
+  --color-cohab-bubble-mint: #4b63f0;
+  --color-cohab-thread-bg: #080b24;
+  --color-cohab-on-fill: #080b24;
+  --color-cohab-avatar-bg: #7c93ff;
+  --color-cohab-avatar-ink: #080b24;
+  --color-cohab-score: #9db0ff;
+  --color-cohab-warn: #ff7a6b;
+  --color-cohab-warn-border: #5a2430;
+  --color-cohab-track: #232c66;
+  --color-cohab-bar-mid: #7c93ff;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -10px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 22px 44px -14px rgb(124 147 255 / 0.35);
 }
 
 :root,
@@ -120,7 +141,11 @@
 @layer base {
 body {
   margin: 0;
-  background: var(--color-cohab-bg);
+  background-color: var(--color-cohab-bg);
+  background-image:
+    radial-gradient(1100px 520px at 90% -8%, rgb(42 75 255 / 0.10), transparent 70%),
+    radial-gradient(800px 420px at -6% 2%, rgb(255 201 51 / 0.13), transparent 70%);
+  background-repeat: no-repeat;
   color: var(--color-cohab-muted);
   font-family: var(--font-sans);
   font-stretch: 100%;
@@ -182,10 +207,16 @@ textarea::placeholder {
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
-/* Volt highlighter: the one way volt meets text, as a fill behind black. */
-.volt {
-  background: var(--color-cohab-volt);
-  color: var(--color-cohab-on-volt);
+/* Sun highlighter: the one way sun meets text, as a fill behind navy. */
+.sun {
+  background: var(--color-cohab-sun);
+  color: var(--color-cohab-on-sun);
+}
+/* Soft layered depth (replaces hard black outlines). */
+.surface {
+  background: var(--color-cohab-card);
+  border: 1px solid var(--color-cohab-border-soft);
+  box-shadow: var(--shadow-soft);
 }
 
 }
@@ -247,8 +278,8 @@ html {
 /* On a void canvas a drop shadow is invisible, so the lift reads through a
    brightening hairline instead — Modal's own depth mechanism. */
 .cohab-lift:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-cohab-primary);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
 }
 .cohab-lift:active {
   transform: translateY(0);

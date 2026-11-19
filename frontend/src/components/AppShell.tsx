@@ -13,10 +13,10 @@ import { cn } from '@/lib/utils'
  * `border-b-2` can only appear at full width. The transparent border is kept
  * purely to reserve the same 2px of space it always did, so nothing shifts. */
 function navLinkClass({ isActive }: { isActive: boolean }) {
-  // Poster nav (D-14.23): the active section is a solid ink pill.
+  // Daylight nav (D-14.24): the active section is a cobalt-tinted pill.
   return cn(
-    'cohab-press h-9 px-4 rounded-full inline-flex items-center text-[14px] font-semibold transition-colors',
-    isActive ? 'bg-cohab-ink text-cohab-card' : 'text-cohab-ink hover:bg-cohab-tint',
+    'cohab-press h-9 px-4 rounded-full inline-flex items-center text-[14px] font-bold transition-colors',
+    isActive ? 'bg-cohab-tint text-cohab-primary' : 'text-cohab-muted hover:bg-cohab-tint hover:text-cohab-ink',
   )
 }
 
@@ -50,7 +50,7 @@ export function AppShell({ children, hideBottomNav }: { children: React.ReactNod
     // shell root would paint straight over the fixed canvas behind it. The
     // page's black comes from `body` (index.css), which sits below both.
     <div className="min-h-screen pb-20 cohab-desktop:pb-0">
-      <header className="sticky top-0 z-40 bg-cohab-bg border-b-2 border-cohab-ink">
+      <header className="sticky top-0 z-40 bg-cohab-card/90 backdrop-blur-md border-b border-cohab-border-soft">
         <ScrollProgress />
         <div className="max-w-5xl cohab-desktop:max-w-[1800px] mx-auto px-4 cohab-desktop:px-6 h-14 cohab-desktop:h-[60px] flex items-center gap-3 cohab-desktop:gap-4">
           <BackButton pathname={pathname} />

@@ -121,7 +121,7 @@ function StatSection({
   const total = entries.reduce((sum, [, n]) => sum + n, 0)
 
   return (
-    <Reveal className="bg-cohab-card border border-cohab-border rounded-2xl p-6">
+    <Reveal className="surface rounded-[22px] p-6">
       <div className="flex items-baseline justify-between gap-4 mb-1">
         <h2 className="text-base font-semibold">{title}</h2>
         <span className="text-[12px] tabular-nums text-cohab-subtle flex-none">

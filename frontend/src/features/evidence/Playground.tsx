@@ -101,7 +101,7 @@ function Board({ pg, onReseed }: { pg: PG; onReseed: () => void }) {
 
   return (
     <div className="grid gap-5 cohab-desktop:grid-cols-[360px_1fr] items-start">
-      <aside className="bg-cohab-card border border-cohab-border rounded-2xl p-5 cohab-desktop:sticky cohab-desktop:top-[88px]">
+      <aside className="surface rounded-[22px] p-5 cohab-desktop:sticky cohab-desktop:top-[88px]">
         <div className="flex items-baseline justify-between mb-3">
           <h2 className="text-[15px] font-semibold">Weights</h2>
           <button type="button" className="text-xs font-medium text-cohab-primary cursor-pointer" onClick={() => setWeights(pg.weights)}>

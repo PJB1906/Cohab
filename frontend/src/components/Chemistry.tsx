@@ -16,7 +16,7 @@ export interface ChemistryRow {
  * grows right. Both long = you suit each other; one short = the match suits
  * only one of you, which is exactly what the harmonic mean penalises.
  *
- * Fills carry meaning, not decoration: volt when both sides are strong
+ * Fills carry meaning, not decoration: cobalt when both sides are strong
  * (>= 0.8), tomato when either side is weak (< 0.5), ink otherwise. */
 export function Chemistry({
   rows,
@@ -56,18 +56,19 @@ export function Chemistry({
     }
   }, [shown])
 
+  // Cobalt ramp for strength (D-14.24): both sides strong is solid cobalt, a
+  // middling row is the lighter blue, a weak side is coral. On the navy band
+  // the strong tone is sun, the one match-moment colour.
   const tone = (r: ChemistryRow) =>
     r.you >= 0.8 && r.them >= 0.8
-      ? // Volt alone is ~1.1:1 against white; the ink outline carries the
-        // shape on light surfaces (WCAG 1.4.11 non-text contrast).
-        dark
-        ? 'bg-cohab-volt'
-        : 'bg-cohab-volt ring-[1.5px] ring-inset ring-cohab-ink'
+      ? dark
+        ? 'bg-cohab-sun'
+        : 'bg-cohab-primary'
       : r.you < 0.5 || r.them < 0.5
         ? 'bg-cohab-accent'
         : dark
-          ? 'bg-white'
-          : 'bg-cohab-ink'
+          ? 'bg-white/70'
+          : 'bg-cohab-sky'
 
   return (
     <div ref={ref} className={cn('w-full', className)}>
@@ -106,7 +107,10 @@ export function Chemistry({
       </ul>
       <div className={cn('flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[11.5px]', dark ? 'text-white/60' : 'text-cohab-subtle')}>
         <span className="inline-flex items-center gap-1.5">
-          <span className={cn('w-3 h-2 rounded-full bg-cohab-volt', !dark && 'ring-1 ring-inset ring-cohab-ink')} /> both strong
+          <span className={cn('w-3 h-2 rounded-full', dark ? 'bg-cohab-sun' : 'bg-cohab-primary')} /> both strong
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className={cn('w-3 h-2 rounded-full', dark ? 'bg-white/70' : 'bg-cohab-sky')} /> fine
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-3 h-2 rounded-full bg-cohab-accent" /> weak on one side

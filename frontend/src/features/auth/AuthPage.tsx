@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { LoginForm } from './LoginForm'
@@ -28,10 +29,9 @@ export function AuthShell({
     <div className="min-h-screen flex flex-col cohab-desktop:grid cohab-desktop:grid-cols-[minmax(0,1fr)_minmax(460px,40%)]">
       {/* Poster panel (D-14.23): black, one real photograph, condensed caps.
           Desktop only; on a phone the form is the whole screen. */}
-      <HeroStagger className="hidden cohab-desktop:flex cohab-desktop:flex-col relative overflow-hidden bg-[#0b0b0b] text-white px-12 pt-11 pb-10">
-        <div data-stagger-item="" className="flex items-center gap-2 mb-10">
-          <span aria-hidden className="w-[18px] h-[18px] rounded-[5px] bg-cohab-volt" />
-          <span className="poster text-[34px] text-white">Cohab</span>
+      <HeroStagger className="hidden cohab-desktop:flex cohab-desktop:flex-col relative overflow-hidden bg-[linear-gradient(160deg,#0b1033_0%,#16228a_100%)] text-white px-12 pt-11 pb-10">
+        <div data-stagger-item="" className="mb-10">
+          <Logo onDark pilot={false} size="lg" />
         </div>
         <h1 data-stagger-item="" className="poster text-white text-[clamp(64px,7vw,112px)] max-w-[11ch]">
           Find the one you can live with.
@@ -43,22 +43,22 @@ export function AuthShell({
             className="absolute inset-0 w-full h-full object-cover rounded-[22px]"
           />
           <div className="absolute left-5 bottom-5 flex flex-col gap-2 items-start">
-            <span className="bg-white text-[#0b0b0b] rounded-[18px] rounded-bl-[4px] px-4 py-2.5 text-[14px] font-semibold shadow-lg">
+            <span className="bg-white text-cohab-on-sun rounded-[18px] rounded-bl-[4px] px-4 py-2.5 text-[14px] font-semibold shadow-lg">
               you cook on weekdays?
             </span>
-            <span className="bg-cohab-volt text-[#0b0b0b] rounded-[18px] rounded-bl-[4px] px-4 py-2.5 text-[14px] font-semibold shadow-lg">
+            <span className="bg-cohab-sun text-cohab-on-sun rounded-[18px] rounded-bl-[4px] px-4 py-2.5 text-[14px] font-semibold shadow-lg">
               every night. you do the dishes?
             </span>
           </div>
-          <div className="absolute right-5 top-5 bg-[#0b0b0b] rounded-[18px] px-4 pt-3 pb-2.5 text-right">
+          <div className="absolute right-5 top-5 bg-cohab-dark-bg rounded-[18px] px-4 pt-3 pb-2.5 text-right">
             <span className="block label text-white/60 text-[10px]">Compatibility</span>
-            <span className="poster-num block text-[56px] text-cohab-volt">92</span>
+            <span className="poster-num block text-[56px] text-cohab-sun">92</span>
           </div>
         </div>
         <ol data-stagger-item="" className="grid grid-cols-2 gap-x-8 gap-y-3 mt-8">
           {POSTER_STEPS.map((s) => (
             <li key={s.n} className="flex gap-3 items-baseline">
-              <span className="poster-num text-[22px] text-cohab-volt">{s.n}</span>
+              <span className="poster-num text-[22px] text-cohab-sun">{s.n}</span>
               <span className="text-[14px] font-semibold leading-[1.3] text-white/90">{s.title}</span>
             </li>
           ))}
