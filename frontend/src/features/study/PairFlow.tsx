@@ -67,14 +67,14 @@ export function PairFlow() {
   if (!instrument.open) {
     return (
       <StudyShell>
-        <h1 className="text-2xl font-semibold mb-2">The study is closed</h1>
+        <h1 className="poster text-[44px] mb-3">The study is closed</h1>
       </StudyShell>
     )
   }
   if (!token) {
     return (
       <StudyShell>
-        <h1 className="text-[28px] font-semibold tracking-tight mb-2">Do you live with someone?</h1>
+        <h1 className="poster text-[48px] cohab-desktop:text-[60px] mb-3 max-w-[16ch]">Do you live with someone?</h1>
         <p className="text-[14.5px] leading-[1.6] text-cohab-muted max-w-[640px] mb-6">
           This study checks whether Cohab's compatibility score agrees with how real cohabitation goes. You and your
           roommate each answer separately, about ten minutes each. Neither of you sees the other's answers, and no
@@ -133,7 +133,7 @@ function PairForm({
   if (s?.submitted) {
     return (
       <StudyShell step="Done">
-        <h1 className="text-2xl font-semibold mb-2">Thank you</h1>
+        <h1 className="poster text-[44px] mb-3">Thank you</h1>
         <p className="text-[14.5px] text-cohab-muted mb-6 max-w-[620px]">
           {s.roommate_submitted
             ? 'Both of you have answered. Your pair is now part of the validation study.'

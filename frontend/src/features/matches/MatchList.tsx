@@ -6,6 +6,7 @@ import { feedbackApi } from '@/api/feedback'
 import { insightsApi } from '@/api/v2'
 import { MatchCard } from './MatchCard'
 import { MatchInsightsPanel } from './MatchInsightsPanel'
+import { TastePanel } from './TastePanel'
 import { AppShell } from '@/components/AppShell'
 import { Tab } from '@/components/Tab'
 import { ChipPill } from '@/components/OptionPill'
@@ -342,7 +343,7 @@ export function MatchList() {
 
         <div>
           <div className="flex items-end justify-between gap-5 mb-1.5">
-            <h1 className="text-[26px] font-semibold tracking-[-.015em] leading-[1.18]">{countLine}</h1>
+            <h1 className="poster text-[64px]">{countLine}</h1>
             <div className="flex items-center gap-2">
               <span className="text-[13px] text-cohab-muted">Sort</span>
               <Tab selected={sortBy === 'best'} onClick={() => setSortBy('best')}>
@@ -360,6 +361,7 @@ export function MatchList() {
 
           {pendingBanner}
 
+          {data && <TastePanel className="mb-5 max-w-[720px]" />}
           {data && <MatchInsightsPanel className="mb-5 max-w-[720px]" listSize={data.length} />}
 
           {isLoading && <p className="text-cohab-muted">Loading…</p>}
@@ -368,8 +370,8 @@ export function MatchList() {
           {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3.5" runKey={runKey}>
-            {filtered.map((item) => (
-              <MatchCard key={item.match_id} item={item} />
+            {filtered.map((item, i) => (
+              <MatchCard key={item.match_id} item={item} rank={i + 1} />
             ))}
           </RevealGroup>
         </div>
@@ -379,7 +381,7 @@ export function MatchList() {
       <div className="cohab-desktop:hidden">
         <div className="px-5 pt-2 pb-2.5 border-b border-cohab-border-soft">
           <div className="flex items-baseline justify-between mb-0.5">
-            <h2 className="text-2xl font-semibold tracking-[-.02em]">Matches</h2>
+            <h2 className="poster text-[44px]">Matches</h2>
             <button
               type="button"
               onClick={() => setSortBy((s) => (s === 'best' ? 'budget' : 'best'))}
@@ -405,6 +407,7 @@ export function MatchList() {
         <div className="px-5 py-3.5">
           {pendingBanner}
 
+          {data && <TastePanel className="mb-4" compact />}
           {data && <MatchInsightsPanel className="mb-4" listSize={data.length} />}
 
           {isLoading && <p className="text-cohab-muted-mobile">Loading…</p>}
@@ -413,8 +416,8 @@ export function MatchList() {
           {profilePrompt}
 
           <RevealGroup className="flex flex-col gap-3" runKey={runKey}>
-            {filtered.map((item) => (
-              <MatchCard key={item.match_id} item={item} />
+            {filtered.map((item, i) => (
+              <MatchCard key={item.match_id} item={item} rank={i + 1} />
             ))}
           </RevealGroup>
 

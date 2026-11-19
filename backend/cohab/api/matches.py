@@ -59,6 +59,7 @@ def get_matches(
     return [
         MatchListItem(
             **(calibrate(cal, e.breakdown) or {}) if e.breakdown else {},
+            taste_rank_change=e.taste_rank_change,
             match_id=e.match_id,
             candidate_id=e.candidate.user_id,
             candidate_name=e.candidate.name,

@@ -34,7 +34,7 @@ export function BlockedUsers() {
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto px-4 py-7">
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Blocked users</h1>
+        <h1 className="poster text-[56px] mb-2">Blocked</h1>
         <p className="text-[13.5px] text-cohab-muted mb-6">
           Unblocking someone lets you match with each other again. They're never notified either way.
         </p>

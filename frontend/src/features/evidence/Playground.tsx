@@ -54,7 +54,7 @@ export function PlaygroundPage() {
     <AppShell>
       <div className="max-w-[1400px] mx-auto px-4 cohab-desktop:px-6 py-7 pb-14">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Policy playground</h1>
+          <h1 className="poster text-[64px]">Policy playground</h1>
           <Link to="/evidence" className="text-[13.5px] font-medium text-cohab-primary">
             ← Evidence
           </Link>

@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { FactsGrid } from '@/components/FactsGrid'
 import { Tab } from '@/components/Tab'
 import { BackButton } from '@/components/BackButton'
-import { AmbientField } from '@/components/CompatibilityField'
 import { useSession } from '@/hooks/useSession'
 import { REASON_LABELS, STATUS_LABELS } from '@/features/safety/copy'
 import { cn } from '@/lib/utils'
@@ -113,7 +112,6 @@ export function ReportReview() {
   if (!error && (isLoading || !data)) {
     return (
       <div className="min-h-screen">
-        <AmbientField />
         {dark}
         <div className="max-w-[680px] mx-auto px-7 py-10 text-cohab-muted">Loading…</div>
       </div>
@@ -122,7 +120,6 @@ export function ReportReview() {
   if (error || !data) {
     return (
       <div className="min-h-screen">
-        <AmbientField />
         {dark}
         <div className="max-w-[680px] mx-auto px-7 py-10 text-cohab-accent">Couldn't load this report.</div>
       </div>
@@ -155,7 +152,6 @@ export function ReportReview() {
 
   return (
     <div className="min-h-screen">
-      <AmbientField />
       {dark}
       <div className="max-w-[680px] mx-auto px-7 py-[22px] pb-[60px]">
         <Link to="/moderation" className="text-[13px] font-medium text-cohab-primary">

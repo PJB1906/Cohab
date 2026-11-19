@@ -15,9 +15,11 @@ answer that honestly, including what to report if real data does not arrive.
 | W3 | Roommate-pair validation: both people answer alone; outcomes and self-report inflation | same |
 | W4 | Bradley–Terry fit shrunk toward the expert prior, grouped CV, baselines, noise ceiling, bootstrap, tier-B cluster fit, isotonic calibration, rank stability | `analysis/fitting.py`, `calibration.py`, `stability.py`, `reliability.py` |
 | W5 | Policy simulation (random, expert, learned, oracle, Irving), misreporting stress test, power study, fairness audit, public-data transfer test | `analysis/simulation.py`, `irving.py`, `power.py`, `fairness.py`, `transfer.py` |
+| W7 | Taste learning: per-member Bayesian logistic regression that reorders your list from your yes/no decisions, with an off switch; simulation in `reproduce` | `services/taste.py`, `api/taste.py`, `analysis/taste_sim.py`, migration `c4e2a8b1d9f3`, `frontend/src/features/matches/TastePanel.tsx` |
+| W8 | "Loud poster" redesign, landing page, chemistry chart, credited stock photos | `frontend/src/index.css`, `components/Chemistry.tsx`, `features/landing/`, `public/photos/` |
 | W6 | "Why so few people", top-3 tie hint, calibrated confidence tiers, evidence page, policy playground, `make reproduce`, protocol, datasheet, model card | `services/insights.py`, `api/evidence.py`, `frontend/src/features/evidence/`, `analysis/reproduce.py` |
 
-Design decisions and every proposed value: `docs/DECISIONS.md` D-14.1 to D-14.20.
+Design decisions and every proposed value: `docs/DECISIONS.md` D-14.1 to D-14.23.
 
 ## Running it
 
@@ -54,8 +56,10 @@ The public-data transfer test needs the Columbia speed-dating CSV saved as
 
 | Path | Who | What |
 | --- | --- | --- |
+| `/` | Logged out | Landing page (members are sent to `/matches`) |
+| `/credits` | Anyone | Photo credits |
 | `/study`, `/study/lab`, `/study/pair` | Anyone, no account | The two studies |
-| `/matches` | Members | Tie hint, "why so few people", confidence tiers when calibrated |
+| `/matches` | Members | Tie hint, "why so few people", confidence tiers when calibrated, taste panel and "up N for you" |
 | `/evidence` | Moderators | Every stored result, with its data-source tag |
 | `/evidence/playground` | Moderators | Re-rank a synthetic person's shortlist live; verify against the server |
 
@@ -77,6 +81,7 @@ exist; the outcome cannot be observed within one trimester.
 
 | Suite | What it checks |
 | --- | --- |
+| `tests/analysis/test_taste.py`, `tests/api/test_taste.py` | Taste fit follows the prior with no data and moves with consistent decisions; activation thresholds; re-ranking without changing shown scores; policy tag; off switch; post-chat rejections ignored |
 | `tests/api/test_instrumentation.py` | Exposure rows and ranks, gap-free ordered event chain for a full journey, no score writes on repeat reads, reasons, funnel, health, metrics |
 | `tests/matching/test_vectorised.py` | Vectorised scores, exclusion reasons and ranking equal the reference matcher |
 | `tests/matching/test_study_design.py`, `tests/api/test_study.py` | Conjoint properties; consent, ordering, resume, withdrawal, flag, pairs, admin export |

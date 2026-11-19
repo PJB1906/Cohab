@@ -42,7 +42,7 @@ export function LabFlow() {
   if (!instrument.open) {
     return (
       <StudyShell>
-        <h1 className="text-2xl font-semibold mb-2">The study is closed</h1>
+        <h1 className="poster text-[44px] mb-3">The study is closed</h1>
         <p className="text-cohab-muted">Thank you for your interest. Responses are no longer being collected.</p>
       </StudyShell>
     )
@@ -56,7 +56,7 @@ function Intro({ onBegin }: { onBegin: (token: string) => void }) {
   const create = useMutation({ mutationFn: () => studyApi.createRater('main'), onSuccess: (r) => onBegin(r.token) })
   return (
     <StudyShell>
-      <h1 className="text-[28px] font-semibold tracking-tight mb-2">Who would you rather live with?</h1>
+      <h1 className="poster text-[48px] cohab-desktop:text-[60px] mb-3 max-w-[16ch]">Who would you rather live with?</h1>
       <p className="text-[14.5px] leading-[1.6] text-cohab-muted max-w-[640px] mb-6">
         A 20-minute study for Cohab, a roommate-matching project at CHRIST University. You answer the same lifestyle
         questions the app asks, then compare pairs of made-up roommates. Your choices teach the matcher what people
@@ -367,7 +367,7 @@ function Finished({ token, onReset }: { token: string; onReset: () => void }) {
   const withdraw = useMutation({ mutationFn: () => studyApi.withdraw(token), onSuccess: onReset })
   return (
     <StudyShell step="Done">
-      <h1 className="text-2xl font-semibold mb-2">Thank you, that's everything</h1>
+      <h1 className="poster text-[44px] mb-3">Thank you, that's everything</h1>
       <p className="text-[14.5px] text-cohab-muted max-w-[620px] mb-6">
         Your choices are now part of the dataset Cohab learns its weights from. If you know people who share a flat
         or room, the roommate-pair study takes ten minutes for each of them.

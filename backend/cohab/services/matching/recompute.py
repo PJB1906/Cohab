@@ -82,7 +82,7 @@ def recompute(session: Session) -> str:
 
     pool = _load_candidates(session)
     text_similarity = TfidfSimilarity().fit([c.lifestyle_notes for c in pool])
-    service = MatchesService(session, weight_set, text_similarity)
+    service = MatchesService(session, weight_set, text_similarity, personalise=False)
 
     subjects = [c for c in pool if c.verification_status == "verified" and c.account_status == "active"]
     touched = 0

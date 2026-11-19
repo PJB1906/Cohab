@@ -40,7 +40,7 @@ export function LoginForm({
     <form onSubmit={submit} className="flex flex-1 flex-col">
       <Logo className="mb-11 cohab-desktop:hidden" />
 
-      <h2 className="text-2xl cohab-desktop:text-[19px] font-semibold tracking-[-0.02em] cohab-desktop:tracking-normal leading-[1.2] cohab-desktop:leading-[1.1] mb-2 cohab-desktop:mb-1.5">
+      <h2 className="poster text-[44px] cohab-desktop:text-[52px] mb-3">
         Log in
       </h2>
       <p className="text-[15px] cohab-desktop:text-[13px] leading-[1.5] cohab-desktop:leading-[1.45] text-cohab-muted mb-7 cohab-desktop:mb-7">

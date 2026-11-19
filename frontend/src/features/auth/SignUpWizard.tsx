@@ -12,7 +12,6 @@ import { Eyebrow } from '@/components/Eyebrow'
 import { OptionRadio } from '@/components/OptionRadio'
 import { MobileStepHeader } from '@/components/MobileStepHeader'
 import { StepTransition } from '@/components/motion/StepTransition'
-import { AmbientField } from '@/components/CompatibilityField'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { AuthShell } from './AuthPage'
 import type { Gender, SeekerType } from '@/api/types'
@@ -131,7 +130,6 @@ export function SignUpWizard({
   if (step === 'seeker') {
     return (
       <div className="min-h-screen flex flex-col relative">
-        <AmbientField />
         <ThemeToggle
           iconOnly
           className="hidden cohab-desktop:grid absolute cohab-desktop:top-8 cohab-desktop:right-8 z-10"
@@ -154,7 +152,7 @@ export function SignUpWizard({
 
           <Eyebrow className="hidden cohab-desktop:block mb-3.5">Step 1 of 4 · Setup</Eyebrow>
 
-          <h1 className="text-2xl cohab-desktop:text-[26px] font-semibold tracking-[-0.02em] cohab-desktop:leading-[1.18] leading-[1.2] mb-2">
+          <h1 className="poster text-[44px] cohab-desktop:text-[56px] mb-3">
             <span className="cohab-desktop:hidden">What are you looking for?</span>
             <span className="hidden cohab-desktop:inline">Which of these is you?</span>
           </h1>
@@ -266,7 +264,7 @@ export function SignUpWizard({
             ← Back
           </Button>
 
-          <h2 className="text-2xl cohab-desktop:text-[19px] font-semibold tracking-[-0.02em] cohab-desktop:tracking-normal leading-[1.2] cohab-desktop:leading-[1.1] mb-2 cohab-desktop:mb-1.5">
+          <h2 className="poster text-[44px] cohab-desktop:text-[52px] mb-3">
             Create your account
           </h2>
           <p className="text-[15px] cohab-desktop:text-[13px] leading-[1.5] cohab-desktop:leading-[1.45] text-cohab-muted mb-5 cohab-desktop:mb-7">
@@ -411,7 +409,7 @@ export function SignUpWizard({
         </Button>
 
         <form onSubmit={submitOtp} className="flex flex-1 flex-col">
-          <h2 className="text-2xl cohab-desktop:text-[19px] font-semibold tracking-[-0.02em] cohab-desktop:tracking-normal leading-[1.2] cohab-desktop:leading-[1.1] mb-2 cohab-desktop:mb-1.5">
+          <h2 className="poster text-[44px] cohab-desktop:text-[52px] mb-3">
             <span className="cohab-desktop:hidden">Enter the code</span>
             <span className="hidden cohab-desktop:inline">Enter the six-digit code</span>
           </h2>
@@ -504,7 +502,7 @@ export function SignUpWizard({
     <AuthShell>
       <StepTransition step="avatar">
       <div className="flex flex-1 flex-col">
-        <h2 className="text-2xl cohab-desktop:text-[19px] font-semibold tracking-[-0.02em] cohab-desktop:tracking-normal leading-[1.2] cohab-desktop:leading-[1.1] mb-2 cohab-desktop:mb-1.5">
+        <h2 className="poster text-[44px] cohab-desktop:text-[52px] mb-3">
           Add a profile photo
         </h2>
         <p className="text-[15px] cohab-desktop:text-[13px] leading-[1.5] cohab-desktop:leading-[1.45] text-cohab-muted mb-7">

@@ -326,7 +326,7 @@ export function RequiredQuestionnaire() {
           className="hidden cohab-desktop:flex cohab-desktop:flex-col bg-cohab-card border border-cohab-border rounded-[18px] px-11 py-10 min-h-[520px]"
         >
           <Eyebrow>{currentQuestion.theme}</Eyebrow>
-          <h1 className="text-[26px] font-semibold tracking-[-.015em] leading-[1.2] mt-3 max-w-[640px]">
+          <h1 className="poster text-[52px] cohab-desktop:text-[64px] mt-3 max-w-[16ch]">
             {currentQuestion.title}
           </h1>
           {currentQuestion.sub && (

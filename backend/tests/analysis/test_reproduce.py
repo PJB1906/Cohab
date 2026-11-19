@@ -10,7 +10,7 @@ from cohab.analysis.reproduce import decide_tier, run
 EXPECTED = {
     "tier": "dryrun", "lab": "dryrun", "pairs": "dryrun", "rank_stability": "simulation",
     "policy_comparison": "simulation", "misreporting": "simulation", "power": "simulation",
-    "fairness_synthetic": "simulation", "transfer": "public",
+    "fairness_synthetic": "simulation", "transfer": "public", "taste_learning": "simulation",
 }
 
 

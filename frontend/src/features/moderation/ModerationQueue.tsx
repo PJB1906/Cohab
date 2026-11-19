@@ -6,7 +6,6 @@ import { Avatar } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Tab } from '@/components/Tab'
 import { BackButton } from '@/components/BackButton'
-import { AmbientField } from '@/components/CompatibilityField'
 import { useSession } from '@/hooks/useSession'
 import { REASON_LABELS, STATUS_LABELS } from '@/features/safety/copy'
 import { TriageRail } from './TriageRail'
@@ -87,7 +86,6 @@ export function ModerationQueue() {
     // fixed ambient canvas, which is why this screen alone had none. The
     // black now comes from `body`, which sits below both.
     <div className="min-h-screen">
-      <AmbientField />
       <header className="bg-cohab-dark-bg/95 backdrop-blur border-b border-cohab-dark-bg">
         <div className="max-w-[1800px] mx-auto px-6 h-[54px] flex items-center gap-[22px]">
           <BackButton pathname="/moderation" />
@@ -123,7 +121,7 @@ export function ModerationQueue() {
       <div className="max-w-[1800px] mx-auto px-6 py-[22px] pb-[60px] grid gap-6 items-start grid-cols-1 cohab-desktop:grid-cols-[minmax(0,1fr)_420px]">
         <div className="bg-cohab-card border border-cohab-border rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-cohab-border flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-lg font-semibold mr-1.5">Report queue</h1>
+            <h1 className="poster text-[44px] mr-2">Report queue</h1>
             {FILTERS.map((f) => (
               <Tab key={f} selected={filter === f} onClick={() => setFilter(f)}>
                 {f}

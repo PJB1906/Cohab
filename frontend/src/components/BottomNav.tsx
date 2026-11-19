@@ -3,8 +3,9 @@ import { cn } from '@/lib/utils'
 
 type Tab = 'matches' | 'saved' | 'chats' | 'profile'
 
-const ACTIVE = '#7fee64'
-const INACTIVE = '#677d64'
+// Always a black pill, in both themes: the poster's one persistent black object.
+const ACTIVE = 'var(--color-poster-volt)'
+const INACTIVE = 'rgba(255,255,255,0.55)'
 
 function MatchesIcon({ color }: { color: string }) {
   return (
@@ -53,8 +54,8 @@ export function BottomNav({ active, unreadChatCount }: { active: Tab; unreadChat
     <nav
       className={cn(
         'cohab-desktop:hidden fixed bottom-1.5 left-1/2 -translate-x-1/2 z-40',
-        'flex items-center gap-0.5 rounded-full bg-cohab-card/90 backdrop-blur-md p-1.5',
-        'shadow-[0_10px_15px_-3px_rgba(0,0,0,.5),0_4px_6px_-4px_rgba(0,0,0,.5)] border border-cohab-border',
+        'flex items-center gap-0.5 rounded-full bg-[#0b0b0b] p-1.5',
+        'shadow-[0_12px_30px_-10px_rgba(0,0,0,.45)] ring-1 ring-white/10',
       )}
     >
       {TABS.map((tab) => {
@@ -68,7 +69,7 @@ export function BottomNav({ active, unreadChatCount }: { active: Tab; unreadChat
           >
             {tab.icon(color)}
             {tab.key === 'chats' && unreadChatCount ? (
-              <span className="absolute top-[5px] right-[calc(50%-17px)] min-w-4 h-4 px-1 box-border rounded-full bg-cohab-accent text-cohab-on-fill text-[10px] font-semibold leading-4 text-center">
+              <span className="absolute top-[5px] right-[calc(50%-17px)] min-w-4 h-4 px-1 box-border rounded-full bg-cohab-volt text-[#0b0b0b] text-[10px] font-semibold leading-4 text-center">
                 {unreadChatCount}
               </span>
             ) : null}

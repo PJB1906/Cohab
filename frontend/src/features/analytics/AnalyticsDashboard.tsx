@@ -162,7 +162,7 @@ export function AnalyticsDashboard() {
           laid out two-up (docs/DECISIONS.md D-13.4) — at desktop widths the
           narrow column left most of the screen empty, reported by the user. */}
       <div className="max-w-[1800px] mx-auto px-4 cohab-desktop:px-6 py-7 pb-12">
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Analytics</h1>
+        <h1 className="poster text-[64px] mb-2">Analytics</h1>
         <p className="text-[13.5px] leading-[1.5] text-cohab-muted mb-6 max-w-[720px]">
           Aggregated, read-only counts — no individual member data. Housing outcomes are covered
           in the evaluation report, not here.

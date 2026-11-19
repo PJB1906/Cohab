@@ -19,10 +19,19 @@ import { BlockedUsers } from '@/features/safety/BlockedUsers'
 import { EvidencePage } from '@/features/evidence/EvidencePage'
 import { PlaygroundPage } from '@/features/evidence/Playground'
 import { StudyLanding } from '@/features/study/StudyLanding'
+import { Landing } from '@/features/landing/Landing'
+import { Credits } from '@/features/landing/Credits'
 import { LabFlow } from '@/features/study/LabFlow'
 import { PairFlow } from '@/features/study/PairFlow'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useSession } from '@/hooks/useSession'
+
+/** Signed in: straight to matches. Signed out: the public landing page. */
+function Home() {
+  const { data: user, isLoading } = useSession()
+  if (isLoading) return null
+  return user ? <Navigate to="/matches" replace /> : <Landing />
+}
 
 function Onboarding({ children }: { children: React.ReactNode }) {
   return (
@@ -85,7 +94,8 @@ export default function App() {
 
       <Route path="/blocked" element={<ProtectedRoute><BlockedUsers /></ProtectedRoute>} />
 
-      <Route path="/" element={<Navigate to="/matches" replace />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/credits" element={<Credits />} />
       <Route path="*" element={<Navigate to="/matches" replace />} />
     </Routes>
   )

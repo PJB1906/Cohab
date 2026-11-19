@@ -4,32 +4,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { matchesApi } from '@/api/matches'
 import { feedbackApi } from '@/api/feedback'
 import { AppShell } from '@/components/AppShell'
-import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Eyebrow } from '@/components/Eyebrow'
 import { FactsGrid } from '@/components/FactsGrid'
-import { AttributeRow } from '@/components/AttributeRow'
+import { Chemistry, type ChemistryRow } from '@/components/Chemistry'
+import { attributeLabel } from '@/data/attributes'
 import { Reveal } from '@/components/motion/Reveal'
 import { CountUp } from '@/components/motion/CountUp'
-import { useBarFill } from '@/hooks/useBarFill'
 import { SafetyActions } from '@/features/safety/SafetyActions'
 import { FeedbackDialog } from './FeedbackDialog'
 import { RejectConfirmDialog } from './RejectConfirmDialog'
 import { SaveToggle } from './SaveToggle'
-import { scorePercent, scoreBand, BAND_COLOR } from '@/lib/score'
+import { scorePercent, scoreBand } from '@/lib/score'
 import type { PendingFeedbackOut } from '@/api/types'
-
-/** The mobile combined-score bar. Its own component only so that
- * `useBarFill` has somewhere to live — `MatchDetail` computes `pct` after its
- * loading/error early returns, and a hook cannot be called after those. */
-function ScoreBar({ pct, color }: { pct: number; color: string }) {
-  const ref = useBarFill<HTMLDivElement>(pct)
-  return (
-    <div className="h-1 rounded-full bg-cohab-border-soft overflow-hidden">
-      <div ref={ref} className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
-    </div>
-  )
-}
 
 export function MatchDetail() {
   const { matchId } = useParams<{ matchId: string }>()
@@ -42,7 +28,6 @@ export function MatchDetail() {
   // clicked, no success state visible).
   const [feedbackTarget, setFeedbackTarget] = useState<PendingFeedbackOut | null>(null)
   const [showReject, setShowReject] = useState(false)
-  const [showAllAttributes, setShowAllAttributes] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['match', matchId],
@@ -62,6 +47,9 @@ export function MatchDetail() {
       queryClient.setQueryData(['match', matchId], (prev: typeof data) =>
         prev ? { ...prev, state: res.state, you_expressed_interest: true } : prev,
       )
+      // Each decision refits your taste model; the list order may change.
+      queryClient.invalidateQueries({ queryKey: ['me', 'taste'] })
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
     },
   })
 
@@ -130,8 +118,15 @@ export function MatchDetail() {
       ? "It's a mutual match — you can both see this conversation."
       : "They'll see that you're interested. It becomes mutual only if they are too."
 
-  const attributeEntries = Object.entries(data.breakdown)
-  const mobileAttributeEntries = showAllAttributes ? attributeEntries : attributeEntries.slice(0, 6)
+  const firstName = data.candidate_name.split(' ')[0]
+  const chemistryRows: ChemistryRow[] = Object.entries(data.breakdown).map(([attr, cell]) => ({
+    key: attr,
+    label: attributeLabel(attr),
+    you: cell.sim_a,
+    them: cell.sim_b,
+  }))
+    // Strongest shared ground first, the friction at the bottom.
+    .sort((x, y) => Math.min(y.you, y.them) - Math.min(x.you, x.them))
 
   return (
     <AppShell>
@@ -158,129 +153,85 @@ export function MatchDetail() {
           </div>
         )}
 
-        {/* Profile + score card */}
-        <div className="bg-cohab-card border border-cohab-border rounded-2xl cohab-desktop:rounded-[18px] p-5 cohab-desktop:p-[30px_32px] mt-3 cohab-desktop:mt-0 cohab-desktop:flex cohab-desktop:items-start cohab-desktop:gap-6">
-          <div className="cohab-desktop:flex-1 cohab-desktop:min-w-0">
-            <div className="flex items-center gap-3.5 cohab-desktop:gap-4 cohab-desktop:mb-1">
-              {/* The avatar used to be `cohab-desktop:hidden`, which left the
-                  desktop card with a name, a course line and ~200px of empty
-                  box below it (reported by the user). It shows on both
-                  breakpoints now, larger on desktop. */}
-              {/* Fixed 64 rather than a responsive class: `Avatar` sets
-                  width/height as inline style, which a utility class cannot
-                  override. */}
-              <Avatar name={data.candidate_name} src={data.candidate_avatar_url} size={64} />
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl cohab-desktop:text-[26px] font-semibold tracking-tight cohab-desktop:tracking-[-.015em] flex items-center gap-2.5 flex-wrap">
-                  {data.candidate_name}
-                  <span className="hidden cohab-desktop:inline-flex items-center rounded-[30px] border border-cohab-primary bg-cohab-tint px-2.5 py-1 text-[11px] font-medium text-cohab-primary">
-                    Verified · Institutional email
+        {/* Poster header (D-14.23): the person, the number, the decision. */}
+        <section className="mt-3 cohab-desktop:mt-0 bg-[#0b0b0b] text-white rounded-[26px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              <span className="label text-[10px] bg-white text-[#0b0b0b] rounded-full px-2.5 py-1">Verified student</span>
+              {data.candidate_course && <span className="text-[13px] text-white/65">{data.candidate_course}</span>}
+              <SaveToggle matchId={matchId!} className="ml-auto w-9 h-9 bg-white text-[#0b0b0b] rounded-full" />
+            </div>
+            <h1 className="poster text-white text-[60px] cohab-desktop:text-[104px] break-words">{data.candidate_name}</h1>
+            {(data.agreements.length > 0 || data.divergence) && (
+              <div className="flex flex-wrap gap-2 mt-6">
+                {data.agreements.map((card) => (
+                  <span key={card.attribute} className="rounded-full bg-white/10 text-white text-[13px] font-semibold px-3 py-1.5">
+                    {card.text}
                   </span>
-                </h1>
-                {data.candidate_course && (
-                  <p className="text-[13.5px] cohab-desktop:text-sm text-cohab-muted mt-0.5">{data.candidate_course}</p>
+                ))}
+                {data.divergence && (
+                  <span className="rounded-full border-2 border-[#ff6a43] text-[#ff8a68] text-[13px] font-semibold px-3 py-1">
+                    Talk about: {data.divergence.text}
+                  </span>
                 )}
               </div>
-              <SaveToggle matchId={matchId!} className="w-9 h-9 border border-cohab-border flex-none" />
-            </div>
-
-            {/* Mobile score row */}
-            <div className="cohab-desktop:hidden flex items-end gap-3 mt-[18px]">
-              <div>
-                <CountUp
-                  value={pct}
-                  suffix="%"
-                  className="block text-[34px] font-bold tracking-[-.02em] tabular-nums leading-none"
-                />
-                <div className="text-xs font-semibold mt-1.5" style={{ color: BAND_COLOR[band] }}>
-                  {band} match
-                </div>
-              </div>
-              <div className="flex-1 pb-1">
-                <ScoreBar pct={pct} color={BAND_COLOR[band]} />
-                <p className="text-xs leading-[1.4] text-cohab-subtle-mobile mt-[7px]">
-                  You score them {towards}%, they score you {from}%. Combined using the harmonic mean — the lower of
-                  the two carries more weight, not a simple average.
-                </p>
-              </div>
-            </div>
-
-            {/* Why you were matched (D-13.14). These cards were fetched by
-                the explanation query and rendered nowhere on this screen —
-                the desktop card showed a name, a course and then ~200px of
-                empty box, which the user reported. They are also the most
-                useful thing to read directly under someone's name, and the
-                attribute-by-attribute table further down is the detail
-                behind them rather than a substitute. */}
-            {(data.agreements.length > 0 || data.divergence) && (
-              <div className="hidden cohab-desktop:block mt-5 pt-4 border-t border-cohab-border-soft">
-                <Eyebrow className="mb-2.5">Why you were matched</Eyebrow>
-                <div className="flex flex-wrap gap-2">
-                  {data.agreements.map((card) => (
-                    <span
-                      key={card.attribute}
-                      className="rounded-lg border border-cohab-primary/35 bg-cohab-tint px-2.5 py-1.5 text-[12.5px] leading-[1.35] text-cohab-ink"
-                    >
-                      {card.text}
-                    </span>
-                  ))}
-                  {data.divergence && (
-                    <span className="rounded-lg border border-cohab-accent/45 bg-cohab-accent-tint px-2.5 py-1.5 text-[12.5px] leading-[1.35] text-cohab-warn">
-                      <span className="font-semibold">Worth discussing · </span>
-                      {data.divergence.text}
-                    </span>
-                  )}
-                </div>
-              </div>
             )}
           </div>
 
-          {/* Desktop score side panel */}
-          <div className="hidden cohab-desktop:block w-[210px] flex-none border-l border-cohab-border pl-[22px]">
-            <Eyebrow>Combined score</Eyebrow>
-            <CountUp
-              value={pct}
-              suffix="%"
-              className="block text-[38px] font-semibold tracking-[-.025em] tabular-nums leading-[1.05] mt-2 mb-2.5"
-            />
-            <p className="text-xs leading-[1.45] text-cohab-muted mb-4">
-              You score them {towards}%, they score you {from}%. Combined using the harmonic mean — the lower of the
-              two carries more weight, not a simple average.
+          <div className="cohab-desktop:text-right">
+            <span className="label text-[10px] text-white/55">Compatibility</span>
+            <CountUp value={pct} className="poster-num block text-[112px] cohab-desktop:text-[150px] text-cohab-volt mt-1" />
+            <span className="label text-[11px] text-cohab-volt">{band} match</span>
+            <p className="text-[12.5px] leading-[1.45] text-white/60 mt-3">
+              They suit you {towards}. You suit them {from}. The lower side counts more.
             </p>
-            {canConfirmMoveIn && (
-              <Button onClick={() => confirmMoveInMutation.mutate()} disabled={confirmMoveInMutation.isPending} className="w-full">
-                Confirm move-in
-              </Button>
-            )}
-            {canChat ? (
-              <Link to={`/matches/${matchId}/chat`} className="block w-full">
-                <Button variant={canConfirmMoveIn ? 'secondary' : 'primary'} className="w-full">
+            <div className="hidden cohab-desktop:flex flex-col gap-2 mt-6">
+              {canConfirmMoveIn && (
+                <button
+                  type="button"
+                  onClick={() => confirmMoveInMutation.mutate()}
+                  disabled={confirmMoveInMutation.isPending}
+                  className="cohab-press h-12 rounded-full bg-cohab-volt text-[#0b0b0b] font-bold disabled:opacity-40"
+                >
+                  Confirm move-in
+                </button>
+              )}
+              {canChat ? (
+                <Link
+                  to={`/matches/${matchId}/chat`}
+                  className="cohab-press h-12 rounded-full bg-white text-[#0b0b0b] font-bold inline-flex items-center justify-center"
+                >
                   Open chat
-                </Button>
-              </Link>
-            ) : (
-              <Button
-                onClick={() => interestMutation.mutate()}
-                disabled={alreadyInterested || interestMutation.isPending}
-                variant={alreadyInterested ? 'secondary' : 'primary'}
-                className="w-full"
-              >
-                {alreadyInterested ? 'Interest sent' : 'Express interest'}
-              </Button>
-            )}
-            {canReject && (
-              <Button variant="danger" size="sm" onClick={() => setShowReject(true)} className="w-full mt-2">
-                Not going ahead with this match
-              </Button>
-            )}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => interestMutation.mutate()}
+                  disabled={alreadyInterested || interestMutation.isPending}
+                  className="cohab-press h-12 rounded-full bg-white text-[#0b0b0b] font-bold disabled:bg-white/20 disabled:text-white/70"
+                >
+                  {alreadyInterested ? 'Interest sent' : "I'm interested"}
+                </button>
+              )}
+              {canReject && (
+                <button
+                  type="button"
+                  onClick={() => setShowReject(true)}
+                  className="cohab-press h-11 rounded-full border-2 border-white/25 text-white/85 text-[14px] font-semibold hover:border-white"
+                >
+                  Not for me
+                </button>
+              )}
+              <p className="text-[11.5px] text-white/45 mt-1">{captionText}</p>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* Listing card */}
         {data.listing && (
-          <Reveal className="bg-cohab-card border border-cohab-border rounded-2xl cohab-desktop:rounded-[18px] p-5 cohab-desktop:p-[26px_30px] mt-3.5 cohab-desktop:mt-4">
+          <Reveal className="bg-cohab-card border-2 border-cohab-ink rounded-[22px] p-5 cohab-desktop:p-8 mt-4">
             <div className="flex items-baseline justify-between mb-1 gap-3">
-              <h2 className="text-base cohab-desktop:text-[17px] font-semibold">Their listing</h2>
+              <h2 className="poster text-[36px] cohab-desktop:text-[44px]">Their place</h2>
               <span className="text-[13px] text-cohab-muted flex-none">{data.listing.locality}</span>
             </div>
             <p className="text-[13px] leading-[1.45] text-cohab-muted mb-4 cohab-desktop:mb-[18px]">
@@ -347,48 +298,28 @@ export function MatchDetail() {
           </Reveal>
         )}
 
-        {/* Attribute breakdown card */}
-        <Reveal className="bg-cohab-card border border-cohab-border rounded-2xl cohab-desktop:rounded-[18px] p-5 cohab-desktop:p-[26px_30px] mt-3.5 cohab-desktop:mt-4">
-          <h2 className="hidden cohab-desktop:block text-[17px] font-semibold mb-1.5">Attribute breakdown</h2>
-          <p className="hidden cohab-desktop:block text-[13px] leading-[1.45] text-cohab-muted mb-5">
-            Tolerance attributes score differently in each direction — the arrow shows which way the difference runs.
-          </p>
-          <p className="cohab-desktop:hidden font-semibold text-[11px] uppercase tracking-[.07em] text-cohab-subtle-mobile mb-3">
-            How you compare
-          </p>
-
-          <div className="hidden cohab-desktop:grid grid-cols-[150px_1fr_1fr_128px] gap-2.5 pb-[9px] border-b border-cohab-border">
-            <Eyebrow>Attribute</Eyebrow>
-            <Eyebrow>You</Eyebrow>
-            <Eyebrow>{data.candidate_name}</Eyebrow>
-            <Eyebrow className="text-right">Score</Eyebrow>
+        {/* Chemistry (D-14.23): the same per-attribute scores the ranking is
+            made of, drawn both ways. Nothing here is computed in the browser. */}
+        <Reveal className="bg-cohab-card border-2 border-cohab-ink rounded-[22px] p-5 cohab-desktop:p-8 mt-4">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+            <div>
+              <span className="label text-[10px] text-cohab-subtle">Habit by habit</span>
+              <h2 className="poster text-[40px] cohab-desktop:text-[56px] mt-1">Your chemistry</h2>
+            </div>
+            <p className="text-[13.5px] leading-[1.5] text-cohab-muted max-w-[46ch]">
+              Left: how well {firstName} suits you. Right: how well you suit {firstName}. Some habits score differently
+              each way, like guests or smoking.
+            </p>
           </div>
-
-          <div className="cohab-desktop:hidden">
-            {mobileAttributeEntries.map(([attr, cell]) => (
-              <AttributeRow key={attr} attribute={attr} simA={cell.sim_a} simB={cell.sim_b} />
-            ))}
-          </div>
-          <div className="hidden cohab-desktop:block">
-            {attributeEntries.map(([attr, cell]) => (
-              <AttributeRow key={attr} attribute={attr} simA={cell.sim_a} simB={cell.sim_b} />
-            ))}
-          </div>
-
-          {!showAllAttributes && attributeEntries.length > 6 && (
-            <button
-              type="button"
-              onClick={() => setShowAllAttributes(true)}
-              className="cohab-desktop:hidden block text-[13.5px] font-medium text-cohab-primary mt-3.5"
-            >
-              Show all {attributeEntries.length} attributes
-            </button>
-          )}
-
+          <Chemistry
+            rows={chemistryRows}
+            youLabel={`${firstName} for you`}
+            themLabel={`You for ${firstName}`}
+          />
           {data.divergence && (
-            <div className="hidden cohab-desktop:flex gap-3 items-start mt-[18px] border border-cohab-accent rounded-xl px-4 py-3.5">
-              <Eyebrow className="text-cohab-accent mt-0.5 flex-none">Divergence</Eyebrow>
-              <p className="text-[13.5px] leading-[1.5] text-cohab-score">{data.divergence.text}</p>
+            <div className="mt-6 border-2 border-cohab-accent rounded-[16px] px-4 py-3.5 flex gap-3 items-start">
+              <span className="label text-[10px] text-cohab-accent mt-[3px] shrink-0">Talk about</span>
+              <p className="text-[14px] leading-[1.5] text-cohab-ink">{data.divergence.text}</p>
             </div>
           )}
         </Reveal>

@@ -146,7 +146,7 @@ export function ContactShare() {
         </div>
 
         <div className="px-5 py-5">
-          <h1 className="text-[22px] font-semibold leading-[1.25] tracking-[-.01em] text-cohab-ink mb-2">
+          <h1 className="poster text-[40px] text-cohab-ink mb-3">
             Both of you have to agree
           </h1>
           <p className="text-[14.5px] leading-[1.55] text-cohab-muted-mobile mb-5">
@@ -247,7 +247,7 @@ export function ContactShare() {
         <Link to={`/matches/${matchId}/chat`} className="text-[13px] font-medium text-cohab-primary">
           ← Back to chat
         </Link>
-        <h1 className="text-[26px] font-semibold leading-[1.18] tracking-[-.015em] text-cohab-ink mt-5 mb-2">
+        <h1 className="poster text-[56px] text-cohab-ink mt-5 mb-3">
           Share contact details with {firstName}
         </h1>
         <p className="text-[15px] leading-[1.55] text-cohab-ink/85 mb-[26px]">

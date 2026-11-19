@@ -99,10 +99,10 @@ export function ImportanceWeights() {
 
       <div className="flex-1 px-4 pb-4 cohab-desktop:max-w-[1160px] cohab-desktop:mx-auto cohab-desktop:px-6 cohab-desktop:py-14 cohab-desktop:pb-0">
         <Eyebrow className="hidden cohab-desktop:block mb-3.5">Step 4 of 4 · Priorities</Eyebrow>
-        <h1 className="hidden cohab-desktop:block text-[26px] font-semibold tracking-[-.015em] leading-[1.18] mb-2">
+        <h1 className="hidden cohab-desktop:block poster text-[72px] mb-3">
           Pick the three that matter most to you
         </h1>
-        <h1 className="cohab-desktop:hidden text-[26px] font-semibold tracking-[-.02em] leading-[1.2] mb-2">
+        <h1 className="cohab-desktop:hidden poster text-[46px] mb-3">
           What matters most to you?
         </h1>
         <p className="text-[15px] cohab-desktop:text-[15px] text-cohab-muted-mobile cohab-desktop:text-cohab-score leading-[1.5] mb-1.5 cohab-desktop:mb-2 cohab-desktop:max-w-[660px]">

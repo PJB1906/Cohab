@@ -155,7 +155,7 @@ export function ListingForm() {
         <MobileStepHeader step={2} totalSteps={4} progressPercent={50} onBack={() => navigate(-1)} />
 
         <div className="px-6 pt-3.5 pb-7">
-          <h2 className="text-2xl font-semibold tracking-tight mb-1.5">Your room</h2>
+          <h2 className="poster text-[46px] mb-2">Your room</h2>
           <p className="text-[14.5px] leading-relaxed text-cohab-muted-mobile mb-5.5">
             These details replace your budget and date preferences when we match you — you're
             stating a price, not a range.
@@ -288,7 +288,7 @@ export function ListingForm() {
         <p className="font-mono text-[10px] uppercase tracking-wider text-cohab-subtle mb-3.5">
           Step 2 of 4 · Your listing
         </p>
-        <h1 className="text-[26px] font-semibold tracking-tight mb-2">
+        <h1 className="poster text-[72px] mb-3">
           Describe the room you're filling
         </h1>
         <p className="text-[15px] leading-relaxed text-cohab-muted mb-7 max-w-[640px]">

@@ -6,7 +6,7 @@ import { StudyShell } from './StudyShell'
 export function StudyLanding() {
   return (
     <StudyShell>
-      <h1 className="text-[30px] font-semibold tracking-tight mb-2">Help Cohab learn what makes roommates work</h1>
+      <h1 className="poster text-[52px] cohab-desktop:text-[72px] mb-3 max-w-[16ch]">Help Cohab learn what makes roommates work</h1>
       <p className="text-[15px] leading-[1.6] text-cohab-muted max-w-[680px] mb-8">
         Cohab ranks possible roommates by how their habits fit together. Its weights came from published conflict
         statistics. These two short studies replace that guess with evidence from real people. Both are anonymous:

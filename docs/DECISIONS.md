@@ -3762,3 +3762,88 @@ signup, at desktop and 375 px widths.
 Checked and not a bug: score count-up and dialog slide-in read mid-animation
 in automated checks; panels "stuck" at partial opacity only while the browser
 pane was hidden (zero animation frames delivered), not in a visible tab.
+
+
+### D-14.22 Taste learning: a per-member model that reorders, never rescores
+
+**What.** Each member gets a small Bayesian logistic regression over the
+per-attribute similarities of people they decided on: "interested" is a yes,
+"not for me" is a no (`services/taste.py`). Coefficients are kept
+non-negative and pulled toward the member's own stated weights by a Gaussian
+prior (MAP fit, L-BFGS-B), so with little data it equals the questionnaire
+and moves only as decisions disagree with it.
+
+**Decisions used.** Only the member's own actions on matches they were shown:
+interest or mutual interest (yes), and rejection *before* chatting (no). A
+rejection after a chat says more about the conversation than the profile, so
+it is ignored. The latest decision on a match wins. It switches on at 6
+decisions with at least 2 of each kind.
+
+**What changes.** Only the order of your list. The model scores you-to-them
+with your learned weights; that is combined with them-to-you by the same
+harmonic mean as the matcher, so the other person's side still counts as much.
+Displayed scores, bands, tiers and the "why" text are unchanged, so a score
+never means two things. Cards that moved show "up N for you". The exposure log
+records the policy as `...+taste`, so a later analysis can separate the two.
+
+**Prior strength by simulation.** `analysis/taste_sim.py` gives each synthetic
+member hidden true weights drawn around their stated ones (Dirichlet,
+concentration 12), shows the top 5 unseen candidates per round, simulates
+noisy yes/no answers and refits. Strengths 0.5, 1.5, 3 and 8 were compared;
+8 was chosen as the most stable. Full run (150 members, 12 rounds, pool 500;
+43 members had enough eligible candidates for all rounds):
+
+| Decisions | Top-10 overlap with true ideal: stated -> learned | NDCG | Members worse than stated |
+| --- | --- | --- | --- |
+| 0 | 0.53 -> 0.53 | 0.959 -> 0.959 | 0% |
+| 20 | 0.53 -> 0.63 | 0.959 -> 0.972 | 9% |
+| 45 | 0.53 -> 0.67 | 0.959 -> 0.979 | 5% |
+| 60 | 0.53 -> 0.67 | 0.959 -> 0.980 | 2% |
+
+This is a simulation under stated assumptions, tagged `simulation` in
+`make reproduce` (step 6b) and on the landing page; it is not evidence about
+real members.
+
+**Control.** Members see what was learned ("you said / you chose" bars and at
+most two template sentences) and can switch it off on the matches page;
+switching off restores the platform order immediately. The model is a few
+numbers per member in `user_taste`, deleted with the account.
+
+### D-14.23 The "loud poster" redesign
+
+**Why.** The v1 look (soft gradients, particle background, purple accents,
+same-weight cards) read as a generic template. The redesign was locked to one
+reference set before building: Partiful's invitation posters (huge condensed
+type, black and white, one loud accent, photos in hard frames, sticker-like
+chat) and The Pudding's mirrored bar charts for the match page.
+
+**Tokens and roles.** Archivo variable (self-hosted, width axis 62-125%) for
+everything: `.poster` is width 62%, weight 900, uppercase, tight leading;
+body text stays at normal width. Ink #0b0b0b and paper are the palette. Volt
+#d4ff3a appears only at match moments (strong fits, your chat bubbles, the
+"up N" chip); on white it always has an ink outline because volt alone is
+about 1.1:1 against white. Tomato is reserved for warnings and weak sides.
+Dark mode swaps ink and paper; volt keeps black text in both.
+
+**Components.** The particle field, gradient score ring and attribute rows
+were removed. Match cards have initials tiles (never photos of strangers),
+rank, a big score and agreement chips. The match page leads with a black
+poster header and a chemistry chart: each habit is a row, your side grows left
+and theirs right, volt when both are strong, tomato when either is weak, which
+is exactly what the harmonic mean punishes.
+
+**Media.** 16 Unsplash photos (Unsplash License, free for commercial use, no
+attribution required) chosen for flats, kitchens and groups of adults; all
+checked as non-premium. Resized to WebP under 300 KB in
+`frontend/public/photos/`, with photographer and source in `CREDITS.json`,
+shown at `/credits`. Photos are scenery for the landing page only and are
+never used as member faces. One photo that looked like school-age students
+was dropped.
+
+**Landing.** Logged-out visitors at `/` get a landing page (hero, how it
+works, a live chemistry example, the taste learning claim labelled as a
+simulation, safety, rooms); logged-in members still go straight to matches.
+
+**Checked.** Every route at 1440 px and 375 px (no horizontal overflow),
+light and dark, as a member, a place-owner and a moderator; lint and build
+clean apart from fast-refresh warnings.

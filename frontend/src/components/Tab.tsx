@@ -19,10 +19,10 @@ export function Tab({
         // rounded-[10px], not `rounded` (4px): at 4px these read as square
         // boxes rather than the mockup's soft pills, and they sit beside
         // the rent Inputs which are already rounded-[10px].
-        'cohab-press rounded-[10px] cursor-pointer px-3 py-[7px] cohab-desktop:px-3.5 text-[12.5px] font-medium transition-colors',
+        'cohab-press rounded-full cursor-pointer px-3.5 py-[7px] text-[12.5px] font-semibold transition-colors border-2',
         selected
-          ? 'bg-cohab-tint border-[1.5px] border-cohab-primary text-cohab-primary'
-          : 'bg-cohab-card border border-cohab-border text-cohab-score',
+          ? 'bg-cohab-ink border-cohab-ink text-cohab-card'
+          : 'bg-transparent border-cohab-border text-cohab-ink hover:border-cohab-ink',
         className,
       )}
     >

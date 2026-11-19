@@ -204,6 +204,8 @@ class MatchListItem(BaseModel):
     listing_room_type: str | None = None
     listing_available_from: date | None = None
     listing_locality: str | None = None
+    # v2 taste learning: places moved because of your learned taste.
+    taste_rank_change: int | None = None
     # v2: present only while a calibration model is active (insights.py).
     would_message_probability: float | None = None
     confidence_tier: str | None = None

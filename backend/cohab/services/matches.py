@@ -18,6 +18,7 @@ resolved in Phase 8).
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -33,7 +34,8 @@ from cohab.services.matching.candidate import Candidate
 from cohab.services.matching.canonical import flip
 from cohab.services.matching.explanations import Explanation, build_explanation
 from cohab.services.matching.ranker import MatchRanker
-from cohab.services.matching.scoring import CompatibilityMatcher, MatchResult
+from cohab.services import taste
+from cohab.services.matching.scoring import CompatibilityMatcher, MatchResult, harmonic_mean
 from cohab.services.matching.text import TextSimilarity
 from cohab.services.safety import blocked_pairs_for
 
@@ -74,6 +76,9 @@ class MatchListEntry:
     # Subject-oriented per-attribute breakdown (sim_a/w_a = the viewer), for
     # the calibrated confidence tier (services/insights.py).
     breakdown: dict | None = None
+    # v2 taste learning: how many places this person moved up (+) or down (-)
+    # in your list because of your learned taste. None when not personalised.
+    taste_rank_change: int | None = None
 
 
 @dataclass(frozen=True)
@@ -148,11 +153,15 @@ class MatchesService:
         session: Session,
         weight_set: WeightSet,
         text_similarity: TextSimilarity,
+        *,
+        personalise: bool = True,
     ) -> None:
         self.session = session
         self.weight_set = weight_set
         matcher = CompatibilityMatcher(weight_set.weights, weight_set.id, text_similarity=text_similarity)
         self.ranker = MatchRanker(matcher)
+        # Batch callers (recompute) score the platform view only.
+        self.personalise = personalise
 
     def _bulk_upsert(self, subject_id: uuid.UUID, results: list[MatchResult]) -> dict[uuid.UUID, MatchScore]:
         """Persist the ranked results in one `INSERT .. ON CONFLICT` per chunk
@@ -275,6 +284,7 @@ class MatchesService:
             transition(self.session, row, "mutual", actor_id=subject_user.id)
 
         self.session.commit()
+        self._learn(subject_user)
         return row.state
 
     def confirm_move_in(self, subject_user: User, match_id: uuid.UUID) -> str:
@@ -312,7 +322,19 @@ class MatchesService:
             metadata={"rejection_reason": reason} if reason else None,
         )
         self.session.commit()
+        self._learn(subject_user)
         return row.state
+
+    def _learn(self, user: User) -> None:
+        """Refit this member's taste model from their decisions (D-14.22).
+        Runs after the decision is committed; a failure here is logged and
+        never undoes or blocks the decision itself."""
+        try:
+            taste.refresh(self.session, user, self.weight_set.weights)
+            self.session.commit()
+        except Exception:  # noqa: BLE001
+            self.session.rollback()
+            logging.getLogger("cohab.taste").exception("taste refit failed for %s", user.id)
 
     def get_matches(
         self, subject_user: User, limit: int = 10, *, log_exposure: bool = True
@@ -332,7 +354,22 @@ class MatchesService:
         self.ranker.filter.blocked_pairs = blocked_pairs_for(self.session, subject_user.id)
         self.ranker.filter.settled_pairs = _settled_pairs_for(self.session, subject_user.id)
 
-        ranked = self.ranker.rank(subject, pool)[:limit]
+        ranked = self.ranker.rank(subject, pool)
+        rank_change: dict[uuid.UUID, int] = {}
+        taste_model = taste.active_model(self.session, subject_user.id) if self.personalise else None
+        if taste_model is not None:
+            # Re-order the whole eligible list by your learned taste on your
+            # side of the match, keeping the other person's side as scored:
+            # a match that suits only you still ranks low (harmonic mean).
+            platform_pos = {m.candidate.user_id: i for i, m in enumerate(ranked)}
+
+            def personal_combined(m) -> float:
+                sims = {a: v["sim_a"] for a, v in m.result.breakdown.items()}
+                return harmonic_mean(taste.personal_score(taste_model, sims), m.result.score_ba)
+
+            ranked = sorted(ranked, key=lambda m: (-personal_combined(m), platform_pos[m.candidate.user_id]))
+            rank_change = {m.candidate.user_id: platform_pos[m.candidate.user_id] - i for i, m in enumerate(ranked)}
+        ranked = ranked[:limit]
         rows = self._bulk_upsert(subject.user_id, [m.result for m in ranked])
         entries = []
         for m in ranked:
@@ -345,6 +382,7 @@ class MatchesService:
                     explanation=m.explanation,
                     state=row.state,
                     breakdown=m.result.breakdown,
+                    taste_rank_change=rank_change.get(m.candidate.user_id) if taste_model is not None else None,
                 )
             )
         if log_exposure:
@@ -357,7 +395,8 @@ class MatchesService:
                 ],
                 surface="list",
                 weight_set_id=self.weight_set.id,
-                policy=policy_version(self.weight_set.source, self.weight_set.version),
+                policy=policy_version(self.weight_set.source, self.weight_set.version)
+                + ("+taste" if taste_model is not None else ""),
             )
         self.session.commit()
         return entries

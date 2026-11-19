@@ -31,7 +31,7 @@ export function ChatList() {
 
       {/* Mobile */}
       <div className="cohab-desktop:hidden max-w-2xl mx-auto px-4 py-7">
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">Chats</h1>
+        <h1 className="poster text-[56px] cohab-desktop:text-[72px] mb-2">Chats</h1>
         <p className="text-[13.5px] text-cohab-muted mb-6">
           Threads open only after both of you express interest.
         </p>

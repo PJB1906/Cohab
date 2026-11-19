@@ -3,6 +3,7 @@ from cohab.models.chat import ContactShare, Message
 from cohab.models.consent import ConsentRecord
 from cohab.models.events import MatchExposure, MatchStateEvent
 from cohab.models.evidence import AnalysisRun, CalibrationModel, WeightSetUncertainty
+from cohab.models.taste import UserTaste
 from cohab.models.study import StudyPair, StudyPairMember, StudyRater, StudyResponse, StudyTrial
 from cohab.models.feedback import Feedback
 from cohab.models.institution import Institution
@@ -41,4 +42,5 @@ __all__ = [
     "StudyResponse",
     "StudyPair",
     "StudyPairMember",
+    "UserTaste",
 ]

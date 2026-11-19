@@ -198,3 +198,29 @@ export const studyToken = {
     }
   },
 }
+
+// --- taste learning (D-14.22) -----------------------------------------------------
+
+export interface TasteWeight {
+  attribute: string
+  label: string
+  stated: number
+  learned: number
+  shift: number
+}
+
+export interface Taste {
+  enabled: boolean
+  active: boolean
+  decisions: number
+  positives: number
+  negatives: number
+  needed: number
+  weights: TasteWeight[]
+  insights: { attribute: string; direction: 'up' | 'down'; text: string }[]
+}
+
+export const tasteApi = {
+  get: () => api.get<Taste>('/me/taste'),
+  set: (enabled: boolean) => api.put<Taste>('/me/taste', { enabled }),
+}

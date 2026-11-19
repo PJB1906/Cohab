@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from cohab.analysis import calibration, fairness, fitting, pair_analysis, power, reliability, simulation, stability, transfer
+from cohab.analysis import calibration, fairness, fitting, pair_analysis, power, reliability, simulation, stability, taste_sim, transfer
 from cohab.analysis.simulate_raters import simulate_pairs, simulate_raters
 from cohab.analysis.weights import EXPERT, EXPERT_STUDY, full_weight_set
 from cohab.services.matching.population import synthetic_candidates
@@ -237,6 +237,9 @@ def run(source: str, quick: bool, out: Path, write_db: bool, publish: bool, acti
     curve = power.power_curve([10, 30] if quick else [10, 20, 30, 40, 60, 80], reps=2 if quick else 12, keys=["linear", "expert_true"] if quick else None)
     curve["minimum_raters_80pct"] = {s["key"]: power.minimum_raters(curve, s["key"]) for s in curve["scenarios"]}
     sink.put("power", "simulation", curve)
+
+    print("6b taste learning", flush=True)
+    sink.put("taste_learning", "simulation", taste_sim.run(n_members=20 if quick else 150, rounds=6 if quick else 12, pool=300 if quick else 500))
 
     print("7/8 fairness", flush=True)
     sink.put("fairness_synthetic", "simulation", fairness.audit(synthetic_candidates(400 if quick else 1500, seed=42, all_verified=True)))

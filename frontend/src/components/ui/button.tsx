@@ -2,30 +2,24 @@ import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-/** Modal's three button treatments (docs/DECISIONS.md D-13.2).
- *
- * `primary` is Modal's Accent Pill: the vivid lime as a *fill*, with dark text
- * on top. Modal rations this to one per viewport, which is why `secondary` —
- * not `primary` — is the right choice for any screen that needs two equally
- * weighted actions.
- *
- * The old `text-white` on every filled variant is gone: white on Lime Pulse
- * fails contrast badly, and Modal's own spec puts #181818 there instead. */
+/** Poster buttons (D-14.23). `primary` is the black pill (white in dark
+ * mode): the one loud action on a screen. `secondary` is outlined in ink, for
+ * a second action of similar weight. Bold, slightly widened type so a button
+ * reads as a button at a glance, not as a link. */
 const buttonVariants = cva(
-  'cohab-press inline-flex items-center justify-center gap-2 rounded-full cohab-desktop:rounded-xl font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none cursor-pointer',
+  'cohab-press inline-flex items-center justify-center gap-2 rounded-full font-bold [font-stretch:108%] tracking-[-0.005em] transition-colors disabled:opacity-35 disabled:pointer-events-none cursor-pointer',
   {
     variants: {
       variant: {
         primary: 'bg-cohab-primary text-cohab-on-fill hover:bg-cohab-primary-dark',
-        secondary:
-          'bg-cohab-card text-cohab-ink border border-cohab-border hover:border-cohab-primary hover:text-cohab-primary',
-        ghost: 'bg-transparent text-cohab-primary hover:underline',
+        secondary: 'bg-transparent text-cohab-ink border-2 border-cohab-ink hover:bg-cohab-ink hover:text-cohab-card',
+        ghost: 'bg-transparent text-cohab-ink underline-offset-4 hover:underline',
         danger: 'bg-transparent text-cohab-accent hover:underline',
         destructive: 'bg-cohab-accent text-cohab-on-fill hover:brightness-110',
       },
       size: {
-        default: 'h-[52px] px-6 text-[15px] cohab-desktop:h-11 cohab-desktop:px-5 cohab-desktop:text-[14px]',
-        sm: 'h-9 px-4 text-sm',
+        default: 'h-[52px] px-7 text-[15px] cohab-desktop:h-12 cohab-desktop:px-6 cohab-desktop:text-[14.5px]',
+        sm: 'h-9 px-4 text-[13px]',
       },
     },
     defaultVariants: { variant: 'primary', size: 'default' },

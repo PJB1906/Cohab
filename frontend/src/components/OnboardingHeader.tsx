@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { profileApi } from '@/api/profile'
 import { Logo } from '@/components/Logo'
-import { AmbientField } from '@/components/CompatibilityField'
 import { cn } from '@/lib/utils'
 
 /** Escape hatch for the four onboarding screens (docs/DECISIONS.md D-13.3).
@@ -49,7 +48,7 @@ export function OnboardingHeader({
   // rather than flashing one that may not belong on this visit. The ambient
   // field still mounts (D-13.11): the background belongs on these screens
   // either way, and it is the header specifically that is conditional.
-  if (!profile) return <AmbientField />
+  if (!profile) return null
 
   function goBack() {
     // A direct paste of /onboarding/weights has no in-app history to return
@@ -60,7 +59,6 @@ export function OnboardingHeader({
 
   return (
     <>
-    <AmbientField />
     {/* Was `hidden cohab-desktop:block` (D-13.11). That left the mobile
         breakpoint with no header at all, and `RequiredQuestionnaire` — unlike
         the other three onboarding screens — has no back control of its own,

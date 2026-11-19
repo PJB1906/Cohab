@@ -45,6 +45,7 @@ export function RejectConfirmDialog({
         prev?.filter((m) => m.candidate_id !== candidateId),
       )
       queryClient.invalidateQueries({ queryKey: ['matches'] })
+      queryClient.invalidateQueries({ queryKey: ['me', 'taste'] })
       navigate('/matches')
     },
   })

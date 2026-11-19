@@ -14,24 +14,19 @@ export function scoreBand(pct: number): ScoreBandName {
   return 'Fair'
 }
 
-// The *thresholds* above stay mockup-sourced (Cohab Prototype.html states the
-// legend verbatim: "Strong 80+ · Good 65-79 · Fair below 65"). The colours no
-// longer are — D-13.2 replaced the mockup palette with Modal's, so a band now
-// reads: Strong = Lime Pulse (the rationed accent, earned by the top band),
-// Good = Sage 60, Fair = the desaturated brick kept as the one non-green
-// signal so a weak match is distinguishable from a strong one by hue and not
-// only by bar length.
+// Poster identity (D-14.23): a strong match earns the volt fill on its bar
+// (volt's one role is "match moment"); the label text stays ink, because
+// volt is never text on white. Good is plain ink, Fair is the warning tomato,
+// so a weak match differs by hue and not only by bar length.
 export const BAND_COLOR: Record<ScoreBandName, string> = {
-  Strong: '#7fee64',
-  Good: '#8cab87',
-  Fair: '#c96a4d',
+  Strong: 'var(--color-cohab-ink)',
+  Good: 'var(--color-cohab-subtle)',
+  Fair: 'var(--color-cohab-accent)',
 }
 
-// Static literal classes (not built from BAND_COLOR) so Tailwind's scanner
-// can see them at build time — arbitrary-value classes assembled from a JS
-// variable at runtime won't be generated.
+// Static literal classes so Tailwind's scanner can see them at build time.
 export const BAND_BAR_CLASS: Record<ScoreBandName, string> = {
-  Strong: 'bg-[#7fee64]',
-  Good: 'bg-[#8cab87]',
-  Fair: 'bg-[#c96a4d]',
+  Strong: 'bg-cohab-volt ring-1 ring-inset ring-cohab-ink',
+  Good: 'bg-cohab-ink',
+  Fair: 'bg-cohab-accent',
 }

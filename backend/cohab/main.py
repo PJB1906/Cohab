@@ -23,6 +23,7 @@ from cohab.api.profile import router as profile_router
 from cohab.api.reports import router as reports_router
 from cohab.api.saved import router as saved_router
 from cohab.api.study import router as study_router
+from cohab.api.taste import router as taste_router
 from cohab.api.uploads import router as uploads_router
 from cohab.core.config import FRONTEND_DIST_DIR
 from cohab.core.observability import configure_logging, metrics, new_request_id, request_id_var
@@ -136,6 +137,7 @@ app.include_router(feedback_router)
 app.include_router(analytics_router)
 app.include_router(study_router)
 app.include_router(evidence_router)
+app.include_router(taste_router)
 
 @app.get("/media/{name}")
 def get_media(name: str) -> Response:

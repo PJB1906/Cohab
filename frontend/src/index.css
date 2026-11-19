@@ -1,242 +1,141 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/archivo/wdth.css';
 
-/* Modal phosphor-terminal palette (docs/DECISIONS.md D-13.2).
+/* Poster identity (docs/DECISIONS.md D-14.23).
    ---------------------------------------------------------------------------
-   This REPLACES the warm off-white / deep-teal tokens that D-5.1 decoded from
-   the two root-level mockups. Recorded as a deliberate deviation: the mockups
-   remain the authority on *layout* and copy, but no longer on colour.
+   Research: Partiful (primary: stark black/white, huge condensed caps,
+   photography in bold frames, sticker chat bubbles, black pill CTAs), Airbnb
+   (photo-first rooms), The Pudding (data stories). Direction chosen by the
+   user from three options: "Loud poster".
 
-   The `--color-cohab-*` names are kept exactly as they were on purpose — every
-   one of the ~40 already-built screens references them through `cohab-*`
-   utility classes, so remapping the values here re-themes the whole app
-   without touching those files. Each token below names the Modal role it now
-   carries, so the indirection stays legible rather than becoming a lie. */
+   Reference lock
+     Preserve: black/white canvas; one condensed ultra-black display face in
+               caps; real photography as the media carrier; black CTAs; bold
+               numerals for scores.
+     Borrow:   The Pudding's mirrored-bar data story, for match pages only.
+     Roles:    volt = match/compatibility moments only (score highlight,
+               mutual, "for you"), always as a fill behind black text, never
+               as text on white. Tomato = warnings and divergence only.
+     Reject:   particle/network backgrounds, gradients, glass, cream canvases,
+               serif headline swaps, indigo.
+
+   One family does all the work: Archivo's width axis runs 62-125%, so
+   display type is the same face squeezed to 62% at weight 900, and body
+   copy is it at 100%. Self-hosted (no request to Google at runtime).
+
+   The `--color-cohab-*` names are kept so every existing screen re-themes
+   through its utilities; each value below states its new role. */
 @theme {
-  /* Modal splits type between a geometric display face and Inter for all UI
-     chrome. Goga is proprietary; Inter Tight is the substitute the style
-     reference itself names. Both are loaded in index.html. */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Fira Mono', ui-monospace, Menlo, monospace;
+  --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
 
-  /* Unchanged — this is a layout boundary, not a colour decision. Below it:
-     Cohab Prototype.html (mobile). At/above it: Cohab Desktop.html. */
   --breakpoint-cohab-desktop: 1220px;
 
-  /* --- Modal source palette, under its own names ------------------------ */
-  --color-void-black: #000000;
-  --color-ground-iron: #181818;
-  --color-carbon-veil: #212525;
-  --color-circuit-border: #485346;
-  --color-phosphor-blue-black: #1f2a33;
-  --color-lime-pulse: #7fee64;
-  --color-phosphor-white: #ddffdc;
-  --color-sage-60: #8cab87;
-  --color-sage-40: #677d64;
-  --color-moss-70: #9cbf93;
-  --color-moss-80: #aed2a4;
-  --color-fern-link: #859984;
-  --color-deep-fern: #697368;
-  --color-pine-15: #3e4a3c;
+  /* Source palette */
+  --color-poster-black: #0b0b0b;
+  --color-poster-white: #ffffff;
+  --color-poster-paper: #f3f3f0;
+  --color-poster-volt: #d4ff3a;
+  --color-poster-tomato: #ff4a1c;
 
-  /* --- The app's semantic tokens, remapped onto the above --------------- */
-
-  /* Primary was deep teal. Lime Pulse is rationed by Modal's own rule (one
-     fill per viewport), so `cohab-primary` is used as a *stroke and text*
-     colour here; the filled-CTA treatment lives in `.cohab-cta` below. */
-  --color-cohab-primary: #7fee64;
-  --color-cohab-primary-dark: #6bd453;
-
-  /* Modal forbids non-green chromatic accents, so the old terracotta cannot
-     survive as-is. Destructive/divergence signals instead drop to the dimmest
-     readable sage and lean on borders and copy, not hue, to read as "warning".
-     The one exception is genuine danger (block/report/suspend), which keeps a
-     desaturated brick so a destructive action is never indistinguishable from
-     a neutral one — an accessibility floor that outranks palette purity. */
-  --color-cohab-accent: #c96a4d;
-  --color-cohab-accent-tint: #241a17;
-
-  --color-cohab-bg: #000000;          /* Surface 0 — Void */
-  --color-cohab-card: #181818;        /* Surface 1 — Ground */
-  --color-cohab-border: #485346;      /* Circuit Border hairline */
-  --color-cohab-border-soft: #1f2a33; /* Phosphor Blue-Black separator */
-  --color-cohab-ink: #ddffdc;         /* Phosphor White — headings/icons */
-  --color-cohab-muted: #8cab87;       /* Sage 60 — default body copy */
-  --color-cohab-subtle: #677d64;      /* Sage 40 — helper text */
-  --color-cohab-placeholder: #697368; /* Deep Fern — placeholders */
-  --color-cohab-tint: #212525;        /* Surface 2 — Carbon, selected rows */
-  --color-cohab-row-tint: #181818;
-
-  /* The mobile prototype's own muted pair collapses onto the same sage scale
-     — Modal has no separate mobile palette, and keeping two would reintroduce
-     the split this remap exists to remove. */
-  --color-cohab-muted-mobile: #8cab87;
-  --color-cohab-subtle-mobile: #677d64;
-
-  /* The moderator shell was the one dark screen in the old design. It is no
-     longer special — it now sits one surface step above the page, which is
-     how Modal separates an elevated region. */
-  --color-cohab-dark-bg: #0a0a0a;
-  --color-cohab-dark-border: #485346;
-  --color-cohab-dark-border-soft: #1f2a33;
-  --color-cohab-dark-text: #ddffdc;
-  --color-cohab-dark-text-muted: #9cbf93;
-  --color-cohab-dark-text-subtle: #697368;
-
-  /* Chat bubbles: outgoing carries the lime as a low-alpha wash rather than a
-     solid fill, so a long thread does not violate the one-lime-fill rule. */
-  --color-cohab-bubble-mint: #1c2a1a;
-  --color-cohab-thread-bg: #0a0a0a;
-
-  /* Tokens for values that were previously written as literal hex in
-     component files (D-13.12). They were indistinguishable from the theme
-     until a light mode existed, at which point every one of them became a
-     dark-only colour stranded on a light page. Named by role, not by shade,
-     so the light overrides below can differ freely.
-
-     Note: `text-[#0a0a0a]` is deliberately NOT tokenised — it is the dark
-     text that sits on a bright lime or brick *fill*, and that fill stays
-     bright in both themes, so the literal is correct in both. */
-  /* Text that sits ON a filled primary/accent button. In the dark theme the
-     fill is bright lime, so this is near-black; in the light theme the fill
-     is the mockup's deep green, so it flips to white. It must be a token —
-     the literal `text-[#0a0a0a]` it replaces was correct only while every
-     fill was bright (D-13.14). */
-  --color-cohab-on-fill: #0a0a0a;
-
-  /* Avatar initials tile. Its own pair rather than reusing tint/primary,
-     because the two themes want opposite treatments: a dark ground with a
-     phosphor foreground here, a solid deep-green ground with white
-     initials in light (D-13.15). */
-  --color-cohab-avatar-bg: #1b2620;
-  --color-cohab-avatar-ink: #aed2a4;
-
-  --color-cohab-score: #9cbf93;       /* numeric readouts, secondary rails */
-  --color-cohab-warn: #c96a4d;        /* divergence copy, PII warnings */
-  --color-cohab-warn-border: #3a2a24;
-  --color-cohab-track: #1f2a33;       /* progress/bar troughs */
-  --color-cohab-bar-mid: #8cab87;     /* mid-band bar fill */
-}
-
-/* ---------------------------------------------------------------------------
-   Light theme (docs/DECISIONS.md D-13.12).
-
-   Tailwind v4 compiles `@theme` values into the stylesheet, so a runtime
-   switch cannot rewrite them. What it *can* do is redefine the same custom
-   properties at a lower-specificity-but-later selector: `:root[data-theme]`
-   wins the cascade over `:root` from `@theme`, and every `cohab-*` utility
-   reads its value through `var()` at use time. So overriding the ~25 tokens
-   below re-themes all ~40 screens without touching a single component — the
-   same indirection that made the Modal remap cheap (D-13.2).
-
-   The values are lifted from `Cohab Desktop.html` itself — the green-on-beige
-   the mockup was always drawn in, and the palette D-5.1 originally decoded
-   before the Modal remap (D-13.2) replaced it. Extracted from the mockup by
-   frequency, not eyeballed: `#eceae5` page ground, `#f5f4f0`/white cards,
-   `#0f5f52` deep green as the primary, `#a8442a` brick for divergence, and
-   the `#14201f`/`#3f4d4a`/`#63706d`/`#7d8a86` text ramp.
-
-   So the app now carries both identities honestly: the phosphor terminal in
-   the dark theme, the mockup's daylight palette in the light one — rather
-   than a lightened phosphor that matches neither document.
-
-   Rules kept from the dark theme:
-     - One accent. Here it is the deep green, which unlike lime is legible as
-       text on beige (#0f5f52 on #eceae5 is ~7:1), so filled CTAs and text
-       links can share a single colour.
-     - Surfaces still step: page → card → tint.
-     - The destructive brick stays chromatic and distinct from the accent,
-       for the same accessibility floor recorded at D-13.2.
-
-   `color-scheme` is set so form controls, scrollbars and the browser's own
-   focus rings follow the theme rather than staying dark on a light page. */
-:root[data-theme='light'] {
-  color-scheme: light;
-
-  --color-cohab-primary: #0f5f52;      /* Mockup deep green */
-  --color-cohab-primary-dark: #0a473d;
-
-  --color-cohab-accent: #a8442a;       /* Mockup brick */
-  --color-cohab-accent-tint: #f7ece8;
-
-  --color-cohab-bg: #eceae5;           /* Surface 0 — the mockup's beige */
-  --color-cohab-card: #f5f4f0;         /* Surface 1 — warm off-white */
-  --color-cohab-border: #cfd3cf;
-  --color-cohab-border-soft: #e3e1dc;
-  --color-cohab-ink: #14201f;          /* Headings — near-black, green cast */
-  --color-cohab-muted: #3f4d4a;
-  --color-cohab-subtle: #63706d;
-  --color-cohab-placeholder: #7d8a86;
-  --color-cohab-tint: #eef4f2;         /* Surface 2 — the mint selected row */
-  --color-cohab-row-tint: #e3e1dc;
-
-  --color-cohab-muted-mobile: #3f4d4a;
-  --color-cohab-subtle-mobile: #63706d;
-
-  /* The moderator shell sits one step *above* the page here too — which in
-     daylight means slightly darker than the card, not lighter. */
-  --color-cohab-dark-bg: #e3e1dc;
-  --color-cohab-dark-border: #cfd3cf;
-  --color-cohab-dark-border-soft: #e3e1dc;
-  --color-cohab-dark-text: #14201f;
-  --color-cohab-dark-text-muted: #3f4d4a;
-  --color-cohab-dark-text-subtle: #63706d;
-
-  --color-cohab-bubble-mint: #eef4f2;  /* Outgoing bubble — the mint wash */
-  --color-cohab-thread-bg: #e3e1dc;
-
-  /* The light fills are dark green and brick, so on-fill text is white. */
+  /* Semantic tokens: light (default) */
+  --color-cohab-primary: #0b0b0b;       /* filled CTAs, links, focus: black */
+  --color-cohab-primary-dark: #2a2a2a;
+  --color-cohab-volt: #d4ff3a;          /* match moments only, as a fill */
+  --color-cohab-on-volt: #0b0b0b;
+  --color-cohab-accent: #e63a10;        /* warnings / divergence text (AA on white) */
+  --color-cohab-accent-tint: #ffece5;
+  --color-cohab-bg: #f3f3f0;            /* page */
+  --color-cohab-card: #ffffff;          /* interactive containers */
+  --color-cohab-border: #dcdcd6;
+  --color-cohab-border-soft: #ebebe6;
+  --color-cohab-ink: #0b0b0b;
+  --color-cohab-muted: #3c3c38;
+  --color-cohab-subtle: #6d6d67;
+  --color-cohab-placeholder: #9a9a93;
+  --color-cohab-tint: #ecece7;          /* selected rows, chips */
+  --color-cohab-row-tint: #f6f6f3;
+  --color-cohab-muted-mobile: #3c3c38;
+  --color-cohab-subtle-mobile: #6d6d67;
+  --color-cohab-dark-bg: #0b0b0b;       /* the black poster bands */
+  --color-cohab-dark-border: #2a2a2a;
+  --color-cohab-dark-border-soft: #1c1c1c;
+  --color-cohab-dark-text: #ffffff;
+  --color-cohab-dark-text-muted: #c9c9c2;
+  --color-cohab-dark-text-subtle: #8d8d86;
+  --color-cohab-bubble-mint: #d4ff3a;   /* your chat bubble: volt sticker */
+  --color-cohab-thread-bg: #f3f3f0;
   --color-cohab-on-fill: #ffffff;
+  --color-cohab-avatar-bg: #0b0b0b;
+  --color-cohab-avatar-ink: #d4ff3a;
+  --color-cohab-score: #0b0b0b;
+  --color-cohab-warn: #e63a10;
+  --color-cohab-warn-border: #ffc9b8;
+  --color-cohab-track: #e2e2dc;
+  --color-cohab-bar-mid: #0b0b0b;
 
-  /* The mockup's avatar circles are solid deep green with white initials. */
-  --color-cohab-avatar-bg: #0f5f52;
-  --color-cohab-avatar-ink: #ffffff;
-
-  --color-cohab-score: #3f4d4a;
-  --color-cohab-warn: #a8442a;
-  --color-cohab-warn-border: #e6cec6;
-  --color-cohab-track: #cfd3cf;
-  --color-cohab-bar-mid: #63706d;
+  --radius-poster: 22px;                /* photo frames */
 }
 
-/* The app-wide ambient field (CompatibilityField.tsx) is held at 45% behind
-   live data so it never competes with content. On black that is plenty; on
-   the light theme's beige the same wash reads as almost nothing even after
-   the canvas switches to its green palette, so daylight gets a little more.
-   A little, deliberately: this multiplies every canvas alpha, so it is also
-   the fastest way to fog the text sitting on top. Kept here rather than as a
-   `light:` utility because the component has no theme-aware class hook. */
-:root[data-theme='light'] .cohab-ambient {
-  opacity: 0.52;
-}
-
-/* The dark theme is the `@theme` default, so it needs no token overrides —
-   only the hint that lets native controls, scrollbars and browser focus
-   rings render dark. */
-:root,
+/* Dark: the same poster, inverted. White becomes the CTA, volt keeps its
+   role. Selected by the theme toggle (lib/theme.ts). */
 :root[data-theme='dark'] {
   color-scheme: dark;
+  --color-cohab-primary: #ffffff;
+  --color-cohab-primary-dark: #dcdcd6;
+  --color-cohab-accent: #ff6a43;
+  --color-cohab-accent-tint: #2a1610;
+  --color-cohab-bg: #0b0b0b;
+  --color-cohab-card: #161616;
+  --color-cohab-border: #2e2e2b;
+  --color-cohab-border-soft: #1f1f1d;
+  --color-cohab-ink: #ffffff;
+  --color-cohab-muted: #cfcfc8;
+  --color-cohab-subtle: #8d8d86;
+  --color-cohab-placeholder: #6b6b65;
+  --color-cohab-tint: #232321;
+  --color-cohab-row-tint: #121212;
+  --color-cohab-muted-mobile: #cfcfc8;
+  --color-cohab-subtle-mobile: #8d8d86;
+  --color-cohab-dark-bg: #000000;
+  --color-cohab-thread-bg: #0b0b0b;
+  --color-cohab-on-fill: #0b0b0b;
+  --color-cohab-avatar-bg: #d4ff3a;
+  --color-cohab-avatar-ink: #0b0b0b;
+  --color-cohab-score: #ffffff;
+  --color-cohab-warn: #ff6a43;
+  --color-cohab-warn-border: #4a2318;
+  --color-cohab-track: #2a2a27;
+  --color-cohab-bar-mid: #ffffff;
 }
 
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Element defaults live in the base layer so utility classes (text-white on
+   a black band, say) always win over them. */
+@layer base {
 body {
   margin: 0;
   background: var(--color-cohab-bg);
   color: var(--color-cohab-muted);
   font-family: var(--font-sans);
-  font-feature-settings: 'cv11';
-  letter-spacing: -0.022em;
+  font-stretch: 100%;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Modal mandates the display face for H1–H4 and card titles, with tight
-   negative tracking that is signature rather than optional. */
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--font-display);
   color: var(--color-cohab-ink);
-  letter-spacing: -0.012em;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 input,
@@ -251,13 +150,46 @@ textarea::placeholder {
   color: var(--color-cohab-placeholder);
 }
 
-/* User feedback: the desktop UI (mockup-literal px values throughout,
-   mostly not Tailwind's rem-based scale) read too small at common desktop
-   resolutions, 1920x1080 specifically. `zoom` (not `transform: scale`)
-   uniformly enlarges every already-built screen's fonts/spacing/icons
-   without reflow bugs or fixed-position drift, and without having to hand-
-   edit every literal px value across ~40 already-built files. Mobile is
-   untouched — it's sized for real device viewports already. */
+}
+
+/* Poster type classes live in the components layer for the same reason:
+   a utility on the same element can still override size or colour. */
+@layer components {
+/* The poster voice: Archivo squeezed to its narrowest, blackest cut, in caps.
+   For headlines and big numbers only, never for running text. */
+.poster {
+  font-family: var(--font-display);
+  font-stretch: 62%;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  line-height: 0.86;
+  text-wrap: balance;
+}
+.poster-num {
+  font-family: var(--font-display);
+  font-stretch: 62%;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+}
+/* Small caps labels: wide and tracked, the counterweight to .poster. */
+.label {
+  font-stretch: 112%;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+/* Volt highlighter: the one way volt meets text, as a fill behind black. */
+.volt {
+  background: var(--color-cohab-volt);
+  color: var(--color-cohab-on-volt);
+}
+
+}
+
 @media (min-width: 1220px) {
   body {
     zoom: 1.1;
@@ -406,5 +338,17 @@ html {
   }
   .cohab-skeleton {
     animation: none;
+  }
+}
+
+/* Landing marquee (D-14.23). Two copies of the word list scroll by exactly
+   one copy's width, so the loop has no visible seam. Stopped entirely under
+   reduced motion by the `motion-reduce:animate-none` on the element. */
+@keyframes cohab-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }

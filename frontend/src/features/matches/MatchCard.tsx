@@ -1,145 +1,114 @@
 import { Link } from 'react-router-dom'
-import { Avatar, isGeneratedAvatar } from '@/components/ui/avatar'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { Eyebrow } from '@/components/Eyebrow'
+import { isGeneratedAvatar } from '@/components/ui/avatar'
 import { CountUp } from '@/components/motion/CountUp'
 import { SaveToggle } from './SaveToggle'
 import { TierBadge } from './MatchInsightsPanel'
-import { scorePercent, scoreBand, BAND_COLOR, BAND_BAR_CLASS } from '@/lib/score'
+import { scorePercent, scoreBand, BAND_BAR_CLASS } from '@/lib/score'
+import { cn } from '@/lib/utils'
 import type { MatchListItem } from '@/api/types'
 
-export function MatchCard({ item }: { item: MatchListItem }) {
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+/** Portrait tile. A real uploaded photo fills it; otherwise the initials are
+ * set in the poster cut, alternating ink and outlined tiles so a list of
+ * people without photos still has rhythm. Never a stock face: these are
+ * real members, and a borrowed photo would misrepresent them. */
+function Portrait({ item, rank }: { item: MatchListItem; rank: number }) {
+  const photo = item.avatar_url && !isGeneratedAvatar(item.avatar_url) ? item.avatar_url : null
+  const inverted = rank % 2 === 0
+  return (
+    <div
+      className={cn(
+        'relative shrink-0 w-[88px] h-[88px] sm:w-[120px] sm:h-[120px] rounded-[18px] overflow-hidden flex items-center justify-center',
+        photo ? '' : inverted ? 'bg-cohab-card border-2 border-cohab-ink' : 'bg-cohab-ink',
+      )}
+    >
+      {photo ? (
+        <img src={photo} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <span className={cn('poster text-[44px] sm:text-[58px]', inverted ? 'text-cohab-ink' : 'text-cohab-card')}>
+          {initials(item.candidate_name)}
+        </span>
+      )}
+      <span className="absolute left-1.5 top-1.5 label text-[9.5px] bg-cohab-card text-cohab-ink rounded-full px-1.5 py-[3px] border border-cohab-ink">
+        #{rank}
+      </span>
+    </div>
+  )
+}
+
+export function MatchCard({ item, rank = 1 }: { item: MatchListItem; rank?: number }) {
   const pct = scorePercent(item.combined_score)
   const band = scoreBand(pct)
-  const barClass = BAND_BAR_CLASS[band]
-  const seekerLine = item.seeker_type === 'has_place' ? 'Has a place' : 'Looking with you'
+  const seekerLine = item.seeker_type === 'has_place' ? 'Has a place' : 'Looking too'
+  const moved = item.taste_rank_change ?? 0
 
   return (
-    <Link
-      to={`/matches/${item.match_id}`}
-      className="block group cohab-lift rounded-2xl"
-      data-reveal-item=""
-    >
-      {/* Desktop — screen 7's card: 186px photo | info | 150px compatibility+budget col */}
-      <div className="hidden cohab-desktop:grid grid-cols-[186px_1fr_150px] gap-5 bg-cohab-card border border-cohab-border rounded-2xl p-[18px] transition-colors group-hover:border-cohab-primary">
-        <div className="relative h-[150px] min-w-0 rounded-xl overflow-hidden bg-cohab-tint flex items-center justify-center">
-          {/* A generated initials avatar is a 256px square, and stretching it
-              into this 186x150 landscape tile made the letters read as huge
-              cropped type rather than a portrait (D-13.11). Seeded members
-              have no real photograph, so the tile falls back to the same
-              circular treatment the rest of the app uses. A genuine uploaded
-              photo still fills the tile as screen 7 intends. */}
-          {item.avatar_url && !isGeneratedAvatar(item.avatar_url) ? (
-            <img src={item.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <Avatar name={item.candidate_name} src={null} size={68} />
-          )}
-          <SaveToggle
-            matchId={item.match_id}
-            className="absolute top-2 right-2 w-7 h-7 bg-cohab-card/90 backdrop-blur border border-cohab-border"
-          />
-        </div>
+    <Link to={`/matches/${item.match_id}`} className="block group" data-reveal-item="">
+      <article className="relative bg-cohab-card border-2 border-cohab-ink rounded-[22px] p-3.5 sm:p-4 flex gap-4 transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(.22,1,.36,1)] group-hover:-translate-y-0.5 group-hover:shadow-[6px_6px_0_0_var(--color-cohab-ink)]">
+        <Portrait item={item} rank={rank} />
 
-        <div className="min-w-0 flex flex-col">
-          <div className="flex items-center gap-2 mb-[3px]">
-            <h3 className="text-lg font-semibold leading-[1.15]">{item.candidate_name}</h3>
-            <Badge variant="verified" className="rounded">
-              Verified
-            </Badge>
-            <TierBadge tier={item.confidence_tier} source={item.calibration_source} probability={item.would_message_probability} />
+        <div className="min-w-0 flex-1 flex flex-col">
+          <div className="flex items-start gap-2">
+            <h3 className="poster text-[30px] sm:text-[38px] truncate min-w-0">{item.candidate_name}</h3>
+            <SaveToggle matchId={item.match_id} className="ml-auto -mr-1 -mt-1 w-8 h-8 shrink-0" />
           </div>
-          <p className="text-[13px] leading-[1.4] text-cohab-muted mb-2.5">
-            {seekerLine} · {item.city}
-          </p>
-          <div className="flex flex-wrap gap-[7px]">
-            {item.agreements.slice(0, 3).map((a) => (
-              <Badge key={a} variant="agreement" className="rounded">
-                {a}
-              </Badge>
-            ))}
-            {item.divergence && (
-              <Badge variant="divergence" className="rounded">
-                {item.divergence}
-              </Badge>
-            )}
-          </div>
-          <div className="flex-1" />
-        </div>
-
-        <div className="border-l border-cohab-border pl-[18px] flex flex-col">
-          <Eyebrow>Compatibility</Eyebrow>
-          <CountUp
-            value={pct}
-            suffix="%"
-            className="text-[27px] font-semibold tracking-[-.02em] tabular-nums mt-1.5 mb-2"
-          />
-          <Progress value={pct} barClassName={barClass} className="h-[3px] mb-3.5" animate />
-          <Eyebrow>Budget</Eyebrow>
-          <span className="text-[17px] font-semibold mt-[5px] mb-0.5 tabular-nums">
-            ₹{item.budget_min.toLocaleString('en-IN')}–{item.budget_max.toLocaleString('en-IN')}
-          </span>
-          <span className="text-xs leading-[1.35] text-cohab-muted">per month</span>
-        </div>
-      </div>
-
-      {/* Mobile — s7's card: avatar row, score bar, 2-col fact grid, agreement chips, divergence callout */}
-      <div className="cohab-desktop:hidden bg-cohab-card border border-cohab-border rounded-[18px] p-[15px]">
-        <div className="flex gap-3 items-start">
-          <Avatar name={item.candidate_name} src={item.avatar_url} size={52} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[16.5px] font-semibold text-cohab-ink truncate">{item.candidate_name}</span>
-              <Badge variant="verified" className="rounded">
-                Verified
-              </Badge>
-            </div>
-            <p className="text-[13px] text-cohab-muted-mobile mt-[3px]">
-              {seekerLine} · {item.city}
-            </p>
-            <div className="mt-1">
-              <TierBadge tier={item.confidence_tier} source={item.calibration_source} probability={item.would_message_probability} />
-            </div>
-          </div>
-          <div className="text-right flex-none flex flex-col items-end gap-1">
-            <SaveToggle matchId={item.match_id} className="w-6 h-6" />
-            <CountUp value={pct} suffix="%" className="text-xl font-bold tabular-nums text-cohab-ink" />
-            <div className="text-[11px] font-medium" style={{ color: BAND_COLOR[band] }}>
-              {band}
-            </div>
-          </div>
-        </div>
-
-        <Progress value={pct} barClassName={barClass} className="h-[3px] mt-3 mb-3.5" animate />
-
-        <div className="grid grid-cols-2 gap-x-3 gap-y-[7px] text-[13px] text-cohab-ink pb-3 border-b border-cohab-border-soft">
-          <div>
-            <span className="text-cohab-subtle-mobile">Budget </span>
-            <span className="font-semibold tabular-nums">
-              ₹{item.budget_min.toLocaleString('en-IN')}–{item.budget_max.toLocaleString('en-IN')}
+          <p className="text-[13.5px] text-cohab-subtle mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-semibold text-cohab-ink">{seekerLine}</span>
+            <span aria-hidden>·</span>
+            <span>
+              ₹{item.budget_min.toLocaleString('en-IN')}
+              {item.budget_max !== item.budget_min && `–${item.budget_max.toLocaleString('en-IN')}`}
             </span>
+            {item.listing_locality && (
+              <>
+                <span aria-hidden>·</span>
+                <span>{item.listing_locality}</span>
+              </>
+            )}
+            {moved > 0 && (
+              <span className="volt rounded-full px-2 py-[2px] text-[11.5px] font-bold" title="Moved up because of what you've chosen so far">
+                ↑{moved} for you
+              </span>
+            )}
+            <TierBadge tier={item.confidence_tier} source={item.calibration_source} probability={item.would_message_probability} />
+          </p>
+
+          <div className="flex flex-wrap gap-1.5 mt-3 pr-12 sm:pr-0">
+            {item.agreements.slice(0, 3).map((a) => (
+              <span key={a} className="rounded-full bg-cohab-tint text-cohab-ink text-[12.5px] font-semibold px-2.5 py-1">
+                {a}
+              </span>
+            ))}
           </div>
-          <div>{item.city}</div>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {item.agreements.slice(0, 3).map((a) => (
-            <Badge key={a} variant="agreement" className="rounded-[10px] px-[9px] py-1.5">
-              {a}
-            </Badge>
-          ))}
-        </div>
-
-        {item.divergence && (
-          <div className="flex gap-2 items-start mt-2.5 bg-cohab-accent-tint rounded-xl px-2.5 py-2.5">
-            <div className="w-[3px] self-stretch bg-cohab-accent rounded flex-none" />
-            <p className="text-[12.5px] leading-[1.4] text-cohab-warn">
-              <span className="font-semibold">Worth discussing · </span>
-              {item.divergence}
+          {item.divergence && (
+            <p className="text-[13px] leading-[1.4] text-cohab-accent font-semibold mt-2.5 pr-12 sm:pr-0">
+              Talk about: <span className="font-normal text-cohab-muted">{item.divergence}</span>
             </p>
+          )}
+        </div>
+
+        <div className="shrink-0 hidden sm:flex flex-col items-end justify-between pl-4 border-l-2 border-cohab-ink/10 w-[120px]">
+          <span className="label text-[9.5px] text-cohab-subtle">Match</span>
+          <CountUp value={pct} className="poster-num text-[72px] text-cohab-ink" />
+          <div className="w-full h-[6px] rounded-full bg-cohab-track overflow-hidden">
+            <div className={cn('h-full rounded-full', BAND_BAR_CLASS[band])} style={{ width: `${pct}%` }} />
           </div>
-        )}
-      </div>
+          <span className="label text-[9.5px] text-cohab-ink mt-1.5">{band}</span>
+        </div>
+        {/* Phone: the score sits in the bottom-right corner instead of a column. */}
+        <div className="sm:hidden absolute right-3.5 bottom-3 text-right leading-none">
+          <span className="poster-num text-[40px] text-cohab-ink">{pct}</span>
+          <span className="block label text-[8.5px] text-cohab-subtle mt-0.5">{band}</span>
+        </div>
+      </article>
     </Link>
   )
 }

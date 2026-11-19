@@ -4,14 +4,17 @@
 import { cn } from '@/lib/utils'
 import type { DataSource } from '@/api/v2'
 
+// Poster palette roles for charts (D-14.23): the learned/real series is ink,
+// the expert baseline is a mid grey, warnings tomato. Volt is not used on
+// these light chart surfaces (it has no contrast against white).
 export const C = {
   ink: 'var(--color-cohab-ink)',
   muted: 'var(--color-cohab-muted)',
   subtle: 'var(--color-cohab-subtle)',
   grid: 'var(--color-cohab-border-soft)',
-  primary: 'var(--color-cohab-primary)',
+  primary: 'var(--color-cohab-ink)',
   accent: 'var(--color-cohab-accent)',
-  expert: 'var(--color-cohab-bar-mid)',
+  expert: 'var(--color-cohab-placeholder)',
 }
 
 const SOURCE: Record<DataSource, { label: string; tone: string }> = {
@@ -147,8 +150,7 @@ export function BarsWithCI({
               y={y(it.value)}
               width={bw * 0.64}
               height={Math.max(0, y(min) - y(it.value))}
-              fill={hl ? (it.label === highlight?.[highlight.length - 1] ? C.primary : C.ink) : C.expert}
-              opacity={hl && it.label !== highlight?.[highlight.length - 1] ? 0.55 : 1}
+              fill={hl ? (it.label === highlight?.[highlight.length - 1] ? C.primary : C.subtle) : C.expert}
               rx={3}
             />
             {it.low != null && it.high != null && (
@@ -297,4 +299,4 @@ export function NullHistogram({ counts, edges, observed }: { counts: number[]; e
   )
 }
 
-export const SERIES_COLORS = ['var(--color-cohab-primary)', 'var(--color-cohab-accent)', '#5b8def', '#b07cd8', '#d4a72c', '#4fb3a9', '#8a8f98']
+export const SERIES_COLORS = ['var(--color-cohab-ink)', 'var(--color-cohab-accent)', '#2563eb', '#0d9488', '#c99a1a', '#8a8f98', '#9a5b2e']

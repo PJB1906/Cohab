@@ -72,7 +72,7 @@ export function SavedList() {
           since Saved has nothing to filter) for token/layout consistency —
           a judgment call, not a mockup-sourced layout. */}
       <div className="hidden cohab-desktop:block max-w-[1800px] mx-auto px-6 py-7">
-        <h1 className="text-[26px] font-semibold tracking-[-.015em] leading-[1.18] mb-1.5">Saved</h1>
+        <h1 className="poster text-[72px] mb-2">Saved</h1>
         <p className="text-[13.5px] leading-[1.5] text-cohab-muted mb-5 max-w-[720px]">
           People you kept to compare later. Saving is private — they won't know.
         </p>
@@ -92,7 +92,7 @@ export function SavedList() {
           "compare" stub + drop-off caption */}
       <div className="cohab-desktop:hidden">
         <div className="px-5 pt-2 pb-3 border-b border-cohab-border-soft">
-          <h2 className="text-2xl font-semibold tracking-[-.02em] mb-0.5">Saved</h2>
+          <h2 className="poster text-[44px] mb-1">Saved</h2>
           <p className="text-[13px] leading-[1.4] text-cohab-muted-mobile">
             Two people you kept to compare. Saving is private.
           </p>

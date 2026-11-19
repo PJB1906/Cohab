@@ -77,7 +77,7 @@ export function OptionalQuestionnaire() {
       </aside>
 
       <div className="px-4 pt-4 pb-8 cohab-desktop:px-0 cohab-desktop:pt-0 cohab-desktop:pb-0 flex flex-col gap-4">
-        <h1 className="cohab-desktop:hidden text-2xl font-semibold tracking-[-.02em] mb-1">
+        <h1 className="cohab-desktop:hidden poster text-[46px] mb-2">
           A bit more, if you have a minute
         </h1>
         <p className="cohab-desktop:hidden text-[14.5px] text-cohab-muted-mobile leading-[1.5] -mt-2 mb-1">

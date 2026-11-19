@@ -6,7 +6,6 @@ import { BackButton } from '@/components/BackButton'
 import { AccountMenu } from '@/components/AccountMenu'
 import { PageTransition } from '@/components/motion/PageTransition'
 import { ScrollProgress } from '@/components/motion/ScrollProgress'
-import { AmbientField } from '@/components/CompatibilityField'
 import { cn } from '@/lib/utils'
 
 /** The active underline is drawn by `.cohab-underline::after` (index.css) so
@@ -14,9 +13,10 @@ import { cn } from '@/lib/utils'
  * `border-b-2` can only appear at full width. The transparent border is kept
  * purely to reserve the same 2px of space it always did, so nothing shifts. */
 function navLinkClass({ isActive }: { isActive: boolean }) {
+  // Poster nav (D-14.23): the active section is a solid ink pill.
   return cn(
-    'cohab-underline text-sm pb-1 border-b-2 border-transparent transition-colors',
-    isActive ? 'is-active font-semibold text-cohab-ink' : 'text-cohab-muted hover:text-cohab-ink',
+    'cohab-press h-9 px-4 rounded-full inline-flex items-center text-[14px] font-semibold transition-colors',
+    isActive ? 'bg-cohab-ink text-cohab-card' : 'text-cohab-ink hover:bg-cohab-tint',
   )
 }
 
@@ -50,8 +50,7 @@ export function AppShell({ children, hideBottomNav }: { children: React.ReactNod
     // shell root would paint straight over the fixed canvas behind it. The
     // page's black comes from `body` (index.css), which sits below both.
     <div className="min-h-screen pb-20 cohab-desktop:pb-0">
-      <AmbientField />
-      <header className="sticky top-0 z-40 bg-cohab-bg/95 backdrop-blur border-b border-cohab-border">
+      <header className="sticky top-0 z-40 bg-cohab-bg border-b-2 border-cohab-ink">
         <ScrollProgress />
         <div className="max-w-5xl cohab-desktop:max-w-[1800px] mx-auto px-4 cohab-desktop:px-6 h-14 cohab-desktop:h-[60px] flex items-center gap-3 cohab-desktop:gap-4">
           <BackButton pathname={pathname} />
@@ -64,7 +63,7 @@ export function AppShell({ children, hideBottomNav }: { children: React.ReactNod
           >
             <Logo />
           </Link>
-          <nav className="hidden cohab-desktop:flex items-center gap-[26px]">
+          <nav className="hidden cohab-desktop:flex items-center gap-1.5 ml-4">
             {/* Active state is computed above rather than left to NavLink's
                 prefix matching: the chat and contact-share routes live under
                 /matches/:id/…, so by default an open chat thread underlined
