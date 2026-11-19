@@ -5,7 +5,7 @@ import { matchesApi } from '@/api/matches'
 import { ApiError } from '@/api/client'
 import { AppShell } from '@/components/AppShell'
 import { Avatar } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const SAFETY_TIPS = [
@@ -85,8 +85,8 @@ export function ContactShare() {
             {notOpenYet ? 'Open chat with them before sharing contact details.' : "Couldn't load this."}
           </p>
           {notOpenYet && (
-            <Link to={`/matches/${matchId}/chat`}>
-              <Button>Open chat</Button>
+            <Link to={`/matches/${matchId}/chat`} className={buttonVariants({})}>
+              Open chat
             </Link>
           )}
         </div>
@@ -343,10 +343,8 @@ export function ContactShare() {
               Agree to share my contact details
             </Button>
           )}
-          <Link to={`/matches/${matchId}/chat`}>
-            <Button variant="secondary" className="!rounded-xl">
-              Keep talking in chat
-            </Button>
+          <Link to={`/matches/${matchId}/chat`} className={buttonVariants({ variant: 'secondary' })}>
+            Keep talking in chat
           </Link>
         </div>
         {errorNote}

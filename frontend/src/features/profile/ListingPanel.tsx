@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Eyebrow } from '@/components/Eyebrow'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import type { ListingOut } from '@/api/types'
 
 function formatDate(iso: string): string {
@@ -32,8 +32,8 @@ export function ListingPanel({ listing }: { listing: ListingOut | null | undefin
           You haven't described your room yet. Until you do, nobody looking for a place can be
           matched with you — the rent, locality and date are the hard constraints matching runs on.
         </p>
-        <Link to="/onboarding/listing">
-          <Button size="sm">Add your listing</Button>
+        <Link to="/onboarding/listing" className={buttonVariants({ size: 'sm' })}>
+          Add your listing
         </Link>
       </div>
     )

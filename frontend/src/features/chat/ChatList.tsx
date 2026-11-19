@@ -25,7 +25,7 @@ export function ChatList() {
           style={{ height: 'calc(100vh - 170px)', minHeight: 560 }}
         >
           <ThreadRail />
-          <div className="relative isolate flex flex-col items-center justify-center gap-2 text-center text-white px-8">
+          <div className="relative isolate grain flex flex-col items-center justify-center gap-2 text-center text-white px-8">
             <img src="/photos/friends-couch.webp" alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
             <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgb(8_12_46/0.94),rgb(27_52_209/0.8))]" />
             <h2 className="poster text-white text-[56px]">Pick a conversation</h2>

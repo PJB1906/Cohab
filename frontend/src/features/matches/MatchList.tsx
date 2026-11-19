@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Reveal } from '@/components/motion/Reveal'
 import { RevealGroup } from '@/components/motion/RevealGroup'
 import { cn } from '@/lib/utils'
+import { Check, RotateCcw, SlidersHorizontal } from 'lucide-react'
 import type { MatchListItem } from '@/api/types'
 
 type SortKey = 'best' | 'budget'
@@ -220,17 +221,21 @@ export function MatchList() {
           className="sticky top-[88px] surface rounded-[22px] px-5 pt-5 pb-[22px]"
         >
           <div className="flex items-baseline justify-between mb-[18px]">
-            <h2 className="text-[17px] font-semibold">Filters</h2>
+            <h2 className="flex items-center gap-2 text-[17px] font-bold text-cohab-ink">
+              <SlidersHorizontal className="size-4 text-cohab-primary" aria-hidden />
+              Filters
+            </h2>
             <button
               type="button"
               onClick={resetFilters}
-              className="text-xs font-medium text-cohab-primary cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-bold text-cohab-primary cursor-pointer hover:underline underline-offset-4"
             >
+              <RotateCcw className="size-3" aria-hidden />
               Reset
             </button>
           </div>
 
-          <p className="text-xs font-semibold text-cohab-score mb-[9px]">Monthly rent</p>
+          <p className="label text-[10px] text-cohab-subtle mb-2.5">Monthly rent</p>
           <div className="flex items-center gap-2 mb-5">
             <Input
               value={rentMin}
@@ -247,7 +252,7 @@ export function MatchList() {
             />
           </div>
 
-          <p className="text-xs font-semibold text-cohab-score mb-[9px]">City</p>
+          <p className="label text-[10px] text-cohab-subtle mb-2.5">City</p>
           <div className="flex flex-col gap-[7px] mb-5">
             {allCities.map((city) => {
               const selected = cities.has(city)
@@ -259,17 +264,12 @@ export function MatchList() {
                   onClick={() => toggleCity(city)}
                   className={cn(
                     'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-left cursor-pointer transition-colors',
-                    selected ? 'bg-cohab-tint' : 'bg-transparent hover:bg-cohab-bg',
+                    selected ? 'bg-cohab-tint text-cohab-primary font-semibold' : 'bg-transparent hover:bg-cohab-row-tint',
                   )}
                 >
-                  <span
-                    className={cn(
-                      'w-[15px] h-[15px] rounded-[4px] border flex-none',
-                      selected ? 'bg-cohab-primary border-cohab-primary' : 'bg-cohab-card border-cohab-border',
-                    )}
-                  />
+                  <span className={cn('w-[18px] h-[18px] rounded-[6px] border-[1.5px] flex-none grid place-items-center transition-colors', selected ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill' : 'bg-cohab-card border-cohab-border')}>{selected && <Check className="size-3" strokeWidth={3.2} aria-hidden />}</span>
                   <span className="flex-1 text-cohab-ink">{city}</span>
-                  <span className="text-xs text-cohab-placeholder">{count}</span>
+                  <span className="text-[11px] font-bold tabular-nums text-cohab-subtle bg-cohab-row-tint rounded-full px-2 py-0.5">{count}</span>
                 </button>
               )
             })}
@@ -282,7 +282,7 @@ export function MatchList() {
               `listing_locality` had to be added to the payload. */}
           {allLocalities.length > 0 && (
             <>
-              <p className="text-xs font-semibold text-cohab-score mb-[9px]">Locality</p>
+              <p className="label text-[10px] text-cohab-subtle mb-2.5">Locality</p>
               <div className="flex flex-col gap-[7px] mb-5">
                 {allLocalities.map((locality) => {
                   const selected = localities.has(locality)
@@ -294,17 +294,12 @@ export function MatchList() {
                       onClick={() => toggleLocality(locality)}
                       className={cn(
                         'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-left cursor-pointer transition-colors',
-                        selected ? 'bg-cohab-tint' : 'bg-transparent hover:bg-cohab-bg',
+                        selected ? 'bg-cohab-tint text-cohab-primary font-semibold' : 'bg-transparent hover:bg-cohab-row-tint',
                       )}
                     >
-                      <span
-                        className={cn(
-                          'w-[15px] h-[15px] rounded-[4px] border flex-none',
-                          selected ? 'bg-cohab-primary border-cohab-primary' : 'bg-cohab-card border-cohab-border',
-                        )}
-                      />
+                      <span className={cn('w-[18px] h-[18px] rounded-[6px] border-[1.5px] flex-none grid place-items-center transition-colors', selected ? 'bg-cohab-primary border-cohab-primary text-cohab-on-fill' : 'bg-cohab-card border-cohab-border')}>{selected && <Check className="size-3" strokeWidth={3.2} aria-hidden />}</span>
                       <span className="flex-1 text-cohab-ink">{locality}</span>
-                      <span className="text-xs text-cohab-placeholder">{count}</span>
+                      <span className="text-[11px] font-bold tabular-nums text-cohab-subtle bg-cohab-row-tint rounded-full px-2 py-0.5">{count}</span>
                     </button>
                   )
                 })}
@@ -312,7 +307,7 @@ export function MatchList() {
             </>
           )}
 
-          <p className="text-xs font-semibold text-cohab-score mb-[9px]">Room type</p>
+          <p className="label text-[10px] text-cohab-subtle mb-2.5">Room type</p>
           <div className="flex flex-wrap gap-2 mb-5">
             {ROOM_OPTIONS.map(([value, label]) => (
               <Tab key={value} selected={room === value} onClick={() => setRoom(value)}>
@@ -321,7 +316,7 @@ export function MatchList() {
             ))}
           </div>
 
-          <p className="text-xs font-semibold text-cohab-score mb-[9px]">Move-in window</p>
+          <p className="label text-[10px] text-cohab-subtle mb-2.5">Move-in window</p>
           <div className="flex flex-wrap gap-2 mb-5">
             {WINDOW_OPTIONS.map(([value, label]) => (
               <Tab key={value} selected={moveWindow === value} onClick={() => setMoveWindow(value)}>
@@ -330,7 +325,7 @@ export function MatchList() {
             ))}
           </div>
 
-          <p className="text-xs font-semibold text-cohab-score mb-[9px]">Who they are</p>
+          <p className="label text-[10px] text-cohab-subtle mb-2.5">Who they are</p>
           <div className="flex flex-wrap gap-2 mb-[18px]">
             {SEEKER_OPTIONS.map(([value, label]) => (
               <Tab key={value} selected={seekerFilter === value} onClick={() => setSeekerFilter(value)}>

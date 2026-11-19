@@ -7,8 +7,8 @@ import { ApiError } from '@/api/client'
 import { useSession } from '@/hooks/useSession'
 import { AppShell } from '@/components/AppShell'
 import { Avatar } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { ArrowLeft, Eye, Phone, SendHorizontal } from 'lucide-react'
 import { SafetyActions } from '@/features/safety/SafetyActions'
 import { ThreadRail } from '@/features/chat/ThreadList'
 import { MessageEnter } from '@/components/motion/MessageEnter'
@@ -154,9 +154,10 @@ export function ChatThread() {
         <div className="cohab-desktop:hidden flex items-center gap-2 px-2 py-1.5 border-b border-cohab-border-soft bg-cohab-card">
           <Link
             to={`/matches/${matchId}`}
-            className="w-10 h-11 flex items-center justify-center text-cohab-ink text-[22px]"
+            aria-label="Back to match"
+            className="w-10 h-11 flex items-center justify-center text-cohab-ink"
           >
-            ←
+            <ArrowLeft className="size-5" aria-hidden />
           </Link>
           <Avatar name={match.candidate_name} src={match.candidate_avatar_url} size={36} />
           <div className="flex-1 min-w-0">
@@ -169,12 +170,12 @@ export function ChatThread() {
         </div>
 
         {/* Header — desktop */}
-        <div className="hidden cohab-desktop:flex items-center gap-3 px-6 py-[15px] border-b border-cohab-border">
+        <div className="hidden cohab-desktop:flex items-center gap-3 px-6 py-[15px] border-b border-cohab-border-soft bg-cohab-card">
           <Avatar name={match.candidate_name} src={match.candidate_avatar_url} size={34} />
           <div className="flex-1">
             <div className="flex items-center gap-[9px]">
               <span className="text-[15px] font-semibold text-cohab-ink">{match.candidate_name}</span>
-              <span className="border border-cohab-border rounded-full px-[9px] py-[3px] text-[11px] font-medium text-cohab-primary bg-cohab-tint">
+              <span className="rounded-full px-[9px] py-[3px] text-[11px] font-bold sun">
                 Mutual match · {pct}
               </span>
             </div>
@@ -185,18 +186,13 @@ export function ChatThread() {
               </p>
             )}
           </div>
-          <Link to={`/matches/${matchId}`}>
-            <Button variant="secondary" size="sm" className="!rounded-[10px]">
-              View match
-            </Button>
+          <Link to={`/matches/${matchId}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+            <Eye className="size-4" aria-hidden />
+            View match
           </Link>
-          <Link to={`/matches/${matchId}/contact-share`}>
-            <Button
-              size="sm"
-              className="!rounded-[10px] !bg-cohab-card !text-cohab-primary border border-cohab-primary hover:!bg-cohab-tint"
-            >
-              Share contact
-            </Button>
+          <Link to={`/matches/${matchId}/contact-share`} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+            <Phone className="size-4" aria-hidden />
+            Share contact
           </Link>
           <SafetyActions userId={match.candidate_id} userName={match.candidate_name} />
         </div>
@@ -285,7 +281,7 @@ export function ChatThread() {
               </div>
 
               {/* PII banner — desktop */}
-              <div role="alert" className="hidden cohab-desktop:flex border-[1.5px] border-cohab-accent rounded-xl px-4 py-3.5 mb-3 gap-3.5 items-start">
+              <div role="alert" className="hidden cohab-desktop:flex bg-cohab-accent-tint border border-cohab-warn-border rounded-[18px] px-4 py-3.5 mb-3 gap-3.5 items-start">
                 <div className="flex-1">
                   <p className="text-[13px] font-semibold text-cohab-accent mb-1">
                     Careful — that looks like contact info
@@ -304,12 +300,10 @@ export function ChatThread() {
                   </button>
                 </div>
                 <div className="flex flex-col gap-2 flex-none">
-                  <Link to={`/matches/${matchId}/contact-share`}>
-                    <Button size="sm" className="!rounded-[10px] whitespace-nowrap w-full">
-                      Share Contact instead
-                    </Button>
+                  <Link to={`/matches/${matchId}/contact-share`} className={buttonVariants({ size: 'sm', className: 'w-full' })}>
+                    Share contact instead
                   </Link>
-                  <Button variant="secondary" size="sm" onClick={dismissWarning} className="!rounded-[10px] whitespace-nowrap">
+                  <Button variant="secondary" size="sm" onClick={dismissWarning} className="whitespace-nowrap">
                     Edit message
                   </Button>
                 </div>
@@ -337,33 +331,51 @@ export function ChatThread() {
               type="submit"
               disabled={sendMutation.isPending || !draft.trim()}
               className={cn(
-                'cohab-press cohab-desktop:hidden w-[46px] h-[46px] rounded-full border-none text-cohab-on-fill text-[17px] font-semibold flex-none flex items-center justify-center disabled:opacity-50 cursor-pointer',
-                warning ? 'bg-cohab-accent' : 'bg-cohab-primary',
+                'cohab-press btn-raised cohab-desktop:hidden w-[46px] h-[46px] rounded-full border-none text-cohab-on-fill flex-none flex items-center justify-center disabled:opacity-50 cursor-pointer',
+                warning ? 'btn-coral bg-cohab-accent' : 'bg-cohab-primary',
               )}
+              aria-label="Send"
             >
-              ↑
+              <SendHorizontal className="size-5" aria-hidden />
             </button>
 
-            {/* Textarea — desktop */}
-            <Textarea
-              rows={1}
-              placeholder={`Message ${match.candidate_name.split(' ')[0]}…`}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className={cn('hidden cohab-desktop:block flex-1 min-h-11 py-2.5', warning && 'border-cohab-accent')}
-            />
-            <Button
-              type="submit"
-              variant={warning ? 'secondary' : 'primary'}
-              disabled={sendMutation.isPending || !draft.trim()}
-              className="hidden cohab-desktop:inline-flex"
+            {/* Composer — desktop: one pill holding the field and the send action */}
+            <div
+              className={cn(
+                'hidden cohab-desktop:flex flex-1 items-end gap-2 bg-cohab-card border rounded-[26px] p-1.5 pl-5 shadow-[var(--shadow-soft)] transition-[border-color,box-shadow]',
+                'focus-within:ring-4 focus-within:ring-cohab-primary/15',
+                warning ? 'border-cohab-accent' : 'border-cohab-border focus-within:border-cohab-primary',
+              )}
             >
-              Send
-            </Button>
+              <textarea
+                rows={1}
+                aria-label={`Message ${match.candidate_name.split(' ')[0]}`}
+                placeholder={`Message ${match.candidate_name.split(' ')[0]}…`}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    e.currentTarget.form?.requestSubmit()
+                  }
+                }}
+                className="flex-1 min-h-11 max-h-40 border-none bg-transparent py-3 text-[15px] text-cohab-ink placeholder:text-cohab-placeholder resize-none outline-none focus-visible:outline-none"
+              />
+              <Button
+                type="submit"
+                variant={warning ? 'secondary' : 'primary'}
+                disabled={!draft.trim()}
+                loading={sendMutation.isPending}
+                className="h-11 px-5"
+                icon={<SendHorizontal className="size-4" aria-hidden />}
+              >
+                Send
+              </Button>
+            </div>
           </form>
           <p className="hidden cohab-desktop:block text-[11.5px] text-cohab-subtle mt-[9px]">
-            Try typing a phone number or an email address to see the check. Abusive content is flagged for
-            moderator review, not blocked.
+            Enter to send, Shift+Enter for a new line. Phone numbers and emails stay hidden until you both agree;
+            abusive messages are flagged for review.
           </p>
           {sendError && <p className="text-[12px] text-cohab-accent text-center pt-2">{sendError}</p>}
             </div>

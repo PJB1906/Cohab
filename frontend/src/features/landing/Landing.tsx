@@ -87,7 +87,7 @@ export function Landing() {
         </Link>
         <Link
           to="/login?mode=signup"
-          className="cohab-press h-11 px-5 rounded-full bg-cohab-primary text-cohab-on-fill text-[14px] font-bold inline-flex items-center"
+          className="cohab-press h-11 px-5 rounded-full btn-raised bg-cohab-primary text-cohab-on-fill text-[14px] font-bold inline-flex items-center"
         >
           Join free
         </Link>
@@ -106,7 +106,7 @@ export function Landing() {
           <div className="flex flex-wrap items-center gap-3 mt-8">
             <Link
               to="/login?mode=signup"
-              className="cohab-press h-14 px-8 rounded-full bg-cohab-primary text-cohab-on-fill text-[16px] font-bold inline-flex items-center gap-2"
+              className="cohab-press h-14 px-8 rounded-full btn-raised bg-cohab-primary text-cohab-on-fill text-[16px] font-bold inline-flex items-center gap-2"
             >
               Start in four minutes <span aria-hidden>→</span>
             </Link>
@@ -287,7 +287,7 @@ export function Landing() {
           </h2>
           <Link
             to="/login?mode=signup"
-            className="cohab-press mt-10 h-16 px-10 rounded-full bg-cohab-primary text-cohab-on-fill text-[18px] font-bold inline-flex items-center gap-2"
+            className="cohab-press mt-10 h-16 px-10 rounded-full btn-raised bg-cohab-primary text-cohab-on-fill text-[18px] font-bold inline-flex items-center gap-2"
           >
             Find my roommate <span aria-hidden>→</span>
           </Link>

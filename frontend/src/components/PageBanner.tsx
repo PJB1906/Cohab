@@ -23,7 +23,7 @@ export function PageBanner({
   return (
     <section
       className={cn(
-        'relative isolate overflow-hidden rounded-[28px] text-white shadow-[var(--shadow-soft)]',
+        'relative isolate grain overflow-hidden rounded-[28px] text-white shadow-[var(--shadow-soft)]',
         size === 'sm' && 'min-h-[150px]',
         size === 'md' && 'min-h-[170px] cohab-desktop:min-h-[220px]',
         size === 'lg' && 'min-h-[220px] cohab-desktop:min-h-[300px]',

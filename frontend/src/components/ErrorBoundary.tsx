@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="h-11 px-5 rounded-xl bg-cohab-primary text-cohab-on-fill text-[14px] font-medium cursor-pointer"
+              className="cohab-press btn-raised h-11 px-6 rounded-full bg-cohab-primary text-cohab-on-fill text-[14px] font-bold cursor-pointer"
             >
               Reload
             </button>

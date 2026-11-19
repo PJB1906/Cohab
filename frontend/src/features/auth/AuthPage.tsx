@@ -29,7 +29,7 @@ export function AuthShell({
     <div className="min-h-screen flex flex-col cohab-desktop:grid cohab-desktop:grid-cols-[minmax(0,1fr)_minmax(460px,40%)]">
       {/* Poster panel (D-14.23): black, one real photograph, condensed caps.
           Desktop only; on a phone the form is the whole screen. */}
-      <HeroStagger className="hidden cohab-desktop:flex cohab-desktop:flex-col relative overflow-hidden bg-[linear-gradient(160deg,#0b1033_0%,#16228a_100%)] text-white px-12 pt-11 pb-10">
+      <HeroStagger className="hidden cohab-desktop:flex cohab-desktop:flex-col relative isolate grain overflow-hidden bg-[linear-gradient(160deg,#0b1033_0%,#16228a_100%)] text-white px-12 pt-11 pb-10">
         <div data-stagger-item="" className="mb-10">
           <Logo onDark pilot={false} size="lg" />
         </div>

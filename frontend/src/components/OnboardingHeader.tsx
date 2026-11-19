@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { profileApi } from '@/api/profile'
 import { Logo } from '@/components/Logo'
+import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { cn } from '@/lib/utils'
 
 /** Escape hatch for the four onboarding screens (docs/DECISIONS.md D-13.3).
@@ -114,6 +115,7 @@ export function OnboardingHeader({
         </Link>
 
         <div className="flex-1" />
+        <ThemeSwitch />
 
         <Link
           to="/profile"
@@ -124,7 +126,7 @@ export function OnboardingHeader({
       </div>
     </header>
     <div className={`mx-auto px-4 cohab-desktop:px-6 pt-4 ${pathname.includes('weights') ? 'max-w-[1160px]' : pathname.includes('listing') ? 'max-w-[1300px]' : 'max-w-[1500px]'}`} aria-hidden>
-      <div className="relative isolate overflow-hidden rounded-[26px] h-[92px] cohab-desktop:h-[124px] shadow-[var(--shadow-soft)]">
+      <div className="relative isolate grain overflow-hidden rounded-[26px] h-[92px] cohab-desktop:h-[124px] shadow-[var(--shadow-soft)]">
         <img src={STEP_PHOTO(pathname)} alt="" className="absolute inset-0 -z-20 w-full h-full object-cover" />
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(105deg,rgb(8_12_46/0.94)_0%,rgb(27_52_209/0.8)_55%,rgb(42_75_255/0.3)_100%)]" />
         <div className="h-full px-5 cohab-desktop:px-8 flex items-center">

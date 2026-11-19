@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { matchesApi } from '@/api/matches'
 import { feedbackApi } from '@/api/feedback'
 import { AppShell } from '@/components/AppShell'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { ArrowRight, Heart, House, MessageCircle, X } from 'lucide-react'
 import { FactsGrid } from '@/components/FactsGrid'
 import { Chemistry, type ChemistryRow } from '@/components/Chemistry'
 import { attributeLabel } from '@/data/attributes'
@@ -154,7 +155,7 @@ export function MatchDetail() {
         )}
 
         {/* Poster header (D-14.23): the person, the number, the decision. */}
-        <section className="relative isolate overflow-hidden mt-3 cohab-desktop:mt-0 text-white rounded-[30px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end shadow-[var(--shadow-soft)]">
+        <section className="relative isolate grain overflow-hidden mt-3 cohab-desktop:mt-0 text-white rounded-[30px] p-6 cohab-desktop:p-10 grid cohab-desktop:grid-cols-[minmax(0,1fr)_260px] gap-8 items-end shadow-[var(--shadow-soft)]">
           <img src="/photos/room-sunlight.webp" alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgb(8_12_46/0.96)_0%,rgb(27_52_209/0.86)_55%,rgb(42_75_255/0.45)_100%)]" />
           <div className="min-w-0">
@@ -187,31 +188,32 @@ export function MatchDetail() {
             <p className="text-[12.5px] leading-[1.45] text-white/60 mt-3">
               They suit you {towards}. You suit them {from}. The lower side counts more.
             </p>
-            <div className="hidden cohab-desktop:flex flex-col gap-2 mt-6">
+            <div className="hidden cohab-desktop:flex flex-col gap-2.5 mt-6">
               {canConfirmMoveIn && (
                 <button
                   type="button"
                   onClick={() => confirmMoveInMutation.mutate()}
                   disabled={confirmMoveInMutation.isPending}
-                  className="cohab-press h-12 rounded-full bg-cohab-sun text-cohab-on-sun font-bold disabled:opacity-40"
+                  className={buttonVariants({ variant: 'sun', className: 'w-full' })}
                 >
+                  <House className="size-4" aria-hidden />
                   Confirm move-in
                 </button>
               )}
               {canChat ? (
-                <Link
-                  to={`/matches/${matchId}/chat`}
-                  className="cohab-press h-12 rounded-full bg-white text-cohab-on-sun font-bold inline-flex items-center justify-center"
-                >
+                <Link to={`/matches/${matchId}/chat`} className={buttonVariants({ variant: 'light', className: 'w-full' })}>
+                  <MessageCircle className="size-4" aria-hidden />
                   Open chat
+                  <ArrowRight className="size-4 -mr-1 transition-transform duration-200 group-hover/btn:translate-x-1" aria-hidden />
                 </Link>
               ) : (
                 <button
                   type="button"
                   onClick={() => interestMutation.mutate()}
                   disabled={alreadyInterested || interestMutation.isPending}
-                  className="cohab-press h-12 rounded-full bg-white text-cohab-on-sun font-bold disabled:bg-white/20 disabled:text-white/70"
+                  className={buttonVariants({ variant: 'light', className: 'w-full' })}
                 >
+                  <Heart className={alreadyInterested ? 'size-4 fill-current' : 'size-4'} aria-hidden />
                   {alreadyInterested ? 'Interest sent' : "I'm interested"}
                 </button>
               )}
@@ -219,8 +221,9 @@ export function MatchDetail() {
                 <button
                   type="button"
                   onClick={() => setShowReject(true)}
-                  className="cohab-press h-11 rounded-full border border-white/35 text-white/90 text-[14px] font-semibold hover:bg-white/10"
+                  className="cohab-press h-11 rounded-full inline-flex items-center justify-center gap-2 border border-white/30 bg-white/5 backdrop-blur-sm text-white/90 text-[14px] font-semibold transition-colors hover:bg-white/12 hover:border-white/50 cursor-pointer"
                 >
+                  <X className="size-4" aria-hidden />
                   Not for me
                 </button>
               )}
@@ -343,8 +346,8 @@ export function MatchDetail() {
               </Button>
             )}
             {canChat && !canConfirmMoveIn ? (
-              <Link to={`/matches/${matchId}/chat`} className="flex-1">
-                <Button className="rounded-full w-full">{primaryLabel}</Button>
+              <Link to={`/matches/${matchId}/chat`} className={buttonVariants({ className: 'flex-1' })}>
+                {primaryLabel}
               </Link>
             ) : (
               <Button onClick={firePrimaryAction} disabled={primaryDisabled} className="rounded-full flex-1">

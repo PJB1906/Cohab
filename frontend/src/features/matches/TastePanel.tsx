@@ -19,7 +19,7 @@ export function TastePanel({ className, compact = false }: { className?: string;
   if (!data) return null
 
   return (
-    <section className={cn('relative overflow-hidden bg-[linear-gradient(135deg,#0b1033_0%,#1b2a9a_100%)] text-white rounded-[26px] p-6 shadow-[var(--shadow-soft)]', className)} aria-label="What your list has learned">
+    <section className={cn('relative isolate grain overflow-hidden bg-[linear-gradient(135deg,#0b1033_0%,#1b2a9a_100%)] text-white rounded-[26px] p-6 shadow-[var(--shadow-soft)]', className)} aria-label="What your list has learned">
       <div className="flex items-start justify-between gap-3">
         <div>
           <span className="label text-[10px] text-cohab-sun">{data.active && data.enabled ? 'Learning from you' : 'Learns from you'}</span>

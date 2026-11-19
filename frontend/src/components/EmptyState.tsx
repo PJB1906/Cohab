@@ -18,7 +18,7 @@ export function EmptyState({
 }) {
   return (
     <div className={cn('surface rounded-[28px] overflow-hidden grid sm:grid-cols-[minmax(0,240px)_1fr]', className)}>
-      <div className="relative isolate min-h-[130px]">
+      <div className="relative isolate grain min-h-[130px]">
         <img src={photo} alt="" aria-hidden className="absolute inset-0 -z-20 w-full h-full object-cover" />
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgb(8_12_46/0.55),rgb(42_75_255/0.35))]" />
       </div>
@@ -32,4 +32,4 @@ export function EmptyState({
 }
 
 export const emptyActionClass =
-  'cohab-press self-start mt-1 h-11 px-6 rounded-full bg-cohab-primary text-cohab-on-fill text-[14px] font-bold inline-flex items-center shadow-[0_10px_22px_-10px_rgb(42_75_255/0.75)]'
+  'cohab-press btn-raised self-start mt-1 h-11 px-6 rounded-full bg-cohab-primary text-cohab-on-fill text-[14px] font-bold inline-flex items-center gap-2'

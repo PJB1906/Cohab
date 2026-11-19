@@ -1,6 +1,8 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useSession } from '@/hooks/useSession'
 import { Logo } from '@/components/Logo'
+import { ThemeSwitch } from '@/components/ThemeSwitch'
+import { ChartColumn, FlaskConical, MessageCircle, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { BottomNav } from '@/components/BottomNav'
 import { BackButton } from '@/components/BackButton'
 import { AccountMenu } from '@/components/AccountMenu'
@@ -15,7 +17,7 @@ import { cn } from '@/lib/utils'
 function navLinkClass({ isActive }: { isActive: boolean }) {
   // Daylight nav (D-14.24): the active section is a cobalt-tinted pill.
   return cn(
-    'cohab-press h-9 px-4 rounded-full inline-flex items-center text-[14px] font-bold transition-colors',
+    'cohab-press h-9 px-3.5 rounded-full inline-flex items-center gap-2 text-[14px] font-bold transition-colors [&>svg]:size-[16px]',
     isActive ? 'bg-cohab-tint text-cohab-primary' : 'text-cohab-muted hover:bg-cohab-tint hover:text-cohab-ink',
   )
 }
@@ -70,31 +72,38 @@ export function AppShell({ children, hideBottomNav }: { children: React.ReactNod
                 Matches while Chat stayed inactive (reported by the user).
                 This mirrors what `bottomNavTab` already did on mobile. */}
             <NavLink to="/matches" className={() => navLinkClass({ isActive: isMatches })}>
+              <Users aria-hidden />
               Matches
             </NavLink>
             <NavLink to="/chats" className={({ isActive }) => navLinkClass({ isActive: isActive || isChat })}>
+              <MessageCircle aria-hidden />
               Chat
             </NavLink>
             <NavLink to="/profile" className={navLinkClass}>
+              <UserRound aria-hidden />
               Profile
             </NavLink>
             {user?.is_moderator && (
               <NavLink to="/moderation" className={navLinkClass}>
+                <ShieldCheck aria-hidden />
                 Moderation
               </NavLink>
             )}
             {user?.is_moderator && (
               <NavLink to="/analytics" className={navLinkClass}>
+                <ChartColumn aria-hidden />
                 Analytics
               </NavLink>
             )}
             {user?.is_moderator && (
               <NavLink to="/evidence" className={navLinkClass}>
+                <FlaskConical aria-hidden />
                 Evidence
               </NavLink>
             )}
           </nav>
           <div className="flex-1" />
+          <ThemeSwitch />
           {user && <AccountMenu user={user} />}
         </div>
       </header>

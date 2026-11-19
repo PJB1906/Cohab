@@ -1,29 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Cohab">
   <!--
-    Cohab's mark, dark theme. Same geometry as favicon-light.svg — only the
-    palette differs, so the two read as one logo in two outfits rather than
-    two logos.
-
-    Colours are the app's own dark tokens (frontend/src/index.css): lime
-    phosphor primary, warm accent. The tile is Surface 1 (#181818) and not
-    the theme's pure-black Surface 0 on purpose — a black tile disappears
-    into a dark browser tab strip, leaving the strokes floating.
-
-    Swapped in by `lib/theme.ts::applyFavicon`. See docs/DECISIONS.md D-13.17.
+    Cohab's mark (D-14.25): two overlapping roofs, two people and one home,
+    on a shared floor, which is the match itself. Same geometry since D-13.17;
+    recoloured for the Daylight palette: cobalt tile, the other person's roof
+    in sun, yours in white. One design for both themes: the cobalt tile reads
+    on light and dark tab strips alike.
   -->
-  <rect width="48" height="48" rx="11" fill="#181818"/>
-
-  <!-- Left roof — the candidate. Accent, drawn first so primary overlaps it. -->
-  <path d="M9 31.5 19.5 20.2a2 2 0 0 1 2.94 0L32.94 31.5"
-        fill="none" stroke="#c96a4d" stroke-width="3.4"
-        stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- Right roof — you. The dominant voice, in the primary. -->
-  <path d="M15.06 31.5 25.56 20.2a2 2 0 0 1 2.94 0L39 31.5"
-        fill="none" stroke="#7fee64" stroke-width="3.4"
-        stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- Shared floor: the match itself. -->
-  <path d="M15.5 37.2h17" fill="none" stroke="#7fee64" stroke-width="3.4"
-        stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4766ff"/>
+      <stop offset="1" stop-color="#2140f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#t)"/>
+  <path d="M9 31.5 19.5 20.2a2 2 0 0 1 2.94 0L32.94 31.5" fill="none" stroke="#ffc933" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.06 31.5 25.56 20.2a2 2 0 0 1 2.94 0L39 31.5" fill="none" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.5 37.2h17" fill="none" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round"/>
 </svg>

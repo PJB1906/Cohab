@@ -3896,3 +3896,44 @@ instead of three wrapped pills.
 
 **Checked.** Every route at 375 px (no horizontal overflow) and desktop, light
 and dark; lint and build clean apart from fast-refresh warnings.
+
+### D-14.25 Mark, one-tap dark mode, tactile buttons, icon set
+
+**Mark.** The logo is the original house mark (D-13.17): two overlapping roofs,
+two people and one home, on a shared floor that stands for the match. Same
+geometry, recoloured: a cobalt tile with a slight top-to-bottom gradient, the
+other person's roof in sun, yours and the floor in white. One drawing serves the
+in-app logo (`Mark` in `components/Logo.tsx`) and both favicons, so the tab icon
+and the header always match; the cobalt tile reads on light and dark tab strips.
+
+**Dark mode, findable.** It already existed but sat inside the account menu, so
+it read as missing. `ThemeSwitch` puts a one-tap moon/sun button in every header
+(app, onboarding; landing and sign-in keep their segmented control). It shows
+where a tap goes (moon in light mode), animates between icons, and stays in sync
+with the other controls through the `data-theme` attribute. The dark palette was
+made a touch deeper and less saturated (page #070a1d, cards #0f1433).
+
+**Buttons.** Raised variants (`.btn-raised`) carry a top highlight, a hairline
+shade at the bottom and a glow in their own colour; they lift a pixel on hover
+and press in on click. Variants keep strict roles: primary (cobalt), sun (match
+moments: confirm move-in), light (actions on photo or navy bands), secondary
+(quiet white), ghost, danger, destructive (coral). `arrow` adds a trailing arrow
+that slides on hover; `loading` shows a spinner. Links that look like buttons use
+`buttonVariants` directly; four places that nested a `<button>` inside a link
+(invalid HTML) were fixed.
+
+**Icons.** Lucide (ISC licence, already a dependency) throughout: header nav,
+the phone tab bar (the current tab opens into a labelled white pill), filters,
+chat (view, share contact, send), and the match hero (heart, chat, house, close).
+
+**Texture.** A code-native film-grain tile (`.grain`, SVG noise at 14% overlay)
+sits over photo banners, navy panels and the sign-in panel, so bands read as
+printed rather than flat.
+
+**Chat.** One composer pill holds the field and the send button, Enter sends and
+Shift+Enter adds a line; the "try typing a phone number" demo hint became real
+guidance.
+
+**Checked.** All 15 member routes at 375 px (no overflow, no console errors);
+desktop and phone in light and dark, including clicking the switch both ways
+(theme, saved choice and favicon all update).
