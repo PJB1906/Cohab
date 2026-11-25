@@ -31,4 +31,4 @@ export function EmptyState({
 }
 
 export const emptyActionClass =
-  'cohab-press btn-raised self-start mt-2 h-11 px-6 rounded-full bg-cohab-fill text-cohab-on-fill text-[14px] font-bold inline-flex items-center gap-2'
+  'cohab-press btn-ink self-start mt-2 h-11 px-6 rounded-full text-[14px] font-bold inline-flex items-center gap-2'

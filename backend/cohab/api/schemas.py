@@ -82,6 +82,22 @@ class ResendOTPRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)
+    # "Keep me logged in" (D-14.27): True keeps the session cookie for
+    # SESSION_TTL_DAYS; False makes it a browser-session cookie that goes when
+    # the browser closes. Defaults to True so older clients keep today's
+    # behaviour.
+    remember: bool = True
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=12)
+    new_password: str = Field(min_length=8, max_length=72)
+    remember: bool = True
 
 
 class UserOut(BaseModel):

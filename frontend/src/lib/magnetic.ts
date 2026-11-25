@@ -24,7 +24,7 @@ export function installMagnetic(): void {
     }
     return m
   }
-  const target = (t: EventTarget | null) => (t instanceof Element ? (t.closest('.btn-raised') as HTMLElement | null) : null)
+  const target = (t: EventTarget | null) => (t instanceof Element ? (t.closest('.btn-raised, .btn-ink') as HTMLElement | null) : null)
 
   document.addEventListener(
     'pointermove',

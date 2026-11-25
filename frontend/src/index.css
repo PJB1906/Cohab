@@ -34,7 +34,7 @@
   /* Semantic tokens: light (default) */
   --color-cohab-primary: #2a4bff;       /* links, rings, focus, strength */
   --color-cohab-primary-dark: #1d3be6;
-  --color-cohab-fill: #2a4bff;          /* filled controls (white text) */
+  --color-cohab-fill: #0d0f14;          /* filled controls: ink, white text (D-14.27) */
   --color-cohab-sky: #9fb0ff;           /* middle strength on bars */
   --color-cohab-sun: #ffc933;
   --color-cohab-on-sun: #0d0f14;
@@ -94,7 +94,7 @@
   color-scheme: dark;
   --color-cohab-primary: #8197ff;
   --color-cohab-primary-dark: #a3b2ff;
-  --color-cohab-fill: #3b5bff;
+  --color-cohab-fill: #f3f3f5;
   --color-cohab-sky: #5065c4;
   --color-cohab-accent: #ff7d6e;
   --color-cohab-accent-tint: #2a1714;
@@ -117,7 +117,7 @@
   --color-cohab-dark-border-soft: #19191d;
   --color-cohab-bubble-mint: #3b5bff;
   --color-cohab-thread-bg: #0a0a0c;
-  --color-cohab-on-fill: #ffffff;
+  --color-cohab-on-fill: #0d0f14;
   --color-cohab-avatar-bg: #3b5bff;
   --color-cohab-avatar-ink: #ffffff;
   --color-cohab-score: #93a6ff;
@@ -503,4 +503,93 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
   .btn-raised::after, .kenburns, .roof-window { animation: none !important; transition: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   Art buttons (D-14.27). Ink pill (white in dark mode) carrying a line drawing
+   of rooftops that drifts on hover; a fill grows out of the arrow badge (or
+   the centre) and flips the label colour. Variants only swap four variables.
+   The fill sits on ::before and the art on ::after, both at z-index -1 inside
+   an isolated button, so they paint above the background and below the label.
+   --------------------------------------------------------------------------- */
+.btn-ink {
+  --btn-bg: var(--color-cohab-fill);
+  --btn-fg: var(--color-cohab-on-fill);
+  --btn-fill: var(--color-cohab-sun);
+  --btn-fill-fg: var(--color-cohab-on-sun);
+  --fx: 50%;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--btn-bg);
+  color: var(--btn-fg);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 -1px 0 rgb(0 0 0 / 0.28),
+    0 1px 2px rgb(13 15 20 / 0.2),
+    0 14px 28px -14px rgb(13 15 20 / 0.6);
+  transition:
+    color 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    scale 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+}
+:root[data-theme='dark'] .btn-ink {
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.5), 0 14px 30px -14px rgb(255 255 255 / 0.18);
+}
+.btn-ink:has(.btn-badge) { --fx: calc(100% - 26px); }
+.btn-ink::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--btn-fill);
+  clip-path: circle(0px at var(--fx) 50%);
+  transition: clip-path 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-ink::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: -40px;
+  bottom: 0;
+  height: 64%;
+  z-index: -1;
+  pointer-events: none;
+  background-color: currentColor;
+  opacity: 0.17;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='40' viewBox='0 0 132 40' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M1 40V25l11-9 11 9v15M23 40V17h17v23M40 40V27l9-7 9 7v13M58 40V14l13-10 13 10v26M84 40V24h14v16M98 40V22l9-8 9 8v18M116 40V28l7-6 8 6'/%3E%3Cpath d='M64 20h4v6h-4zM74 20h4v6h-4zM28 23h4v5h-4zM89 29h4v5h-4zM104 27h4v5h-4z'/%3E%3C/svg%3E") repeat-x left bottom / auto 100%;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='40' viewBox='0 0 132 40' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M1 40V25l11-9 11 9v15M23 40V17h17v23M40 40V27l9-7 9 7v13M58 40V14l13-10 13 10v26M84 40V24h14v16M98 40V22l9-8 9 8v18M116 40V28l7-6 8 6'/%3E%3Cpath d='M64 20h4v6h-4zM74 20h4v6h-4zM28 23h4v5h-4zM89 29h4v5h-4zM104 27h4v5h-4z'/%3E%3C/svg%3E") repeat-x left bottom / auto 100%;
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+}
+.btn-ink:hover { color: var(--btn-fill-fg); translate: 0 -1px; }
+.btn-ink:hover::before { clip-path: circle(160% at var(--fx) 50%); }
+.btn-ink:hover::after { transform: translateX(-36px); opacity: 0.22; }
+.btn-ink:active { scale: 0.97; translate: 0 0; }
+.btn-ink:focus-visible { outline: 2px solid var(--color-cohab-primary); outline-offset: 3px; }
+
+.btn-ink--sun { --btn-bg: var(--color-cohab-sun); --btn-fg: var(--color-cohab-on-sun); --btn-fill: #0d0f14; --btn-fill-fg: #ffffff; }
+.btn-ink--light { --btn-bg: #ffffff; --btn-fg: #0d0f14; --btn-fill: var(--color-cohab-sun); --btn-fill-fg: #0d0f14; }
+.btn-ink--coral { --btn-bg: var(--color-cohab-accent); --btn-fg: #ffffff; --btn-fill: #0d0f14; --btn-fill-fg: #ffffff; }
+
+/* The arrow badge: a disc in the fill colour; the arrow turns from a
+   diagonal to straight ahead as the fill arrives. */
+.btn-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-right: -14px;
+  border-radius: 999px;
+  background: var(--btn-fill);
+  color: var(--btn-fill-fg);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-badge svg { transform: rotate(-45deg); transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.btn-ink:hover .btn-badge { transform: translateX(2px); }
+.btn-ink:hover .btn-badge svg { transform: rotate(0deg); }
+.btn-ink:not(.h-9) .btn-badge { width: 34px; height: 34px; margin-right: -16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-ink, .btn-ink::before, .btn-ink::after, .btn-badge, .btn-badge svg { transition: none !important; }
 }

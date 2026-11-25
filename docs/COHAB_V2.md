@@ -19,7 +19,7 @@ answer that honestly, including what to report if real data does not arrive.
 | W8 | "Loud poster" redesign, then the "Daylight" colour system (cobalt, navy, sun), photo banners, landing page, chemistry chart, credited stock photos | `frontend/src/index.css`, `components/Chemistry.tsx`, `features/landing/`, `public/photos/` |
 | W6 | "Why so few people", top-3 tie hint, calibrated confidence tiers, evidence page, policy playground, `make reproduce`, protocol, datasheet, model card | `services/insights.py`, `api/evidence.py`, `frontend/src/features/evidence/`, `analysis/reproduce.py` |
 
-Design decisions and every proposed value: `docs/DECISIONS.md` D-14.1 to D-14.26.
+Design decisions and every proposed value: `docs/DECISIONS.md` D-14.1 to D-14.27.
 
 ## Running it
 

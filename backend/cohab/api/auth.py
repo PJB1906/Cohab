@@ -15,6 +15,8 @@ from cohab.api.deps import get_current_user, get_db
 from cohab.api.schemas import (
     AccountUpdateRequest,
     LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RegisterRequest,
     RegisterResponse,
     ResendOTPRequest,
@@ -45,14 +47,16 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("cohab.auth")
 
 
-def _set_session_cookie(response: Response, user: User) -> None:
+def _set_session_cookie(response: Response, user: User, *, persistent: bool = True) -> None:
+    """`persistent=False` ("keep me logged in" unticked) omits max_age, so
+    the browser drops the cookie when it closes (D-14.27)."""
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=create_session_token(user.id),
         httponly=True,
         samesite="lax",
         secure=COOKIE_SECURE,
-        max_age=SESSION_TTL_DAYS * 24 * 60 * 60,
+        max_age=SESSION_TTL_DAYS * 24 * 60 * 60 if persistent else None,
         path="/",
     )
 
@@ -121,7 +125,39 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_db))
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "incorrect email or password")
     except AccountNotActive:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "account is not active")
-    _set_session_cookie(response, user)
+    _set_session_cookie(response, user, persistent=body.remember)
+    return user
+
+
+@router.post("/password-reset/request", status_code=status.HTTP_202_ACCEPTED)
+def password_reset_request(body: PasswordResetRequest, db: Session = Depends(get_db)) -> dict[str, bool]:
+    """Always 202 for a well-formed email, whether or not it has an
+    account, so the response never reveals who is registered."""
+    service = AuthService(db, get_otp_sender())
+    try:
+        service.request_password_reset(email=body.email)
+    except ResendTooSoon as exc:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, f"wait a moment before requesting another code ({exc})")
+    except OTPDeliveryFailed as exc:
+        logger.error("reset code delivery failed: %s", str(exc).replace(body.email, "[email]"))
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "couldn't send the email — try again shortly")
+    return {"sent": True}
+
+
+@router.post("/password-reset/confirm", response_model=UserOut)
+def password_reset_confirm(body: PasswordResetConfirm, response: Response, db: Session = Depends(get_db)) -> User:
+    service = AuthService(db, get_otp_sender())
+    try:
+        user = service.reset_password(email=body.email, code=body.code, new_password=body.new_password)
+    except TooManyOTPAttempts:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many incorrect attempts — request a new code")
+    except OTPExpired:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "that code has expired — request a new one")
+    except InvalidOTP:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "incorrect code")
+    except AccountNotActive:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "account is not active")
+    _set_session_cookie(response, user, persistent=body.remember)
     return user
 
 

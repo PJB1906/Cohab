@@ -63,7 +63,7 @@ export function Chemistry({
     r.you >= 0.8 && r.them >= 0.8
       ? dark
         ? 'bg-cohab-sun'
-        : 'bg-cohab-fill'
+        : 'bg-cohab-primary'
       : r.you < 0.5 || r.them < 0.5
         ? 'bg-cohab-accent'
         : dark
@@ -107,7 +107,7 @@ export function Chemistry({
       </ul>
       <div className={cn('flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[11.5px]', dark ? 'text-white/60' : 'text-cohab-subtle')}>
         <span className="inline-flex items-center gap-1.5">
-          <span className={cn('w-3 h-2 rounded-full', dark ? 'bg-cohab-sun' : 'bg-cohab-fill')} /> both strong
+          <span className={cn('w-3 h-2 rounded-full', dark ? 'bg-cohab-sun' : 'bg-cohab-primary')} /> both strong
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className={cn('w-3 h-2 rounded-full', dark ? 'bg-white/70' : 'bg-cohab-sky')} /> fine

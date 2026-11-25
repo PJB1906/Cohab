@@ -334,8 +334,8 @@ export function ChatThread() {
               type="submit"
               disabled={sendMutation.isPending || !draft.trim()}
               className={cn(
-                'cohab-press btn-raised cohab-desktop:hidden w-[46px] h-[46px] rounded-full border-none text-cohab-on-fill flex-none flex items-center justify-center disabled:opacity-50 cursor-pointer',
-                warning ? 'btn-coral bg-cohab-accent' : 'bg-cohab-fill',
+                'cohab-press cohab-desktop:hidden w-[46px] h-[46px] rounded-full border-none text-cohab-on-fill flex-none flex items-center justify-center disabled:opacity-50 cursor-pointer',
+                warning ? 'btn-ink btn-ink--coral' : 'btn-ink',
               )}
               aria-label="Send"
             >

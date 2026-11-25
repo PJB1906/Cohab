@@ -8,11 +8,14 @@ export function ScoreRing({
   pct,
   size = 104,
   stroke = 9,
+  track = 'var(--color-cohab-track)',
   children,
 }: {
   pct: number
   size?: number
   stroke?: number
+  /** Track colour; override on surfaces that are light in both themes. */
+  track?: string
   children?: React.ReactNode
 }) {
   const r = (size - stroke) / 2
@@ -21,7 +24,7 @@ export function ScoreRing({
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-cohab-track)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         <motion.circle
           cx={size / 2}
           cy={size / 2}

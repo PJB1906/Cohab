@@ -220,6 +220,69 @@ class AuthService:
         self.otp_sender.send(email, code)
         return user
 
+    def request_password_reset(self, *, email: str) -> None:
+        """Email a one-time code that lets the owner of `email` set a new
+        password (D-14.27). Reuses the account's verification row: same code
+        hashing, expiry (`OTP_TTL_MINUTES`), attempt limit and resend cooldown
+        as sign-up. An unknown email does nothing, silently, so this endpoint
+        cannot be used to find out who has an account."""
+        email = email.strip().lower()
+        user = self.session.scalar(select(User).where(User.email == email))
+        if user is None or user.account_status != "active":
+            return
+        record = self.session.scalars(
+            select(VerificationRecord).where(VerificationRecord.user_id == user.id)
+        ).first()
+        if record is None:
+            record = VerificationRecord(user_id=user.id, method="email_otp", status="pending", otp_attempts=0)
+            self.session.add(record)
+        elif record.otp_expires_at is not None:
+            issued_at = record.otp_expires_at - timedelta(minutes=OTP_TTL_MINUTES)
+            elapsed = (datetime.now(timezone.utc) - issued_at).total_seconds()
+            if elapsed < RESEND_OTP_COOLDOWN_SECONDS:
+                raise ResendTooSoon(RESEND_OTP_COOLDOWN_SECONDS - elapsed)
+
+        code = generate_otp()
+        record.otp_hash = hash_otp(code)
+        record.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_TTL_MINUTES)
+        record.otp_attempts = 0
+        self.session.commit()
+        self.otp_sender.send(email, code)
+
+    def reset_password(self, *, email: str, code: str, new_password: str) -> User:
+        """Check the emailed code and set the new password. A correct code
+        also proves the inbox, so an account that never finished verifying is
+        marked verified here too."""
+        email = email.strip().lower()
+        user = self.session.scalar(select(User).where(User.email == email))
+        record = (
+            self.session.scalars(select(VerificationRecord).where(VerificationRecord.user_id == user.id)).first()
+            if user is not None
+            else None
+        )
+        if user is None or record is None or record.otp_hash is None:
+            raise InvalidOTP("no reset code for this account")
+        if record.otp_attempts >= OTP_MAX_ATTEMPTS:
+            raise TooManyOTPAttempts()
+        if record.otp_expires_at is None or datetime.now(timezone.utc) > record.otp_expires_at:
+            raise OTPExpired()
+        if not verify_otp_hash(code, record.otp_hash):
+            record.otp_attempts += 1
+            self.session.commit()
+            raise InvalidOTP()
+        if user.account_status != "active":
+            raise AccountNotActive(user.account_status)
+
+        user.password_hash = hash_password(new_password)
+        record.otp_hash = None
+        record.otp_expires_at = None
+        if record.status != "verified":
+            record.status = "verified"
+            record.verified_at = datetime.now(timezone.utc)
+            user.verification_status = "verified"
+        self.session.commit()
+        return user
+
     def login(self, *, email: str, password: str) -> User:
         email = email.strip().lower()
         user = self.session.scalar(select(User).where(User.email == email))

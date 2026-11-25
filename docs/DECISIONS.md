@@ -3986,3 +3986,49 @@ All of it is off under `prefers-reduced-motion`.
 no overflow, correct theme, no console errors. Desktop light and dark: matches,
 match detail, chat, chats, saved, sign-in, credits. The sort pill and the theme
 switch were exercised by clicking.
+
+### D-14.27 Art buttons, a sign-in page that matches the product, and real account recovery
+
+**Buttons.** Filled cobalt buttons read as a generated default, so filled
+controls moved off blue. The `fill` token is now ink (#0d0f14) in light mode
+and near-white (#f3f3f5) in dark mode. Primary buttons are "art buttons"
+(`.btn-ink`): the pill carries a line drawing of rooftops (the mark's motif,
+as a CSS mask in `currentColor`) that drifts on hover, while a sun fill grows
+out of the arrow badge (or the centre) and flips the label colour; the arrow
+turns from diagonal to straight ahead. They keep the magnetic lean (GSAP).
+Variants only swap four CSS variables: sun (match moments; ink fill), light
+(on photos or ink panels), destructive (coral; ink fill). Selected chips,
+checkboxes and steps follow the ink fill. Cobalt stays only where it carries
+meaning: links, focus, strength of fit (score rings, bars, chemistry), and
+your own chat bubbles.
+
+**Sign-in page.** The left panel (`AuthStage`) is now the product's own
+language: the headline set line by line (GSAP), and a collage of a real
+photo, a second photo, an example match card (labelled "Example match"; not a
+member) and a chat exchange that drift with the pointer at different depths
+and bob gently (Motion), over the rooftop drawing, with a ticker of the habits
+Cohab asks about. The form side has icon fields, a show/hide password control,
+the art button, trust notes, and transitions between its steps (Motion).
+
+**Account recovery and "keep me logged in" were fake; now real.** "Forgot
+password?" did nothing and "Keep me logged in" was never sent. Now:
+- `POST /auth/password-reset/request` emails a one-time code. It always
+  answers 202 for a well-formed email, so it never reveals who has an account.
+  It reuses the sign-up code machinery: hashed code, 10-minute expiry, 5
+  attempts, 30-second resend cooldown.
+- `POST /auth/password-reset/confirm` checks the code, sets the new password
+  (8 to 72 characters), logs the user in, and marks a never-verified account
+  as verified (the code proves the inbox).
+- `remember` on login (default true): false sets a browser-session cookie with
+  no max-age.
+Tests: `tests/api/test_password_reset.py` (reset and log in, unknown email gets
+the same answer and no email, wrong codes counted and locked out, cooldown,
+cookie lifetime).
+
+**Landing.** A scroll progress bar in sun, and the hero collage drifts apart at
+different speeds as the page scrolls (Motion `useScroll`); the stickers bob.
+
+**Checked.** The reset flow end to end in the browser with a throwaway local
+account (old password refused afterwards, new one accepted); button hover
+states; sign-in at desktop in light and dark and at 375 px (no overflow);
+scroll progress and parallax values against the real scroll position.

@@ -33,6 +33,15 @@ export interface ResendOtpRequest {
 export interface LoginRequest {
   email: string
   password: string
+  /** Keep me logged in: false makes the session end when the browser closes. */
+  remember?: boolean
+}
+
+export interface PasswordResetConfirm {
+  email: string
+  code: string
+  new_password: string
+  remember?: boolean
 }
 
 export interface UserOut {

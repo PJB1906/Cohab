@@ -1,4 +1,7 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { motion, useScroll, useSpring, useTransform } from 'motion/react'
+import { ButtonArrow } from '@/components/ui/button'
 import { Chemistry, type ChemistryRow } from '@/components/Chemistry'
 import { Logo } from '@/components/Logo'
 import { Roofline } from '@/components/Roofline'
@@ -75,9 +78,68 @@ function Sticker({ children, className }: { children: React.ReactNode; className
   )
 }
 
+/** Scroll progress along the top edge (Motion). */
+function ScrollBar() {
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 30, restDelta: 0.001 })
+  return <motion.div aria-hidden style={{ scaleX }} className="fixed top-0 inset-x-0 h-[3px] origin-left bg-cohab-sun z-50" />
+}
+
+/** The hero collage: photos, the score card and the chat stickers drift
+ * apart at different speeds as the page scrolls (Motion), and the stickers
+ * bob gently. */
+function HeroStack() {
+  const ref = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
+  const back = useTransform(scrollYProgress, [0, 1], [0, -70])
+  const mid = useTransform(scrollYProgress, [0, 1], [0, -20])
+  const front = useTransform(scrollYProgress, [0, 1], [0, -140])
+  const card = useTransform(scrollYProgress, [0, 1], [0, -220])
+  const cardTurn = useTransform(scrollYProgress, [0, 1], [-4, -12])
+  return (
+    <div ref={ref} className="relative h-[460px] sm:h-[540px] cohab-desktop:h-[620px]">
+      <motion.img
+        style={{ y: back }}
+        src="/photos/friends-couch.webp"
+        alt="A group of friends on a sofa in a shared flat"
+        className="absolute right-0 top-0 w-[78%] h-[62%] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)]"
+      />
+      <motion.img
+        style={{ y: mid }}
+        src="/photos/cooking-together.webp"
+        alt="Two flatmates cooking together"
+        className="absolute left-0 bottom-0 w-[64%] h-[54%] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)] -rotate-2"
+      />
+      <motion.img
+        style={{ y: front }}
+        src="/photos/room-plants.webp"
+        alt="A bright room with plants"
+        className="absolute right-[4%] bottom-[2%] w-[30%] h-[30%] object-cover rounded-[18px] border-[5px] border-white shadow-[var(--shadow-lift)] rotate-3"
+      />
+      <motion.div
+        style={{ y: card, rotate: cardTurn }}
+        className="absolute left-[6%] top-[8%] bg-cohab-dark-bg text-white rounded-[20px] px-5 pt-3 pb-3 shadow-[0_14px_40px_-14px_rgba(0,0,0,.6)]"
+      >
+        <span className="label text-[10px] text-white/60 block">Compatibility</span>
+        <span className="poster-num text-[76px] text-cohab-sun block">92</span>
+        <span className="label text-[10px] text-cohab-sun">Strong both ways</span>
+      </motion.div>
+      <motion.div style={{ y: front }} className="absolute left-[38%] top-[56%]">
+        <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
+          <Sticker className="relative bg-white text-cohab-on-sun rounded-bl-[4px] block">you’re up before 7?</Sticker>
+        </motion.div>
+        <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}>
+          <Sticker className="relative ml-10 mt-2 bg-cohab-sun text-cohab-on-sun rounded-bl-[4px] block">6:30. coffee’s on me</Sticker>
+        </motion.div>
+      </motion.div>
+    </div>
+  )
+}
+
 export function Landing() {
   return (
     <div className="min-h-screen bg-cohab-bg text-cohab-ink">
+      <ScrollBar />
       {/* Top bar */}
       <header className="max-w-[1400px] mx-auto px-5 cohab-desktop:px-10 h-[72px] flex items-center gap-4">
         <Logo />
@@ -88,7 +150,7 @@ export function Landing() {
         </Link>
         <Link
           to="/login?mode=signup"
-          className="cohab-press h-11 px-5 rounded-full btn-raised bg-cohab-fill text-cohab-on-fill text-[14px] font-bold inline-flex items-center"
+          className="cohab-press h-11 px-5 rounded-full btn-ink text-[14px] font-bold inline-flex items-center"
         >
           Join free
         </Link>
@@ -107,9 +169,9 @@ export function Landing() {
           <div className="flex flex-wrap items-center gap-3 mt-8">
             <Link
               to="/login?mode=signup"
-              className="cohab-press h-14 px-8 rounded-full btn-raised bg-cohab-fill text-cohab-on-fill text-[16px] font-bold inline-flex items-center gap-2"
+              className="cohab-press h-14 pl-8 pr-6 rounded-full btn-ink text-[16px] font-bold inline-flex items-center gap-4"
             >
-              Start in four minutes <span aria-hidden>→</span>
+              Start in four minutes <ButtonArrow />
             </Link>
             <Link
               to="/study"
@@ -120,31 +182,7 @@ export function Landing() {
           </div>
         </div>
 
-        {/* Photo stack */}
-        <div className="relative h-[460px] sm:h-[540px] cohab-desktop:h-[620px]">
-          <img
-            src="/photos/friends-couch.webp"
-            alt="A group of friends on a sofa in a shared flat"
-            className="absolute right-0 top-0 w-[78%] h-[62%] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)]"
-          />
-          <img
-            src="/photos/cooking-together.webp"
-            alt="Two flatmates cooking together"
-            className="absolute left-0 bottom-0 w-[64%] h-[54%] object-cover rounded-[22px] border-[5px] border-white shadow-[var(--shadow-lift)] -rotate-2"
-          />
-          <img
-            src="/photos/room-plants.webp"
-            alt="A bright room with plants"
-            className="absolute right-[4%] bottom-[2%] w-[30%] h-[30%] object-cover rounded-[18px] border-[5px] border-white shadow-[var(--shadow-lift)] rotate-3"
-          />
-          <div className="absolute left-[6%] top-[8%] bg-cohab-dark-bg text-white rounded-[20px] px-5 pt-3 pb-3 rotate-[-4deg] shadow-[0_14px_40px_-14px_rgba(0,0,0,.6)]">
-            <span className="label text-[10px] text-white/60 block">Compatibility</span>
-            <span className="poster-num text-[76px] text-cohab-sun block">92</span>
-            <span className="label text-[10px] text-cohab-sun">Strong both ways</span>
-          </div>
-          <Sticker className="left-[38%] top-[56%] bg-white text-cohab-on-sun rounded-bl-[4px]">you’re up before 7?</Sticker>
-          <Sticker className="left-[46%] top-[66%] bg-cohab-sun text-cohab-on-sun rounded-bl-[4px]">6:30. coffee’s on me</Sticker>
-        </div>
+        <HeroStack />
       </section>
 
       <Marquee />
@@ -288,9 +326,9 @@ export function Landing() {
           </h2>
           <Link
             to="/login?mode=signup"
-            className="cohab-press mt-10 h-16 px-10 rounded-full btn-raised bg-cohab-fill text-cohab-on-fill text-[18px] font-bold inline-flex items-center gap-2"
+            className="cohab-press mt-10 h-16 pl-10 pr-7 rounded-full btn-ink text-[18px] font-bold inline-flex items-center gap-5"
           >
-            Find my roommate <span aria-hidden>→</span>
+            Find my roommate <ButtonArrow />
           </Link>
         </div>
       </section>
